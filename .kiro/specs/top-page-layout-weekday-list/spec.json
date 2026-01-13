@@ -1,0 +1,22 @@
+{
+  "feature_name": "top-page-layout-weekday-list",
+  "created_at": "2026-01-08T16:31:36+09:00",
+  "updated_at": "2026-01-13T13:36:56+09:00",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "ready_for_implementation": false
+}

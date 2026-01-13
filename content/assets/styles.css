@@ -1,0 +1,352 @@
+@import url('https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Maru+Gothic:wght@400;700&display=swap');
+
+:root {
+  --ink: #2f251f;
+  --paper: #fbf7f0;
+  --paper-2: #f5efe4;
+  --accent: #d9b88f;
+  --accent-dark: #c89c6a;
+  --external: #9bb7d6;
+  --outline: #2f251f;
+  --shadow: 0 2px 0 rgba(47, 37, 31, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(216, 184, 143, 0.25), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(155, 183, 214, 0.2), transparent 45%),
+    linear-gradient(180deg, var(--paper), var(--paper-2));
+}
+
+.page {
+  min-height: 100vh;
+  padding: 2rem 1.5rem 4rem;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.hand {
+  font-family: "Yomogi", "Zen Maru Gothic", sans-serif;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.site-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  background: var(--accent);
+  border: 2px solid var(--outline);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--outline);
+  background: var(--paper);
+  display: grid;
+  place-items: center;
+}
+
+.avatar::after {
+  content: "";
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--outline);
+  border-radius: 50%;
+  position: relative;
+  top: -6px;
+}
+
+.avatar::before {
+  content: "";
+  width: 36px;
+  height: 20px;
+  border: 2px solid var(--outline);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  position: relative;
+  top: 18px;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.profile-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--outline);
+  padding-bottom: 0.4rem;
+  min-width: 220px;
+}
+
+.edit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--accent);
+  border: 2px solid var(--outline);
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.2rem 0 2rem;
+}
+
+.link-chip {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--external);
+  border: 2px solid var(--outline);
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.section {
+  margin-top: 2rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1.4rem;
+  background: var(--accent);
+  border: 2px solid var(--outline);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.toggle-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.toggle {
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 2px solid var(--outline);
+  background: var(--paper);
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.toggle.is-active {
+  background: var(--accent);
+}
+
+.section[data-visibility="private"] .section-body {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.2rem;
+  margin-top: 1.2rem;
+}
+
+.tile {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tile-box {
+  background: var(--external);
+  border: 2px solid var(--outline);
+  border-radius: 12px;
+  aspect-ratio: 1 / 1;
+  box-shadow: var(--shadow);
+}
+
+.tile-title {
+  font-weight: 700;
+}
+
+.list-row {
+  margin-top: 1rem;
+  border: 2px solid var(--outline);
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  background: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.list-row .thumb {
+  background: var(--accent-dark);
+  border-right: 2px solid var(--outline);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.list-row .title {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-weight: 700;
+}
+
+.favorite-list {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--outline);
+  border-radius: 10px;
+  background: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.favorite-item .name {
+  font-weight: 700;
+}
+
+.list-page-title {
+  text-align: center;
+  font-size: 2rem;
+  margin: 1.2rem 0 0.6rem;
+}
+
+.list-meta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  align-items: center;
+}
+
+.oshi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+  margin-top: 1.5rem;
+}
+
+.oshi-card {
+  border: 2px solid var(--outline);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.oshi-card .image {
+  position: relative;
+  background: var(--external);
+  aspect-ratio: 1 / 1;
+  border-bottom: 2px solid var(--outline);
+}
+
+.badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: var(--accent);
+  border: 2px solid var(--outline);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.oshi-card .content {
+  padding: 0.8rem 1rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag {
+  background: var(--accent);
+  border: 2px solid var(--outline);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.section-note {
+  font-size: 0.9rem;
+  color: #5c5148;
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 640px) {
+  .profile-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-name {
+    width: 100%;
+  }
+
+  .list-row {
+    grid-template-columns: 1fr;
+  }
+
+  .list-row .thumb {
+    border-right: none;
+    border-bottom: 2px solid var(--outline);
+    padding: 0.8rem 0;
+  }
+}

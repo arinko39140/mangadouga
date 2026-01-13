@@ -1,0 +1,3 @@
+list_id,user_id,favorite_count,can_display
+2,2,112,TRUE
+1,1,60,FALSE
