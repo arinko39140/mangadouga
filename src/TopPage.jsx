@@ -22,13 +22,15 @@ const getJstWeekdayKey = () => {
   return JST_WEEKDAY_KEYS[jstDate.getUTCDay()]
 }
 
+const defaultWeekdayDataProvider = createWeekdayDataProvider(supabase)
+
 const buildEmptyWeekdayLists = () =>
   WEEKDAYS.map((weekday) => ({
     weekday: weekday.key,
     items: [],
   }))
 
-function TopPage({ dataProvider = createWeekdayDataProvider(supabase) }) {
+function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
   const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
   const [isLoading, setIsLoading] = useState(true)
