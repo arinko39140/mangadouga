@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from './supabaseClient.js'
+import { createWeekdayDataProvider } from './weekdayDataProvider.js'
 import './TopPage.css'
 
 const WEEKDAYS = [
@@ -20,10 +22,34 @@ const getJstWeekdayKey = () => {
   return JST_WEEKDAY_KEYS[jstDate.getUTCDay()]
 }
 
-function TopPage() {
+const buildEmptyWeekdayLists = () =>
+  WEEKDAYS.map((weekday) => ({
+    weekday: weekday.key,
+    items: [],
+  }))
+
+function TopPage({ dataProvider = createWeekdayDataProvider(supabase) }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
+  const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
+  const selectedList =
+    weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+
+  useEffect(() => {
+    let isMounted = true
+
+    dataProvider.fetchWeekdayLists().then((result) => {
+      if (!isMounted) return
+      if (result.ok) {
+        setWeekdayLists(result.data)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [dataProvider])
 
   return (
     <main className="top-page">
@@ -55,6 +81,11 @@ function TopPage() {
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
           <p>{selectedWeekdayLabel}曜日の一覧</p>
+          <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
+            {selectedList.map((item) => (
+              <li key={item.id}>{item.title}</li>
+            ))}
+          </ul>
         </section>
         <aside className="top-page__link top-page__link--cta" aria-label="推しリスト導線">
           <h2>推しリスト導線</h2>

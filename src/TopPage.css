@@ -67,6 +67,13 @@
   letter-spacing: 0.02em;
 }
 
+.top-page__list-items {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
 .top-page__nav h2,
 .top-page__list h2,
 .top-page__link h2 {

@@ -3,10 +3,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import TopPage from './TopPage.jsx'
 
-const renderTopPage = () =>
+const renderTopPage = (props = {}) =>
   render(
     <MemoryRouter>
-      <TopPage />
+      <TopPage {...props} />
     </MemoryRouter>
   )
 
@@ -78,5 +78,39 @@ describe('TopPage layout', () => {
     expect(selectedButtons).toHaveLength(1)
     expect(selectedButtons[0]).toBe(targetButton)
     expect(screen.getByText('土曜日の一覧')).toBeInTheDocument()
+  })
+
+  it('取得データが曜日別一覧に反映され、人気順で表示される', async () => {
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'mon',
+            items: [
+              { id: 'm1', title: '人気一位', popularityScore: 200 },
+              { id: 'm2', title: '人気二位', popularityScore: 120 },
+            ],
+          },
+          { weekday: 'tue', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    fireEvent.click(screen.getByRole('button', { name: '月' }))
+
+    await screen.findByText('人気一位')
+    const list = screen.getByRole('list', { name: '曜日別一覧のアイテム' })
+    const items = list.querySelectorAll('li')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('人気一位')
+    expect(items[1]).toHaveTextContent('人気二位')
   })
 })
