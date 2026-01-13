@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
   },
   test: {
     environment: 'jsdom',
