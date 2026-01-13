@@ -1,0 +1,63 @@
+import { describe, expect, it, vi } from 'vitest'
+import { createWeekdayDataProvider, WEEKDAY_KEYS } from './weekdayDataProvider.js'
+
+const buildSupabaseMock = (rows) => {
+  const orderMock = vi.fn().mockResolvedValue({ data: rows, error: null })
+  const gteMock = vi.fn().mockReturnValue({ order: orderMock })
+  const selectMock = vi.fn().mockReturnValue({ gte: gteMock })
+  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+
+  return {
+    client: { from: fromMock },
+    calls: { fromMock, selectMock, gteMock, orderMock },
+  }
+}
+
+describe('WeekdayDataProvider', () => {
+  it('過去1週間の条件と人気順の条件で取得し、曜日ごとに返す', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const rows = [
+      {
+        movie_id: 'm1',
+        movie_title: '月曜のレター',
+        url: '/movies/m1',
+        favorite_count: 120,
+        update: '2026-01-19T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 't1',
+        movie_title: '火のしおり',
+        url: '/movies/t1',
+        favorite_count: 90,
+        update: '2026-01-18T10:00:00Z',
+        series_id: null,
+        weekday: 'tue',
+      },
+    ]
+
+    const { client, calls } = buildSupabaseMock(rows)
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(calls.fromMock).toHaveBeenCalledWith('movie')
+    expect(calls.selectMock).toHaveBeenCalled()
+    expect(calls.gteMock).toHaveBeenCalledWith('update', '2026-01-14T12:00:00.000Z')
+    expect(calls.orderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(WEEKDAY_KEYS.length)
+    const monday = result.data.find((list) => list.weekday === 'mon')
+    expect(monday.items[0]).toMatchObject({
+      title: '月曜のレター',
+      popularityScore: 120,
+      weekday: 'mon',
+    })
+
+    vi.useRealTimers()
+  })
+})
