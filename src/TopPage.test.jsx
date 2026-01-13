@@ -52,6 +52,15 @@ describe('TopPage layout', () => {
     expect(link).toHaveAttribute('href', '/oshi-lists/')
   })
 
+  it('推しリスト導線のリンク先が推しリストページである', () => {
+    renderTopPage()
+
+    expect(screen.getByRole('link', { name: '推しリスト一覧へ' })).toHaveAttribute(
+      'href',
+      '/oshi-lists/'
+    )
+  })
+
   it('JST基準の現在曜日が初期選択になり、一覧が表示される', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
