@@ -15,4 +15,14 @@ describe('TopPage layout', () => {
       screen.getByRole('complementary', { name: '推しリスト導線' })
     ).toBeInTheDocument()
   })
+
+  it('曜日ナビゲーションは7曜日を表示し、選択状態が識別できる', () => {
+    render(<TopPage />)
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons).toHaveLength(7)
+
+    const selected = buttons.find((button) => button.getAttribute('aria-pressed') === 'true')
+    expect(selected).toBeTruthy()
+  })
 })
