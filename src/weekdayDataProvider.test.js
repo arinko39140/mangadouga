@@ -13,6 +13,18 @@ const buildSupabaseMock = (rows) => {
   }
 }
 
+const buildSupabaseErrorMock = (error) => {
+  const orderMock = vi.fn().mockResolvedValue({ data: null, error })
+  const gteMock = vi.fn().mockReturnValue({ order: orderMock })
+  const selectMock = vi.fn().mockReturnValue({ gte: gteMock })
+  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+
+  return {
+    client: { from: fromMock },
+    calls: { fromMock, selectMock, gteMock, orderMock },
+  }
+}
+
 describe('WeekdayDataProvider', () => {
   it('過去1週間の条件と人気順の条件で取得し、曜日ごとに返す', async () => {
     vi.useFakeTimers()
@@ -59,5 +71,42 @@ describe('WeekdayDataProvider', () => {
     })
 
     vi.useRealTimers()
+  })
+
+  it('Supabase未設定の場合はnot_configuredとして返す', async () => {
+    const provider = createWeekdayDataProvider(null)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(result).toEqual({ ok: false, error: 'not_configured' })
+  })
+
+  it('通信失敗時はnetworkとして返す', async () => {
+    const { client } = buildSupabaseErrorMock(new Error('Failed to fetch'))
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(result).toEqual({ ok: false, error: 'network' })
+  })
+
+  it('不明な失敗時はunknownとして返す', async () => {
+    const { client } = buildSupabaseErrorMock(new Error('boom'))
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(result).toEqual({ ok: false, error: 'unknown' })
+  })
+
+  it('空データの場合は空の曜日一覧を返す', async () => {
+    const { client } = buildSupabaseMock([])
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(WEEKDAY_KEYS.length)
+    expect(result.data.every((list) => list.items.length === 0)).toBe(true)
   })
 })

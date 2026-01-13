@@ -35,8 +35,18 @@ const buildWeekThreshold = () => {
   return new Date(Date.now() - sixDaysInMs).toISOString()
 }
 
+const isNetworkError = (error) => {
+  if (!error) return false
+  const message = String(error.message ?? '')
+  return message.includes('Failed to fetch') || message.includes('NetworkError')
+}
+
 export const createWeekdayDataProvider = (supabaseClient) => ({
   async fetchWeekdayLists() {
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
     const { data, error } = await supabaseClient
       .from('movie')
       .select(
@@ -46,7 +56,10 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       .order('favorite_count', { ascending: false })
 
     if (error) {
-      throw error
+      return {
+        ok: false,
+        error: isNetworkError(error) ? 'network' : 'unknown',
+      }
     }
 
     return {
