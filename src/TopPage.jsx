@@ -11,8 +11,18 @@ const WEEKDAYS = [
   { key: 'sun', label: '日' },
 ]
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+const JST_WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+const getJstWeekdayKey = () => {
+  const jstDate = new Date(Date.now() + JST_OFFSET_MS)
+  return JST_WEEKDAY_KEYS[jstDate.getUTCDay()]
+}
+
 function TopPage() {
-  const selectedWeekday = 'mon'
+  const selectedWeekday = getJstWeekdayKey()
+  const selectedWeekdayLabel =
+    WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
 
   return (
     <main className="top-page">
@@ -42,7 +52,7 @@ function TopPage() {
         </nav>
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
-          <p>ここに曜日別の一覧が表示されます。</p>
+          <p>{selectedWeekdayLabel}曜日の一覧</p>
         </section>
         <aside className="top-page__link top-page__link--cta" aria-label="推しリスト導線">
           <h2>推しリスト導線</h2>

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { vi } from 'vitest'
 import TopPage from './TopPage.jsx'
 
 const renderTopPage = () =>
@@ -49,5 +50,18 @@ describe('TopPage layout', () => {
 
     const link = screen.getByRole('link', { name: '推しリスト一覧へ' })
     expect(link).toHaveAttribute('href', '/oshi-lists/')
+  })
+
+  it('JST基準の現在曜日が初期選択になり、一覧が表示される', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    renderTopPage()
+
+    const selectedButton = screen.getByRole('button', { name: '火' })
+    expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('火曜日の一覧')).toBeInTheDocument()
+
+    vi.useRealTimers()
   })
 })
