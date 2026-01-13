@@ -25,4 +25,14 @@ describe('TopPage layout', () => {
     const selected = buttons.find((button) => button.getAttribute('aria-pressed') === 'true')
     expect(selected).toBeTruthy()
   })
+
+  it('曜日一覧枠と推しリスト導線が見た目で区別できる', () => {
+    render(<TopPage />)
+
+    const listPanel = screen.getByRole('region', { name: '曜日別一覧' })
+    const listLink = screen.getByRole('complementary', { name: '推しリスト導線' })
+
+    expect(listPanel).toHaveClass('top-page__list--panel')
+    expect(listLink).toHaveClass('top-page__link--cta')
+  })
 })

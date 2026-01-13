@@ -43,6 +43,16 @@
   grid-area: link;
 }
 
+.top-page__list--panel {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(90, 70, 110, 0.2);
+}
+
+.top-page__link--cta {
+  background: linear-gradient(135deg, rgba(248, 226, 210, 0.95), rgba(255, 255, 255, 0.8));
+  border-color: rgba(176, 120, 120, 0.35);
+}
+
 .top-page__nav h2,
 .top-page__list h2,
 .top-page__link h2 {
