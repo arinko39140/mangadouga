@@ -15,6 +15,8 @@ Vite + Reactを中心にしたフロントエンドに、Supabaseを用いた動
 
 - `@vitejs/plugin-react` for React + Vite integration
 - `@supabase/supabase-js` for Supabase client access
+- `react-router-dom` for client-side routing
+- `vitest` + Testing Library for unit testing
 
 ## Development Standards
 
@@ -25,7 +27,7 @@ No TypeScript; rely on JavaScript conventions and ESLint.
 ESLint with React, hooks, and refresh plugins.
 
 ### Testing
-No automated test framework configured.
+Vitest + Testing Libraryでユニットテストを実行する。
 
 ## Development Environment
 
@@ -53,6 +55,8 @@ Node.js for Vite workflows.
 
 ## Updates
 
+- updated_at: 2026-01-13T17:10:00+0900
+- note: テスト実行環境とルーティング用ライブラリの方針を追記
 - updated_at: 2026-01-08T18:03:22+0900
 - note: 将来的な動的化とDB利用の方針を追記
 - updated_at: 2025-01-13T00:00:00+0900
