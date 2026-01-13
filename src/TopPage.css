@@ -53,6 +53,20 @@
   border-color: rgba(176, 120, 120, 0.35);
 }
 
+.top-page__link-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(60, 40, 90, 0.9);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .top-page__nav h2,
 .top-page__list h2,
 .top-page__link h2 {

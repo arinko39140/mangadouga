@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './TopPage.css'
 
 const WEEKDAYS = [
@@ -46,6 +47,9 @@ function TopPage() {
         <aside className="top-page__link top-page__link--cta" aria-label="推しリスト導線">
           <h2>推しリスト導線</h2>
           <p>推しリスト一覧への入口です。</p>
+          <Link className="top-page__link-action" to="/oshi-lists/">
+            推しリスト一覧へ
+          </Link>
         </aside>
       </div>
     </main>
