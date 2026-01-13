@@ -113,4 +113,50 @@ describe('TopPage layout', () => {
     expect(items[0]).toHaveTextContent('人気一位')
     expect(items[1]).toHaveTextContent('人気二位')
   })
+
+  it('読み込み中はローディング状態を表示する', () => {
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn(
+        () =>
+          new Promise(() => {
+            // keep pending for loading state
+          })
+      ),
+    }
+
+    renderTopPage({ dataProvider })
+
+    expect(screen.getByText('読み込み中...')).toBeInTheDocument()
+  })
+
+  it('取得失敗時はエラー状態を表示する', async () => {
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: false, error: 'network' }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    expect(await screen.findByText('通信エラーが発生しました。')).toBeInTheDocument()
+  })
+
+  it('一覧が空の場合は空状態を表示する', async () => {
+    const emptyLists = [
+      { weekday: 'mon', items: [] },
+      { weekday: 'tue', items: [] },
+      { weekday: 'wed', items: [] },
+      { weekday: 'thu', items: [] },
+      { weekday: 'fri', items: [] },
+      { weekday: 'sat', items: [] },
+      { weekday: 'sun', items: [] },
+    ]
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: true, data: emptyLists }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    expect(
+      await screen.findByText('表示できる一覧がありません。')
+    ).toBeInTheDocument()
+  })
 })

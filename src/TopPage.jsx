@@ -31,6 +31,8 @@ const buildEmptyWeekdayLists = () =>
 function TopPage({ dataProvider = createWeekdayDataProvider(supabase) }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
   const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
   const selectedList =
@@ -39,12 +41,23 @@ function TopPage({ dataProvider = createWeekdayDataProvider(supabase) }) {
   useEffect(() => {
     let isMounted = true
 
-    dataProvider.fetchWeekdayLists().then((result) => {
-      if (!isMounted) return
-      if (result.ok) {
-        setWeekdayLists(result.data)
-      }
-    })
+    setIsLoading(true)
+    setError(null)
+
+    dataProvider
+      .fetchWeekdayLists()
+      .then((result) => {
+        if (!isMounted) return
+        if (result.ok) {
+          setWeekdayLists(result.data)
+        } else {
+          setError(result.error)
+        }
+      })
+      .finally(() => {
+        if (!isMounted) return
+        setIsLoading(false)
+      })
 
     return () => {
       isMounted = false
@@ -81,11 +94,25 @@ function TopPage({ dataProvider = createWeekdayDataProvider(supabase) }) {
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
           <p>{selectedWeekdayLabel}曜日の一覧</p>
-          <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
-            {selectedList.map((item) => (
-              <li key={item.id}>{item.title}</li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <p className="top-page__status">読み込み中...</p>
+          ) : error ? (
+            <p className="top-page__status top-page__status--error">
+              {error === 'not_configured'
+                ? 'Supabaseの設定が不足しています。'
+                : error === 'network'
+                ? '通信エラーが発生しました。'
+                : '不明なエラーが発生しました。'}
+            </p>
+          ) : selectedList.length === 0 ? (
+            <p className="top-page__status">表示できる一覧がありません。</p>
+          ) : (
+            <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
+              {selectedList.map((item) => (
+                <li key={item.id}>{item.title}</li>
+              ))}
+            </ul>
+          )}
         </section>
         <aside className="top-page__link top-page__link--cta" aria-label="推しリスト導線">
           <h2>推しリスト導線</h2>

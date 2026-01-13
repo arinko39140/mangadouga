@@ -74,6 +74,16 @@
   gap: 0.4rem;
 }
 
+.top-page__status {
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.75);
+}
+
+.top-page__status--error {
+  color: #a33a32;
+}
+
 .top-page__nav h2,
 .top-page__list h2,
 .top-page__link h2 {
