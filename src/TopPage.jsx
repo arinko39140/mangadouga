@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './TopPage.css'
 
@@ -20,7 +21,7 @@ const getJstWeekdayKey = () => {
 }
 
 function TopPage() {
-  const selectedWeekday = getJstWeekdayKey()
+  const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
 
@@ -43,6 +44,7 @@ function TopPage() {
                     : 'top-page__weekday-button'
                 }
                 aria-pressed={weekday.key === selectedWeekday}
+                onClick={() => setSelectedWeekday(weekday.key)}
               >
                 {weekday.label}
               </button>

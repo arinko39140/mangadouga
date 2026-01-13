@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import TopPage from './TopPage.jsx'
@@ -63,5 +63,20 @@ describe('TopPage layout', () => {
     expect(screen.getByText('火曜日の一覧')).toBeInTheDocument()
 
     vi.useRealTimers()
+  })
+
+  it('曜日を選択すると選択状態と一覧が切り替わる', () => {
+    renderTopPage()
+
+    const targetButton = screen.getByRole('button', { name: '土' })
+    fireEvent.click(targetButton)
+
+    const selectedButtons = screen
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true')
+
+    expect(selectedButtons).toHaveLength(1)
+    expect(selectedButtons[0]).toBe(targetButton)
+    expect(screen.getByText('土曜日の一覧')).toBeInTheDocument()
   })
 })
