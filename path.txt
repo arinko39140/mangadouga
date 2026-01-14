@@ -1,1 +1,7 @@
 /mnt/c/Users/arink/OneDrive/Desktop/mangadouga
+
+ステップ1：top-page-layout-weekday-list
+
+ステップ2：work-page-playback-episode-list
+
+supabase 1192Jmdw!-893

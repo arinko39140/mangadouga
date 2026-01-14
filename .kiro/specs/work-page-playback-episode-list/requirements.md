@@ -40,7 +40,8 @@
 #### Acceptance Criteria
 1. The Work Page UI shall 作品のお気に入り登録用のスター表示を行う
 2. When ユーザーがスター表示を選択したとき, the Work Page UI shall 作品をお気に入りに登録する
-3. When 作品がお気に入りに登録されている場合, the Work Page UI shall 登録済みであることを示す状態を表示する
+3. If ユーザーが未ログインの状態でスター表示を選択したとき, the Work Page UI shall ログイン画面へ誘導する
+4. When 作品がお気に入りに登録されている場合, the Work Page UI shall 登録済みであることを示す状態を表示する
 
 ### Requirement 5: 話数選択と再生領域の連動
 **Objective:** As a 閲覧ユーザー, I want 話数一覧から再生対象を切り替えられる, so that 視聴したい話数へ素早く移動できる
@@ -72,5 +73,6 @@
 1. Where 話数が推しリストに登録されている場合, the Work Page UI shall 該当話数に「済」表示を行う
 2. If 話数が推しリストに登録されていない場合, the Work Page UI shall 該当話数に「推」表示を行う
 3. When ユーザーが「推」表示を選択したとき, the Work Page UI shall 話数を推しリストに登録する
-4. When 推しリストへの登録が完了したとき, the Work Page UI shall 「推」表示を「済」表示に切り替える
-5. The Work Page UI shall 話数一覧上で登録済みの話数を識別できるようにする
+4. If ユーザーが未ログインの状態で「推」表示を選択したとき, the Work Page UI shall ログイン画面へ誘導する
+5. When 推しリストへの登録が完了したとき, the Work Page UI shall 「推」表示を「済」表示に切り替える
+6. The Work Page UI shall 話数一覧上で登録済みの話数を識別できるようにする
