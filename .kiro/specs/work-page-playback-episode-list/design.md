@@ -5,7 +5,7 @@
 
 対象ユーザーは閲覧ユーザーであり、作品ページ内で話数を選び、推しやお気に入りを記録するワークフローを持つ。既存のTopPageの状態分岐・データ取得パターンを踏襲しつつ、作品ページ専用のUIとデータ契約を設計する。
 
-本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。
+本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`が`null`の話数は一覧に表示しない。
 
 ### Goals
 - 作品ページで動画再生と話数一覧を統合した閲覧体験を提供する
@@ -83,7 +83,7 @@ sequenceDiagram
     participant SupabaseDB
     User ->> WorkPageUI: 推し または お気に入り操作
     WorkPageUI ->> AuthGate: ensureAuthenticated
-    AuthGate -->> WorkPageUI: redirect to /login/ when auth_required
+    AuthGate -->> WorkPageUI: redirect to /login/?redirect=/series/:seriesId/ when auth_required
     WorkPageUI ->> DataProvider: toggleOshi or toggleFavorite
     DataProvider ->> SupabaseDB: upsert or delete
     SupabaseDB -->> DataProvider: updated status
@@ -157,6 +157,7 @@ sequenceDiagram
 - 初期表示で最新話を選択し、未取得時はローディングを表示する
 - ソート変更時に一覧と選択状態の整合を保つ
   - ソート変更時は`selectedEpisodeId`が新しい並びに存在する場合は維持し、存在しない場合のみ`sortOrder`に従って先頭話数を選択する
+- `auth_required`を受け取った場合は、即時に`AuthGate.redirectToLogin`を呼び出す
 
 **Dependencies**
 - Inbound: Router — `seriesId`の受け取り (P0)
@@ -227,6 +228,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: 公開日未設定の表示ラベルを統一
 - Validation: サムネイル欠損時はプレースホルダ
+- Validation: `publishedAt`が`null`の話数は一覧に表示しない
 - Risks: 日付フォーマットの統一ルールが未定
 
 #### SortControl
@@ -329,8 +331,9 @@ interface WorkPageDataProvider {
   - 認証が必要な操作は`auth_required`を返す
 - Postconditions:
   - `fetch`系はソート済みの結果を返す
-  - 最新話は`movie.update`が最も新しい話数として扱う
+  - 最新話は`movie.update`が最も新しい話数として扱う（同日複数話は時間が新しい方を優先）
   - `publishedAt`は`movie.update`をそのままマッピングする
+  - `movie.update`が`null`の話数は返却しない
   - `toggle`系は最新の状態を返す
 - Invariants:
   - `publishedAt`未設定は`null`で統一
