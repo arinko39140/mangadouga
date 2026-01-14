@@ -5,7 +5,7 @@
 
 対象ユーザーは閲覧ユーザーであり、作品ページ内で話数を選び、推しやお気に入りを記録するワークフローを持つ。既存のTopPageの状態分岐・データ取得パターンを踏襲しつつ、作品ページ専用のUIとデータ契約を設計する。
 
-本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`が`null`の話数は一覧に表示しない。
+本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`が`null`の話数は一覧に表示し、「未設定」ラベルで扱い、ソートは常に末尾に配置する。
 
 ### Goals
 - 作品ページで動画再生と話数一覧を統合した閲覧体験を提供する
@@ -228,7 +228,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: 公開日未設定の表示ラベルを統一
 - Validation: サムネイル欠損時はプレースホルダ
-- Validation: `publishedAt`が`null`の話数は一覧に表示しない
+- Validation: `publishedAt`が`null`の話数は一覧に表示し、「未設定」ラベルで表示する
 - Risks: 日付フォーマットの統一ルールが未定
 
 #### SortControl
@@ -333,7 +333,7 @@ interface WorkPageDataProvider {
   - `fetch`系はソート済みの結果を返す
   - 最新話は`movie.update`が最も新しい話数として扱う（同日複数話は時間が新しい方を優先）
   - `publishedAt`は`movie.update`をそのままマッピングする
-  - `movie.update`が`null`の話数は返却しない
+  - `movie.update`が`null`の話数は返却し、「未設定」として扱う
   - `toggle`系は最新の状態を返す
 - Invariants:
   - `publishedAt`未設定は`null`で統一
