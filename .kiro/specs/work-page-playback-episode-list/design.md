@@ -71,6 +71,7 @@ sequenceDiagram
     DataProvider ->> SupabaseDB: select movie by series_id order update desc
     SupabaseDB -->> DataProvider: episode list
     WorkPageUI -->> User: 最新話を選択して表示
+    Note over WorkPageUI: sortOrder変更時はselectedEpisodeIdを維持。存在しない場合のみ先頭話数を選択
 ```
 
 ```mermaid
@@ -82,7 +83,7 @@ sequenceDiagram
     participant SupabaseDB
     User ->> WorkPageUI: 推し または お気に入り操作
     WorkPageUI ->> AuthGate: ensureAuthenticated
-    AuthGate -->> WorkPageUI: redirect to login
+    AuthGate -->> WorkPageUI: redirect to /login/ when auth_required
     WorkPageUI ->> DataProvider: toggleOshi or toggleFavorite
     DataProvider ->> SupabaseDB: upsert or delete
     SupabaseDB -->> DataProvider: updated status
@@ -155,6 +156,7 @@ sequenceDiagram
 - 作品情報・話数一覧・選択中話数の統合状態を保持する
 - 初期表示で最新話を選択し、未取得時はローディングを表示する
 - ソート変更時に一覧と選択状態の整合を保つ
+  - ソート変更時は`selectedEpisodeId`が新しい並びに存在する場合は維持し、存在しない場合のみ`sortOrder`に従って先頭話数を選択する
 
 **Dependencies**
 - Inbound: Router — `seriesId`の受け取り (P0)
@@ -237,7 +239,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: `sortOrder`状態を更新
 - Validation: 初期値は`latest`
-- Risks: ソート時の選択話数の再選択仕様
+- Risks: 選択話数がソート後の一覧に存在しない場合のみ先頭話数を選択する
 
 #### FavoriteStarButton
 
@@ -249,7 +251,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: 操作時に`AuthGate`を経由
 - Validation: 未ログイン時はログイン誘導
-- Risks: 認証状態の取得方式が未確定
+- Risks: 認証方式決定に伴う契約変更
 
 #### OshiBadgeButton
 
@@ -276,6 +278,7 @@ sequenceDiagram
 - Supabaseから作品情報と話数一覧を取得
 - ソート順に応じて`movie.update`で並び替えた結果を返す
 - 推し/お気に入りの登録状態を更新する
+- 認証が必要な操作は`auth_required`を返し、`AuthGate`に委譲する
 
 **Dependencies**
 - Inbound: WorkPageUI — 取得/更新の依頼 (P0)
@@ -346,7 +349,8 @@ interface WorkPageDataProvider {
 
 **Responsibilities & Constraints**
 - 未ログイン時に`/login/`への遷移を促す（新規ルートとして追加）
-- 認証状態の判定方法は将来の認証実装に合わせる
+- 認証状態の判定はSupabase Authを前提とする
+- `auth_required`のハンドリングは`AuthGate`に集約する
 
 **Dependencies**
 - Inbound: WorkPageUI — 認証ガードの呼び出し (P0)
@@ -376,6 +380,7 @@ interface AuthGate {
   - 未ログイン時は常に`/login/`へ遷移する
 
 **Implementation Notes**
+- Integration: 認証取得は暫定的にSupabase Authを前提とし、`/login/`ルートは最小のダミー実装でも良い
 - Integration: 認証実装が無い場合は常に未ログインとして扱う
 - Validation: 認証取得失敗時は未ログイン扱い
 - Risks: 認証方式決定に伴う契約変更
@@ -418,9 +423,10 @@ erDiagram
   - `movie_id` uuid PK
   - `movie_title` text not null
   - `url` text
+  - `thumbnail_url` text
   - `update` timestamptz
   - `series_id` uuid FK -> series.series_id
-  - サムネイルは将来的に`movie.thumbnail_url`を追加する想定
+  - サムネイルは`movie.thumbnail_url`を参照する
 - `series_favorite`
   - `series_id` uuid FK
   - `user_id` uuid FK
@@ -436,6 +442,7 @@ erDiagram
 **API Data Transfer**
 - `SeriesDetail`と`EpisodeSummary`をUIに返却
 - `publishedAt`は`movie.update`由来のISO文字列、未設定は`null`
+- `thumbnailUrl`は`movie.thumbnail_url`由来、未設定は`null`
 
 ## Error Handling
 
