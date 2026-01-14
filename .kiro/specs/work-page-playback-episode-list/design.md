@@ -5,7 +5,7 @@
 
 対象ユーザーは閲覧ユーザーであり、作品ページ内で話数を選び、推しやお気に入りを記録するワークフローを持つ。既存のTopPageの状態分岐・データ取得パターンを踏襲しつつ、作品ページ専用のUIとデータ契約を設計する。
 
-本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定する。
+本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。
 
 ### Goals
 - 作品ページで動画再生と話数一覧を統合した閲覧体験を提供する
@@ -327,6 +327,7 @@ interface WorkPageDataProvider {
 - Postconditions:
   - `fetch`系はソート済みの結果を返す
   - 最新話は`movie.update`が最も新しい話数として扱う
+  - `publishedAt`は`movie.update`をそのままマッピングする
   - `toggle`系は最新の状態を返す
 - Invariants:
   - `publishedAt`未設定は`null`で統一
@@ -344,7 +345,7 @@ interface WorkPageDataProvider {
 | Requirements | 4.3, 8.4 |
 
 **Responsibilities & Constraints**
-- 未ログイン時に`/login/`への遷移を促す
+- 未ログイン時に`/login/`への遷移を促す（新規ルートとして追加）
 - 認証状態の判定方法は将来の認証実装に合わせる
 
 **Dependencies**
@@ -434,7 +435,7 @@ erDiagram
 ### Data Contracts & Integration
 **API Data Transfer**
 - `SeriesDetail`と`EpisodeSummary`をUIに返却
-- `publishedAt`はISO文字列、未設定は`null`
+- `publishedAt`は`movie.update`由来のISO文字列、未設定は`null`
 
 ## Error Handling
 
