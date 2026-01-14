@@ -5,7 +5,7 @@
 
 対象ユーザーは閲覧ユーザーであり、作品ページ内で話数を選び、推しやお気に入りを記録するワークフローを持つ。既存のTopPageの状態分岐・データ取得パターンを踏襲しつつ、作品ページ専用のUIとデータ契約を設計する。
 
-本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`が`null`の話数は一覧に表示し、「未設定」ラベルで扱い、ソートは常に末尾に配置する。
+本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。公開日が更新に連動して変わる運用とし、メタ更新があれば公開日も更新されるものとする。`movie.update`が`null`の話数は一覧に表示し、「未設定」ラベルで扱い、ソートは常に末尾に配置する。
 
 ### Goals
 - 作品ページで動画再生と話数一覧を統合した閲覧体験を提供する
@@ -157,6 +157,7 @@ sequenceDiagram
 - 初期表示で最新話を選択し、未取得時はローディングを表示する
 - ソート変更時に一覧と選択状態の整合を保つ
   - ソート変更時は`selectedEpisodeId`が新しい並びに存在する場合は維持し、存在しない場合のみ`sortOrder`に従って先頭話数を選択する
+- ログイン復帰時は`redirect`パラメータから`seriesId`/`selectedEpisodeId`/`sortOrder`を復元し、操作継続可能な状態に戻す
 - `auth_required`を受け取った場合は、即時に`AuthGate.redirectToLogin`を呼び出す
 
 **Dependencies**
@@ -385,6 +386,7 @@ interface AuthGate {
 **Implementation Notes**
 - Integration: 認証取得は暫定的にSupabase Authを前提とし、`/login/`ルートは最小のダミー実装でも良い
 - Integration: 認証実装が無い場合は常に未ログインとして扱う
+- Integration: `/login/`へ遷移する際は`redirect`に`/series/:seriesId/`と`selectedEpisodeId`/`sortOrder`を含める
 - Validation: 認証取得失敗時は未ログイン扱い
 - Risks: 認証方式決定に伴う契約変更
 
