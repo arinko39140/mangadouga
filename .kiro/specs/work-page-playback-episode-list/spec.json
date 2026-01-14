@@ -1,16 +1,16 @@
 {
   "feature_name": "work-page-playback-episode-list",
   "created_at": "2026-01-13T08:20:08Z",
-  "updated_at": "2026-01-13T09:54:56Z",
+  "updated_at": "2026-01-14T07:29:33Z",
   "language": "ja",
-  "phase": "requirements-generated",
+  "phase": "design-generated",
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true
     },
     "design": {
-      "generated": false,
+      "generated": true,
       "approved": false
     },
     "tasks": {
