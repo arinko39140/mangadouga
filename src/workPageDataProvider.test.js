@@ -161,6 +161,43 @@ describe('WorkPageDataProvider', () => {
     ])
   })
 
+  it('古い順でも公開日未設定は末尾に配置する', async () => {
+    const rows = [
+      {
+        movie_id: 'episode-null',
+        movie_title: '未設定',
+        url: null,
+        thumbnail_url: null,
+        update: null,
+      },
+      {
+        movie_id: 'episode-old',
+        movie_title: '第1話',
+        url: '/watch/old',
+        thumbnail_url: null,
+        update: '2025-12-01T00:00:00Z',
+      },
+      {
+        movie_id: 'episode-latest',
+        movie_title: '最新話',
+        url: '/watch/latest',
+        thumbnail_url: null,
+        update: '2026-01-01T00:00:00Z',
+      },
+    ]
+    const { client } = buildEpisodesSupabaseMock(rows)
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchEpisodes('series-1', 'oldest')
+
+    expect(result.ok).toBe(true)
+    expect(result.data.map((episode) => episode.id)).toEqual([
+      'episode-old',
+      'episode-latest',
+      'episode-null',
+    ])
+  })
+
   it('Supabase未設定の場合はnot_configuredとして返す', async () => {
     const provider = createWorkPageDataProvider(null)
 
