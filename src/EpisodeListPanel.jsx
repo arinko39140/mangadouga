@@ -1,3 +1,5 @@
+import EpisodeListItem from './EpisodeListItem.jsx'
+
 function EpisodeListPanel({
   episodes = [],
   selectedEpisodeId = null,
@@ -32,7 +34,7 @@ function EpisodeListPanel({
                   aria-pressed={isSelected}
                   onClick={() => onSelectEpisode?.(episode.id)}
                 >
-                  {episode.title}
+                  <EpisodeListItem episode={episode} />
                 </button>
               </li>
             )
