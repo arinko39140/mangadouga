@@ -133,6 +133,26 @@ describe('WorkPage state', () => {
     })
   })
 
+  it('話数一覧が空の場合は空状態を表示する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1')
+
+    expect(await screen.findByText('話数が存在しません。')).toBeInTheDocument()
+    expect(screen.getByText('全0話')).toBeInTheDocument()
+  })
+
   it('並び順変更時に一覧と再生対象が一致するように更新される', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
@@ -198,6 +218,40 @@ describe('WorkPage state', () => {
     const oldestButton = await screen.findByRole('button', { name: '最古話' })
     expect(oldestButton).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByText('再生中: 最古話')).toBeInTheDocument()
+  })
+
+  it('並び順の切り替えで表示ラベルが更新される', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'episode-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: '/video/latest',
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1')
+
+    expect(await screen.findByText('並び順: 最新話')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '古い順' }))
+
+    expect(await screen.findByText('並び順: 古い順')).toBeInTheDocument()
   })
 
   it('話数一覧の更新で選択が失われた場合は先頭話数に切り替える', async () => {
