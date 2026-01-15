@@ -5,7 +5,7 @@
 
 対象ユーザーは閲覧ユーザーであり、作品ページ内で話数を選び、推しやお気に入りを記録するワークフローを持つ。既存のTopPageの状態分岐・データ取得パターンを踏襲しつつ、作品ページ専用のUIとデータ契約を設計する。
 
-本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`は初回取り込み日時として固定し、メタ更新では更新しない運用とする。`movie.update`が`null`の話数は一覧に表示し、「未設定」ラベルで扱い、ソートは常に末尾に配置する。
+本機能は`/series/:seriesId/`ルートを追加し、作品情報・話数情報・ユーザー状態の表示を行うことで、現行のルーティングとSupabase連携に新たな表示面を追加する。最新話は`movie.update`の最も新しい日時で判定し、公開日も`movie.update`を正式な基準として運用する（`published_at`は追加しない）。`movie.update`は初回取り込み日時として固定し、メタ更新では更新しない運用とする。不変性はDBトリガ/権限で担保する。`movie.update`が`null`の話数は一覧に表示し、「未設定」ラベルで扱い、ソートは常に末尾に配置する。
 
 ### Goals
 - 作品ページで動画再生と話数一覧を統合した閲覧体験を提供する
@@ -83,7 +83,7 @@ sequenceDiagram
     participant SupabaseDB
     User ->> WorkPageUI: 推し または お気に入り操作
     WorkPageUI ->> AuthGate: ensureAuthenticated
-    AuthGate -->> WorkPageUI: redirect to /login/?redirect=/series/:seriesId/ when auth_required
+    AuthGate -->> WorkPageUI: redirect to /login/?redirect=/series/:seriesId/ when unauthenticated
     WorkPageUI ->> DataProvider: toggleOshi or toggleFavorite
     DataProvider ->> SupabaseDB: upsert or delete
     SupabaseDB -->> DataProvider: updated status
@@ -158,7 +158,7 @@ sequenceDiagram
 - ソート変更時に一覧と選択状態の整合を保つ
   - ソート変更時は`selectedEpisodeId`が新しい並びに存在する場合は維持し、存在しない場合のみ`sortOrder`に従って先頭話数を選択する
 - ログイン復帰時は`redirect`パラメータから`seriesId`/`selectedEpisodeId`/`sortOrder`を復元し、操作継続可能な状態に戻す
-- `auth_required`を受け取った場合は、即時に`AuthGate.redirectToLogin`を呼び出す
+- 推し/お気に入り操作は事前に`AuthGate`で認証判定し、未ログイン時は即時にログイン導線へ遷移する
   - `redirect`形式: `/login/?redirect=${encodeURIComponent('/series/:seriesId/?selectedEpisodeId=...&sortOrder=latest|oldest')}`
 
 **Dependencies**
@@ -282,7 +282,7 @@ sequenceDiagram
 - Supabaseから作品情報と話数一覧を取得
 - ソート順に応じて`movie.update`で並び替えた結果を返す
 - 推し/お気に入りの登録状態を更新する
-- 認証が必要な操作は`auth_required`を返し、`AuthGate`に委譲する
+- 認証が必要な操作は`AuthGate`で事前判定し、DataProviderは認証済み前提で実行する
 - 未ログイン時の`isFavorited`/`isOshi`は常に`false`として返す
 
 **Dependencies**
@@ -302,9 +302,7 @@ type DataError =
   | { type: 'not_found' }
   | { type: 'unknown' }
 
-type AuthError = { type: 'auth_required' }
-
-type Result<T> = { ok: true; data: T } | { ok: false; error: DataError | AuthError }
+type Result<T> = { ok: true; data: T } | { ok: false; error: DataError }
 
 type SeriesDetail = {
   id: string
@@ -331,7 +329,7 @@ interface WorkPageDataProvider {
 ```
 - Preconditions:
   - `seriesId`と`episodeId`は必須
-  - 認証が必要な操作は`auth_required`を返す
+  - 認証が必要な操作は`AuthGate`で事前判定済みであること
 - Postconditions:
   - `fetch`系はソート済みの結果を返す
   - 最新話は`movie.update`が最も新しい話数として扱う（同日複数話は時間が新しい方を優先）
@@ -356,7 +354,7 @@ interface WorkPageDataProvider {
 **Responsibilities & Constraints**
 - 未ログイン時に`/login/`への遷移を促す（新規ルートとして追加）
 - 認証状態の判定はSupabase Authを前提とする
-- `auth_required`のハンドリングは`AuthGate`に集約する
+- 認証判定とログイン導線は`AuthGate`に集約する
 
 **Dependencies**
 - Inbound: WorkPageUI — 認証ガードの呼び出し (P0)
@@ -455,7 +453,7 @@ erDiagram
 
 ### Error Strategy
 - 取得失敗は`DataError`に正規化し、UIは状態表示で回復可能にする
-- 認証が必要な操作は`auth_required`としてログイン導線を提示する
+- 認証が必要な操作は`AuthGate`で判定しログイン導線を提示する
 
 ### Error Categories and Responses
 - **User Errors**: 未ログイン → ログイン導線表示
@@ -467,7 +465,7 @@ erDiagram
 
 ## Testing Strategy
 
-- Unit Tests: データプロバイダの`sortOrder`処理、エラー正規化、`auth_required`分岐
+- Unit Tests: データプロバイダの`sortOrder`処理、エラー正規化
 - Integration Tests: `/series/:seriesId/`表示、最新話の初期選択、ソート切替の反映
 - E2E/UI Tests: 話数選択→再生更新、未ログイン時の推し/お気に入り誘導
 
@@ -476,6 +474,7 @@ erDiagram
 ### Security Considerations
 - 推し/お気に入り更新は認証済みユーザーのみ許可
 - `series_favorite`と`episode_oshi`はユーザー単位のRLSポリシーを前提
+- `movie.update`は不変とし、DBトリガ/権限で更新を拒否する
 
 ### Performance & Scalability
 - 話数ソートはDB側の`order`を優先し、必要に応じてページングを導入
@@ -489,6 +488,7 @@ flowchart TD
     Phase2 --> Phase3[Create favorite and oshi tables]
     Phase3 --> Phase4[Enable RLS policies]
 ```
+- `movie.update`不変性を担保するトリガ/権限を追加する
 
 ## Supporting References (Optional)
 - 追加なし
