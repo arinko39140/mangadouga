@@ -37,6 +37,46 @@ const mapEpisodeRow = (row) => ({
   isOshi: false,
 })
 
+const toggleRecord = async ({
+  client,
+  table,
+  idField,
+  idValue,
+  resultKey,
+}) => {
+  const { data, error } = await client
+    .from(table)
+    .select(idField)
+    .eq(idField, idValue)
+    .limit(1)
+
+  if (error) {
+    return { ok: false, error: normalizeError(error) }
+  }
+
+  const exists = (data ?? []).length > 0
+
+  if (exists) {
+    const { error: deleteError } = await client
+      .from(table)
+      .delete()
+      .eq(idField, idValue)
+
+    if (deleteError) {
+      return { ok: false, error: normalizeError(deleteError) }
+    }
+
+    return { ok: true, data: { [resultKey]: false } }
+  }
+
+  const { error: insertError } = await client.from(table).insert({ [idField]: idValue })
+  if (insertError) {
+    return { ok: false, error: normalizeError(insertError) }
+  }
+
+  return { ok: true, data: { [resultKey]: true } }
+}
+
 export const createWorkPageDataProvider = (supabaseClient) => ({
   async fetchSeriesOverview(seriesId) {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
@@ -76,5 +116,33 @@ export const createWorkPageDataProvider = (supabaseClient) => ({
 
     const episodes = (data ?? []).map(mapEpisodeRow)
     return { ok: true, data: sortEpisodes(episodes, sortOrder) }
+  },
+
+  async toggleSeriesFavorite(seriesId) {
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    return toggleRecord({
+      client: supabaseClient,
+      table: 'series_favorite',
+      idField: 'series_id',
+      idValue: seriesId,
+      resultKey: 'isFavorited',
+    })
+  },
+
+  async toggleEpisodeOshi(episodeId) {
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    return toggleRecord({
+      client: supabaseClient,
+      table: 'episode_oshi',
+      idField: 'movie_id',
+      idValue: episodeId,
+      resultKey: 'isOshi',
+    })
   },
 })

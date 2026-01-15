@@ -24,6 +24,40 @@ const buildSeriesSupabaseMock = (rows, error = null) => {
   }
 }
 
+const buildToggleSupabaseMock = ({
+  table,
+  existing,
+  selectError = null,
+  mutateError = null,
+}) => {
+  const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
+  const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
+  const insertMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
+  const limitMock = vi.fn().mockResolvedValue({
+    data: existing ? [{ id: 'row' }] : [],
+    error: selectError,
+  })
+  const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
+  const fromMock = vi.fn().mockImplementation((name) => {
+    if (name !== table) return {}
+    return { select: selectMock, delete: deleteMock, insert: insertMock }
+  })
+
+  return {
+    client: { from: fromMock },
+    calls: {
+      fromMock,
+      selectMock,
+      eqMock,
+      limitMock,
+      deleteMock,
+      deleteEqMock,
+      insertMock,
+    },
+  }
+}
+
 describe('WorkPageDataProvider', () => {
   it('作品情報を取得して画面向けに変換する', async () => {
     const rows = [
@@ -169,6 +203,75 @@ describe('WorkPageDataProvider', () => {
       error: 'unknown',
     })
     await expect(episodesProvider.fetchEpisodes('series-1', 'latest')).resolves.toEqual({
+      ok: false,
+      error: 'unknown',
+    })
+  })
+
+  it('お気に入りが未登録の場合は登録して状態を返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      table: 'series_favorite',
+      existing: false,
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.toggleSeriesFavorite('series-1')
+
+    expect(calls.fromMock).toHaveBeenCalledWith('series_favorite')
+    expect(calls.selectMock).toHaveBeenCalled()
+    expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.insertMock).toHaveBeenCalledWith({ series_id: 'series-1' })
+    expect(result).toEqual({ ok: true, data: { isFavorited: true } })
+  })
+
+  it('お気に入りが登録済みの場合は解除して状態を返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      table: 'series_favorite',
+      existing: true,
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.toggleSeriesFavorite('series-1')
+
+    expect(calls.deleteMock).toHaveBeenCalled()
+    expect(calls.deleteEqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(result).toEqual({ ok: true, data: { isFavorited: false } })
+  })
+
+  it('推しが未登録の場合は登録して状態を返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      table: 'episode_oshi',
+      existing: false,
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.toggleEpisodeOshi('episode-1')
+
+    expect(calls.fromMock).toHaveBeenCalledWith('episode_oshi')
+    expect(calls.eqMock).toHaveBeenCalledWith('movie_id', 'episode-1')
+    expect(calls.insertMock).toHaveBeenCalledWith({ movie_id: 'episode-1' })
+    expect(result).toEqual({ ok: true, data: { isOshi: true } })
+  })
+
+  it('更新失敗時はエラーを正規化して返す', async () => {
+    const { client: favoriteClient } = buildToggleSupabaseMock({
+      table: 'series_favorite',
+      existing: false,
+      mutateError: new Error('NetworkError'),
+    })
+    const { client: oshiClient } = buildToggleSupabaseMock({
+      table: 'episode_oshi',
+      existing: false,
+      selectError: new Error('boom'),
+    })
+    const favoriteProvider = createWorkPageDataProvider(favoriteClient)
+    const oshiProvider = createWorkPageDataProvider(oshiClient)
+
+    await expect(favoriteProvider.toggleSeriesFavorite('series-1')).resolves.toEqual({
+      ok: false,
+      error: 'network',
+    })
+    await expect(oshiProvider.toggleEpisodeOshi('episode-1')).resolves.toEqual({
       ok: false,
       error: 'unknown',
     })
