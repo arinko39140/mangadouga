@@ -1,10 +1,13 @@
 import { BrowserRouter } from 'react-router-dom'
+import AppShell from './AppShell.jsx'
 import AppRouter from './AppRouter.jsx'
 
 function App() {
   return (
     <BrowserRouter>
-      <AppRouter />
+      <AppShell>
+        <AppRouter />
+      </AppShell>
     </BrowserRouter>
   )
 }
