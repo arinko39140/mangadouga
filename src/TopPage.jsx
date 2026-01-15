@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import PlaybackPanel from './PlaybackPanel.jsx'
 import { supabase } from './supabaseClient.js'
 import { createWeekdayDataProvider } from './weekdayDataProvider.js'
 import './TopPage.css'
@@ -39,6 +40,13 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
   const selectedList =
     weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+  const featuredEpisode = selectedList[0]
+    ? {
+        id: selectedList[0].id,
+        title: selectedList[0].title,
+        videoUrl: selectedList[0].detailPath ?? null,
+      }
+    : null
 
   useEffect(() => {
     let isMounted = true
@@ -72,6 +80,17 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
         <h1>トップページ</h1>
       </header>
       <div className="top-page__grid">
+        <section className="top-page__playback" aria-label="動画再生">
+          <h2>ピックアップ動画</h2>
+          <p>{selectedWeekdayLabel}曜日の人気動画を再生できます。</p>
+          {isLoading ? (
+            <p className="top-page__status">再生準備中...</p>
+          ) : featuredEpisode ? (
+            <PlaybackPanel episode={featuredEpisode} isLoading={false} />
+          ) : (
+            <p className="top-page__status">再生できる動画がありません。</p>
+          )}
+        </section>
         <nav className="top-page__nav" aria-label="曜日ナビゲーション">
           <h2>曜日ナビゲーション</h2>
           <div className="top-page__weekday">

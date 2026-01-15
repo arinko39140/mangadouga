@@ -16,6 +16,7 @@
   gap: 1.5rem;
   grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
   grid-template-areas:
+    'playback playback'
     'nav list'
     'link list';
 }
@@ -41,6 +42,40 @@
 
 .top-page__link {
   grid-area: link;
+}
+
+.top-page__playback {
+  grid-area: playback;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 99, 117, 0.15);
+  box-shadow: 0 18px 40px rgba(43, 27, 57, 0.12);
+}
+
+.top-page__playback .work-page__player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(35, 25, 45, 0.12);
+}
+
+.top-page__playback .work-page__player iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.top-page__playback .work-page__playback-fallback {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.top-page__playback .work-page__playback-link {
+  color: #2f2035;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .top-page__list--panel {
@@ -99,13 +134,20 @@
   color: rgba(44, 32, 50, 0.75);
 }
 
+.top-page__playback .work-page__status {
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.75);
+}
+
 .top-page__status--error {
   color: #a33a32;
 }
 
 .top-page__nav h2,
 .top-page__list h2,
-.top-page__link h2 {
+.top-page__link h2,
+.top-page__playback h2 {
   margin: 0 0 0.5rem;
   font-size: 1.1rem;
 }
@@ -136,7 +178,8 @@
 
 .top-page__nav p,
 .top-page__list p,
-.top-page__link p {
+.top-page__link p,
+.top-page__playback p {
   margin: 0;
   color: rgba(44, 32, 50, 0.75);
 }
@@ -145,6 +188,7 @@
   .top-page__grid {
     grid-template-columns: 1fr;
     grid-template-areas:
+      'playback'
       'nav'
       'list'
       'link';
