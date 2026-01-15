@@ -97,8 +97,18 @@ describe('TopPage layout', () => {
           {
             weekday: 'mon',
             items: [
-              { id: 'm1', title: '人気一位', popularityScore: 200 },
-              { id: 'm2', title: '人気二位', popularityScore: 120 },
+              {
+                id: 'm1',
+                title: '人気一位',
+                popularityScore: 200,
+                seriesId: 'series-1',
+              },
+              {
+                id: 'm2',
+                title: '人気二位',
+                popularityScore: 120,
+                seriesId: 'series-2',
+              },
             ],
           },
           { weekday: 'tue', items: [] },
@@ -121,6 +131,10 @@ describe('TopPage layout', () => {
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent('人気一位')
     expect(items[1]).toHaveTextContent('人気二位')
+    expect(screen.getByRole('link', { name: '人気一位' })).toHaveAttribute(
+      'href',
+      '/series/series-1/'
+    )
   })
 
   it('読み込み中はローディング状態を表示する', () => {

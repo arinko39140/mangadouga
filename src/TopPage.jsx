@@ -111,7 +111,18 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
           ) : (
             <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
               {selectedList.map((item) => (
-                <li key={item.id}>{item.title}</li>
+                <li key={item.id} className="top-page__work-item">
+                  {item.seriesId ? (
+                    <Link
+                      className="top-page__work-link"
+                      to={`/series/${item.seriesId}/`}
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className="top-page__work-title">{item.title}</span>
+                  )}
+                </li>
               ))}
             </ul>
           )}

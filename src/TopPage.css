@@ -74,6 +74,25 @@
   gap: 0.4rem;
 }
 
+.top-page__work-item {
+  line-height: 1.4;
+}
+
+.top-page__work-link,
+.top-page__work-title {
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.9);
+}
+
+.top-page__work-link {
+  text-decoration: none;
+}
+
+.top-page__work-link:hover,
+.top-page__work-link:focus-visible {
+  text-decoration: underline;
+}
+
 .top-page__status {
   margin: 0.75rem 0 0;
   font-weight: 600;
