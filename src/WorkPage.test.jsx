@@ -15,6 +15,18 @@ const renderWorkPage = (dataProvider, seriesId = 'series-1') =>
     </MemoryRouter>
   )
 
+const renderWorkPageWithUrl = (dataProvider, url) =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route
+          path="/series/:seriesId/"
+          element={<WorkPage dataProvider={dataProvider} />}
+        />
+      </Routes>
+    </MemoryRouter>
+  )
+
 describe('WorkPage state', () => {
   it('初期表示で最新話を選択し、再生対象に反映する', async () => {
     const dataProvider = {
@@ -208,5 +220,86 @@ describe('WorkPage state', () => {
     const newButton = await screen.findByRole('button', { name: 'C話' })
     expect(newButton).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('全1話')).toBeInTheDocument()
+  })
+
+  it('リダイレクトのパラメータから話数選択と並び順を復元する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'episode-old',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2025-12-01T00:00:00Z',
+            videoUrl: null,
+            isOshi: false,
+          },
+          {
+            id: 'episode-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: null,
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+
+    renderWorkPageWithUrl(
+      dataProvider,
+      '/series/series-1/?selectedEpisodeId=episode-old&sortOrder=oldest'
+    )
+
+    const selectedButton = await screen.findByRole('button', { name: '第1話' })
+    expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('並び順: 古い順')).toBeInTheDocument()
+    expect(await screen.findByText('再生中: 第1話')).toBeInTheDocument()
+  })
+
+  it('不正なパラメータは既定値へフォールバックする', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'episode-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: null,
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+
+    renderWorkPageWithUrl(
+      dataProvider,
+      '/series/series-1/?selectedEpisodeId=unknown&sortOrder=invalid'
+    )
+
+    const latestButton = await screen.findByRole('button', { name: '最新話' })
+    expect(latestButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('並び順: 最新話')).toBeInTheDocument()
   })
 })

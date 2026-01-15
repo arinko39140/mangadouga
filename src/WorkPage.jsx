@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 
 const defaultDataProvider = {
   fetchSeriesOverview: async () => ({ ok: false, error: 'not_configured' }),
@@ -7,13 +7,21 @@ const defaultDataProvider = {
 }
 
 const formatSortLabel = (sortOrder) => (sortOrder === 'latest' ? '最新話' : '古い順')
+const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
 
 function WorkPage({ dataProvider = defaultDataProvider }) {
   const { seriesId } = useParams()
+  const location = useLocation()
   const [series, setSeries] = useState(null)
   const [episodes, setEpisodes] = useState([])
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState(null)
-  const [sortOrder] = useState('latest')
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('selectedEpisodeId')
+  })
+  const [sortOrder, setSortOrder] = useState(() => {
+    const params = new URLSearchParams(location.search)
+    return parseSortOrder(params.get('sortOrder'))
+  })
   const [loading, setLoading] = useState({ series: false, episodes: false })
   const [error, setError] = useState({ series: null, episodes: null })
 
@@ -21,6 +29,20 @@ function WorkPage({ dataProvider = defaultDataProvider }) {
     () => episodes.find((episode) => episode.id === selectedEpisodeId) ?? null,
     [episodes, selectedEpisodeId]
   )
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const requestedSortOrder = params.get('sortOrder')
+    const requestedEpisodeId = params.get('selectedEpisodeId')
+
+    if (requestedSortOrder) {
+      setSortOrder(parseSortOrder(requestedSortOrder))
+    }
+
+    if (requestedEpisodeId) {
+      setSelectedEpisodeId(requestedEpisodeId)
+    }
+  }, [location.search])
 
   useEffect(() => {
     if (!seriesId) return
