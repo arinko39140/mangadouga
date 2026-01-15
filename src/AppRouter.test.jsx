@@ -19,4 +19,9 @@ describe('AppRouter', () => {
     renderWithRoute('/oshi-lists/')
     expect(screen.getByRole('heading', { name: '推しリスト' })).toBeInTheDocument()
   })
+
+  it('ルート/login/でログイン画面が表示される', () => {
+    renderWithRoute('/login/')
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
+  })
 })
