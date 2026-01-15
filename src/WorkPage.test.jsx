@@ -532,6 +532,51 @@ describe('WorkPage state', () => {
     expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
   })
 
+  it('推し解除で一覧上の表示が推に戻る', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'episode-1',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: '/video/1',
+            isOshi: true,
+          },
+        ],
+      }),
+      toggleEpisodeOshi: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { isOshi: false },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', authGate)
+
+    const oshiButton = await screen.findByRole('button', { name: '済' })
+    fireEvent.click(oshiButton)
+
+    await waitFor(() => {
+      expect(dataProvider.toggleEpisodeOshi).toHaveBeenCalledWith('episode-1')
+    })
+    expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
+  })
+
   it('未ログインの場合は推し操作でログイン導線へ誘導する', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
