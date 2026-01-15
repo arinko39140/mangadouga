@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import FavoriteStarButton from './FavoriteStarButton.jsx'
+import PlaybackPanel from './PlaybackPanel.jsx'
 import SeriesHeader from './SeriesHeader.jsx'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
@@ -168,13 +169,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         />
       </header>
       <section className="work-page__playback" aria-label="再生領域">
-        {loading.episodes ? (
-          <p className="work-page__status">再生準備中...</p>
-        ) : selectedEpisode ? (
-          <p className="work-page__playback-title">再生中: {selectedEpisode.title}</p>
-        ) : (
-          <p className="work-page__status">話数が選択されていません。</p>
-        )}
+        <PlaybackPanel episode={selectedEpisode} isLoading={loading.episodes} />
       </section>
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>
