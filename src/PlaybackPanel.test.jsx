@@ -8,15 +8,20 @@ describe('PlaybackPanel', () => {
     expect(screen.getByText('再生準備中...')).toBeInTheDocument()
   })
 
-  it('選択話数のタイトルを表示する', () => {
+  it('YouTubeのURLがあれば埋め込み再生を表示する', () => {
     render(
       <PlaybackPanel
         isLoading={false}
-        episode={{ id: 'e1', title: '第1話', videoUrl: '/video' }}
+        episode={{
+          id: 'e1',
+          title: '第1話',
+          videoUrl: 'https://www.youtube.com/watch?v=abc123',
+        }}
       />
     )
 
-    expect(screen.getByText('再生中: 第1話')).toBeInTheDocument()
+    const iframe = screen.getByTitle('再生中: 第1話')
+    expect(iframe).toHaveAttribute('src', 'https://www.youtube.com/embed/abc123')
   })
 
   it('動画URLが未設定の場合は代替表示を行う', () => {
@@ -28,5 +33,20 @@ describe('PlaybackPanel', () => {
     )
 
     expect(screen.getByText('動画URLが未設定です。')).toBeInTheDocument()
+  })
+
+  it('YouTube以外のURLはフォールバック表示にする', () => {
+    render(
+      <PlaybackPanel
+        isLoading={false}
+        episode={{ id: 'e1', title: '第1話', videoUrl: 'https://example.com/video' }}
+      />
+    )
+
+    expect(screen.getByText('対応していない動画URLです。')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '元の動画を開く' })).toHaveAttribute(
+      'href',
+      'https://example.com/video'
+    )
   })
 })

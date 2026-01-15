@@ -9,6 +9,7 @@ import SortControl from './SortControl.jsx'
 import { createMockWorkPageDataProvider } from './mockWorkPageDataProvider.js'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
+import './WorkPage.css'
 
 const defaultDataProvider = supabase
   ? createWorkPageDataProvider(supabase)

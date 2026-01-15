@@ -1,0 +1,33 @@
+.work-page__playback {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 99, 117, 0.15);
+  box-shadow: 0 18px 40px rgba(43, 27, 57, 0.12);
+}
+
+.work-page__player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(35, 25, 45, 0.12);
+}
+
+.work-page__player iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.work-page__playback-fallback {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.work-page__playback-link {
+  color: #2f2035;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
