@@ -133,6 +133,73 @@ describe('WorkPage state', () => {
     })
   })
 
+  it('並び順変更時に一覧と再生対象が一致するように更新される', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn((seriesId, sortOrder) => {
+        if (sortOrder === 'oldest') {
+          return Promise.resolve({
+            ok: true,
+            data: [
+              {
+                id: 'episode-oldest',
+                title: '最古話',
+                thumbnailUrl: null,
+                publishedAt: '2024-01-01T00:00:00Z',
+                videoUrl: '/video/oldest',
+                isOshi: false,
+              },
+            ],
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          data: [
+            {
+              id: 'episode-latest',
+              title: '最新話',
+              thumbnailUrl: null,
+              publishedAt: '2026-01-01T00:00:00Z',
+              videoUrl: '/video/latest',
+              isOshi: false,
+            },
+            {
+              id: 'episode-middle',
+              title: '中間話',
+              thumbnailUrl: null,
+              publishedAt: '2025-06-01T00:00:00Z',
+              videoUrl: '/video/middle',
+              isOshi: false,
+            },
+          ],
+        })
+      }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1')
+
+    const latestButton = await screen.findByRole('button', { name: '最新話' })
+    expect(latestButton).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: '古い順' }))
+
+    await waitFor(() => {
+      expect(dataProvider.fetchEpisodes).toHaveBeenCalledWith('series-1', 'oldest')
+    })
+
+    const oldestButton = await screen.findByRole('button', { name: '最古話' })
+    expect(oldestButton).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByText('再生中: 最古話')).toBeInTheDocument()
+  })
+
   it('話数一覧の更新で選択が失われた場合は先頭話数に切り替える', async () => {
     const firstProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
