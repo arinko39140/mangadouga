@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { supabase } from './supabaseClient.js'
+import { createWorkPageDataProvider } from './workPageDataProvider.js'
 
-const defaultDataProvider = {
-  fetchSeriesOverview: async () => ({ ok: false, error: 'not_configured' }),
-  fetchEpisodes: async () => ({ ok: false, error: 'not_configured' }),
-}
+const defaultDataProvider = createWorkPageDataProvider(supabase)
 
 const formatSortLabel = (sortOrder) => (sortOrder === 'latest' ? '最新話' : '古い順')
 const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
