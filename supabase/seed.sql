@@ -2,6 +2,10 @@ insert into public.series (series_id, title, favorite_count)
 values
   ('1', 'あいうえお', 100);
 
+insert into public.users (user_id, name, x_url, youtube_url, other_url)
+values
+  ('1', 'A', null, null, null);
+
 insert into public.movie (movie_title, url, favorite_count, "update", series_id, weekday)
 values
   ('朝焼けのスケッチ', 'https://example.com/movies/1', 120, now() - interval '1 day', '1', 'mon'),
