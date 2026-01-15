@@ -75,6 +75,27 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
     }
   }
 
+  const handleOshiToggle = async (episodeId) => {
+    if (!seriesId || typeof dataProvider.toggleEpisodeOshi !== 'function') return
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      authGateInstance.redirectToLogin('oshi')
+      return
+    }
+
+    const result = await dataProvider.toggleEpisodeOshi(episodeId)
+    if (result.ok) {
+      setEpisodes((prev) =>
+        prev.map((episode) =>
+          episode.id === episodeId
+            ? { ...episode, isOshi: result.data.isOshi }
+            : episode
+        )
+      )
+    }
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const requestedSortOrder = params.get('sortOrder')
@@ -183,6 +204,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
           episodes={episodes}
           selectedEpisodeId={selectedEpisodeId}
           onSelectEpisode={setSelectedEpisodeId}
+          onToggleOshi={handleOshiToggle}
           isLoading={loading.episodes}
           error={error.episodes}
         />

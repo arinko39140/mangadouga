@@ -4,6 +4,7 @@ function EpisodeListPanel({
   episodes = [],
   selectedEpisodeId = null,
   onSelectEpisode,
+  onToggleOshi,
   isLoading = false,
   error = null,
 }) {
@@ -24,18 +25,12 @@ function EpisodeListPanel({
             const isSelected = episode.id === selectedEpisodeId
             return (
               <li key={episode.id} className="work-page__episode-item">
-                <button
-                  type="button"
-                  className={
-                    isSelected
-                      ? 'work-page__episode-button is-selected'
-                      : 'work-page__episode-button'
-                  }
-                  aria-pressed={isSelected}
-                  onClick={() => onSelectEpisode?.(episode.id)}
-                >
-                  <EpisodeListItem episode={episode} />
-                </button>
+                <EpisodeListItem
+                  episode={episode}
+                  isSelected={isSelected}
+                  onSelect={onSelectEpisode}
+                  onToggleOshi={onToggleOshi}
+                />
               </li>
             )
           })}
