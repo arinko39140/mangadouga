@@ -282,6 +282,7 @@ sequenceDiagram
 - ソート順に応じて`movie.update`で並び替えた結果を返す
 - 推し/お気に入りの登録状態を更新する
 - 認証が必要な操作は`auth_required`を返し、`AuthGate`に委譲する
+- 未ログイン時の`isFavorited`/`isOshi`は常に`false`として返す
 
 **Dependencies**
 - Inbound: WorkPageUI — 取得/更新の依頼 (P0)
