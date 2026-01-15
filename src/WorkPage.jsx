@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import SeriesHeader from './SeriesHeader.jsx'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 
@@ -116,13 +117,11 @@ function WorkPage({ dataProvider = defaultDataProvider }) {
     <main className="work-page">
       <header className="work-page__header">
         <h1>作品ページ</h1>
-        {loading.series ? (
-          <p className="work-page__status">作品情報を読み込み中...</p>
-        ) : error.series ? (
-          <p className="work-page__status work-page__status--error">作品情報の取得に失敗しました。</p>
-        ) : (
-          <p className="work-page__title">{series?.title ?? '作品が見つかりません。'}</p>
-        )}
+        <SeriesHeader
+          title={series?.title}
+          isLoading={loading.series}
+          error={error.series}
+        />
       </header>
       <section className="work-page__playback" aria-label="再生領域">
         {loading.episodes ? (
