@@ -159,7 +159,7 @@ sequenceDiagram
   - ソート変更時は`selectedEpisodeId`が新しい並びに存在する場合は維持し、存在しない場合のみ`sortOrder`に従って先頭話数を選択する
 - ログイン復帰時は`redirect`パラメータから`seriesId`/`selectedEpisodeId`/`sortOrder`を復元し、操作継続可能な状態に戻す
 - `auth_required`を受け取った場合は、即時に`AuthGate.redirectToLogin`を呼び出す
-  - `redirect`形式: `/login/?redirect=/series/:seriesId/?selectedEpisodeId=...&sortOrder=latest|oldest`
+  - `redirect`形式: `/login/?redirect=${encodeURIComponent('/series/:seriesId/?selectedEpisodeId=...&sortOrder=latest|oldest')}`
 
 **Dependencies**
 - Inbound: Router — `seriesId`の受け取り (P0)
@@ -206,7 +206,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: `selectedEpisodeId`の変更で再生対象を更新
 - Validation: `episode.url`未設定時は代替表示
-- Risks: 再生準備中表示の時間閾値が未定
+- Validation: 再生準備中表示は「再生領域をクリックして再生に切り替える」操作で終了する
 
 #### EpisodeListPanel
 
