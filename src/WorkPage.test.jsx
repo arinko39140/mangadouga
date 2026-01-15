@@ -3,25 +3,25 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import WorkPage from './WorkPage.jsx'
 
-const renderWorkPage = (dataProvider, seriesId = 'series-1') =>
+const renderWorkPage = (dataProvider, seriesId = 'series-1', authGate) =>
   render(
     <MemoryRouter initialEntries={[`/series/${seriesId}/`]}>
       <Routes>
         <Route
           path="/series/:seriesId/"
-          element={<WorkPage dataProvider={dataProvider} />}
+          element={<WorkPage dataProvider={dataProvider} authGate={authGate} />}
         />
       </Routes>
     </MemoryRouter>
   )
 
-const renderWorkPageWithUrl = (dataProvider, url) =>
+const renderWorkPageWithUrl = (dataProvider, url, authGate) =>
   render(
     <MemoryRouter initialEntries={[url]}>
       <Routes>
         <Route
           path="/series/:seriesId/"
-          element={<WorkPage dataProvider={dataProvider} />}
+          element={<WorkPage dataProvider={dataProvider} authGate={authGate} />}
         />
       </Routes>
     </MemoryRouter>
@@ -301,5 +301,68 @@ describe('WorkPage state', () => {
     const latestButton = await screen.findByRole('button', { name: '最新話' })
     expect(latestButton).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('並び順: 最新話')).toBeInTheDocument()
+  })
+
+  it('お気に入り操作で認証済みなら状態が更新される', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      toggleSeriesFavorite: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { isFavorited: true },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', authGate)
+
+    const button = await screen.findByRole('button', { name: /お気に入り/ })
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(dataProvider.toggleSeriesFavorite).toHaveBeenCalledWith('series-1')
+    })
+    expect(screen.getByText('お気に入り: 登録済み')).toBeInTheDocument()
+  })
+
+  it('未ログインの場合はログイン導線へ誘導する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      toggleSeriesFavorite: vi.fn(),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', authGate)
+
+    const button = await screen.findByRole('button', { name: /お気に入り/ })
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(authGate.redirectToLogin).toHaveBeenCalledWith('favorite')
+    })
+    expect(dataProvider.toggleSeriesFavorite).not.toHaveBeenCalled()
   })
 })

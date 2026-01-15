@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { createAuthGate } from './authGate.js'
+import FavoriteStarButton from './FavoriteStarButton.jsx'
 import SeriesHeader from './SeriesHeader.jsx'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
@@ -9,9 +11,10 @@ const defaultDataProvider = createWorkPageDataProvider(supabase)
 const formatSortLabel = (sortOrder) => (sortOrder === 'latest' ? '最新話' : '古い順')
 const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
 
-function WorkPage({ dataProvider = defaultDataProvider }) {
+function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   const { seriesId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const [series, setSeries] = useState(null)
   const [episodes, setEpisodes] = useState([])
   const [selectedEpisodeId, setSelectedEpisodeId] = useState(() => {
@@ -22,6 +25,7 @@ function WorkPage({ dataProvider = defaultDataProvider }) {
     const params = new URLSearchParams(location.search)
     return parseSortOrder(params.get('sortOrder'))
   })
+  const [favoriteUpdating, setFavoriteUpdating] = useState(false)
   const [loading, setLoading] = useState({ series: false, episodes: false })
   const [error, setError] = useState({ series: null, episodes: null })
 
@@ -29,6 +33,41 @@ function WorkPage({ dataProvider = defaultDataProvider }) {
     () => episodes.find((episode) => episode.id === selectedEpisodeId) ?? null,
     [episodes, selectedEpisodeId]
   )
+
+  const authGateInstance = useMemo(() => {
+    if (authGate) return authGate
+    return createAuthGate({
+      supabaseClient: supabase,
+      navigate,
+      getRedirectContext: () => ({
+        seriesId,
+        selectedEpisodeId,
+        sortOrder,
+      }),
+    })
+  }, [authGate, navigate, seriesId, selectedEpisodeId, sortOrder])
+
+  const handleFavoriteToggle = async () => {
+    if (!seriesId || typeof dataProvider.toggleSeriesFavorite !== 'function') return
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      authGateInstance.redirectToLogin('favorite')
+      return
+    }
+
+    setFavoriteUpdating(true)
+    try {
+      const result = await dataProvider.toggleSeriesFavorite(seriesId)
+      if (result.ok) {
+        setSeries((prev) =>
+          prev ? { ...prev, isFavorited: result.data.isFavorited } : prev
+        )
+      }
+    } finally {
+      setFavoriteUpdating(false)
+    }
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -121,6 +160,11 @@ function WorkPage({ dataProvider = defaultDataProvider }) {
           title={series?.title}
           isLoading={loading.series}
           error={error.series}
+        />
+        <FavoriteStarButton
+          isFavorited={series?.isFavorited ?? false}
+          isLoading={favoriteUpdating}
+          onToggle={handleFavoriteToggle}
         />
       </header>
       <section className="work-page__playback" aria-label="再生領域">
