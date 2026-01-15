@@ -5,10 +5,14 @@ import EpisodeListPanel from './EpisodeListPanel.jsx'
 import FavoriteStarButton from './FavoriteStarButton.jsx'
 import PlaybackPanel from './PlaybackPanel.jsx'
 import SeriesHeader from './SeriesHeader.jsx'
+import SortControl from './SortControl.jsx'
+import { createMockWorkPageDataProvider } from './mockWorkPageDataProvider.js'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 
-const defaultDataProvider = createWorkPageDataProvider(supabase)
+const defaultDataProvider = supabase
+  ? createWorkPageDataProvider(supabase)
+  : createMockWorkPageDataProvider()
 
 const formatSortLabel = (sortOrder) => (sortOrder === 'latest' ? '最新話' : '古い順')
 const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
@@ -174,6 +178,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       </section>
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>
+        <SortControl sortOrder={sortOrder} onChange={setSortOrder} />
         <EpisodeListPanel
           episodes={episodes}
           selectedEpisodeId={selectedEpisodeId}
