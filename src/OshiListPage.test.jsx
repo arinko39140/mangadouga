@@ -59,6 +59,7 @@ describe('OshiListPage', () => {
     })
     expect(dataProvider.fetchListSummary).not.toHaveBeenCalled()
     expect(dataProvider.fetchListItems).not.toHaveBeenCalled()
+    expect(screen.queryByRole('list', { name: '推し作品一覧' })).not.toBeInTheDocument()
   })
 
   it('取得成功で詳細を表示する', async () => {
