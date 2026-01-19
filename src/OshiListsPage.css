@@ -1,0 +1,224 @@
+.oshi-lists {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.oshi-lists h1 {
+  margin: 0;
+  color: #2a1e2f;
+}
+
+.oshi-lists__controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.oshi-lists__label {
+  font-weight: 600;
+  color: #3b2f40;
+}
+
+.oshi-lists__toggle-group {
+  display: inline-flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 99, 117, 0.2);
+}
+
+.oshi-lists__toggle {
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  background: transparent;
+  color: #6a596b;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.oshi-lists__toggle.is-active {
+  background: #2f2035;
+  color: #fff7f5;
+  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+}
+
+.oshi-lists__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.2rem;
+}
+
+.oshi-lists__items--grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.oshi-lists__items--list {
+  grid-template-columns: 1fr;
+}
+
+.oshi-lists__card {
+  background: #fffaf6;
+  border-radius: 20px;
+  border: 1px solid rgba(140, 110, 120, 0.16);
+  display: grid;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(43, 27, 57, 0.08);
+}
+
+.oshi-lists__card.is-inactive {
+  opacity: 0.75;
+}
+
+.oshi-lists__items--list .oshi-lists__card {
+  grid-template-columns: minmax(160px, 240px) 1fr;
+}
+
+.oshi-lists__items--grid .oshi-lists__card {
+  grid-template-columns: 1fr;
+}
+
+.oshi-lists__thumb {
+  position: relative;
+  background: rgba(35, 25, 45, 0.08);
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+}
+
+.oshi-lists__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.oshi-lists__thumb-placeholder {
+  color: #7b6875;
+  font-size: 0.9rem;
+}
+
+.oshi-lists__badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: #ffded9;
+  color: #8d2c24;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(141, 44, 36, 0.2);
+}
+
+.oshi-lists__body {
+  padding: 1.2rem 1.4rem 1.4rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.oshi-lists__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.oshi-lists__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2a1e2f;
+}
+
+.oshi-lists__chip {
+  background: rgba(47, 32, 53, 0.08);
+  color: #3b2f40;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.oshi-lists__meta {
+  margin: 0;
+  color: #6a596b;
+  font-size: 0.9rem;
+}
+
+.oshi-lists__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.oshi-lists__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #2f2035;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(47, 32, 53, 0.4);
+  padding-bottom: 0.1rem;
+}
+
+.oshi-lists__link:hover {
+  color: #1f1824;
+  border-bottom-color: rgba(31, 24, 36, 0.7);
+}
+
+.oshi-lists__muted {
+  color: #9a8895;
+  font-size: 0.85rem;
+}
+
+.oshi-lists__oshi-button {
+  border: 1px solid rgba(120, 99, 117, 0.3);
+  border-radius: 999px;
+  background: #fff;
+  color: #6a596b;
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.oshi-lists__oshi-button.is-registered {
+  background: #2f2035;
+  color: #fff7f5;
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+}
+
+.oshi-lists__oshi-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.oshi-lists__status {
+  margin: 0;
+  color: #6a596b;
+}
+
+.oshi-lists__status--error {
+  color: #8d2c24;
+  background: rgba(255, 222, 217, 0.6);
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba(141, 44, 36, 0.2);
+}
+
+@media (max-width: 720px) {
+  .oshi-lists__items--list .oshi-lists__card {
+    grid-template-columns: 1fr;
+  }
+}

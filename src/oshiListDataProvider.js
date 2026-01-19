@@ -9,6 +9,40 @@ const isNetworkError = (error) => {
 
 const normalizeError = (error) => (isNetworkError(error) ? 'network' : 'unknown')
 
+const toggleRecord = async ({ client, table, idField, idValue, resultKey }) => {
+  const { data, error } = await client
+    .from(table)
+    .select(idField)
+    .eq(idField, idValue)
+    .limit(1)
+
+  if (error) {
+    return { ok: false, error: normalizeError(error) }
+  }
+
+  const exists = (data ?? []).length > 0
+
+  if (exists) {
+    const { error: deleteError } = await client
+      .from(table)
+      .delete()
+      .eq(idField, idValue)
+
+    if (deleteError) {
+      return { ok: false, error: normalizeError(deleteError) }
+    }
+
+    return { ok: true, data: { [resultKey]: false } }
+  }
+
+  const { error: insertError } = await client.from(table).insert({ [idField]: idValue })
+  if (insertError) {
+    return { ok: false, error: normalizeError(insertError) }
+  }
+
+  return { ok: true, data: { [resultKey]: true } }
+}
+
 const mapMovieRow = (movie) => ({
   id: movie.movie_id,
   title: movie.movie_title,
@@ -42,5 +76,22 @@ export const createOshiListDataProvider = (supabaseClient) => ({
     }
 
     return { ok: true, data: normalizeOshiRows(data) }
+  },
+
+  async toggleMovieOshi(movieId) {
+    if (typeof movieId !== 'string' || movieId.trim() === '') {
+      return { ok: false, error: 'invalid_input' }
+    }
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    return toggleRecord({
+      client: supabaseClient,
+      table: 'movie_oshi',
+      idField: 'movie_id',
+      idValue: movieId,
+      resultKey: 'isOshi',
+    })
   },
 })

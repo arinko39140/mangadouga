@@ -87,9 +87,10 @@ describe('OshiListsPage', () => {
       expect(screen.getByText('推し動画')).toBeInTheDocument()
     })
     expect(screen.getByText('推し動画2')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: '済' })).toHaveLength(2)
   })
 
-  it('取得成功時に推しのみ一覧表示する', async () => {
+  it('推し状態に応じてボタン表示を切り替える', async () => {
     const dataProvider = {
       fetchOshiList: vi.fn().mockResolvedValue({
         ok: true,
@@ -109,7 +110,9 @@ describe('OshiListsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('推し動画')).toBeInTheDocument()
     })
-    expect(screen.queryByText('未登録動画')).not.toBeInTheDocument()
+    expect(screen.getByText('未登録動画')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
   })
 
   it('表示形式の切替後も一覧を維持する', async () => {
@@ -137,6 +140,36 @@ describe('OshiListsPage', () => {
     expect(screen.getByText('推し動画')).toBeInTheDocument()
     expect(screen.getByText('推し動画2')).toBeInTheDocument()
     expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(1)
+  })
+
+  it('推しトグルで表示状態を更新する', async () => {
+    const dataProvider = {
+      fetchOshiList: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [{ id: 'movie-1', title: '推し動画', isOshi: true }],
+      }),
+      toggleMovieOshi: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { isOshi: false },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListsPage(dataProvider, authGate)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '済' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
+    })
+    expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
   })
 
   it('推し更新イベントで一覧を再取得する', async () => {
