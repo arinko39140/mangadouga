@@ -4,8 +4,8 @@ import EpisodeListPanel from './EpisodeListPanel.jsx'
 
 describe('EpisodeListPanel', () => {
   const episodes = [
-    { id: 'episode-1', title: '第1話' },
-    { id: 'episode-2', title: '第2話' },
+    { id: 'movie-1', title: '第1話' },
+    { id: 'movie-2', title: '第2話' },
   ]
 
   it('話数一覧と総数、選択状態を表示する', () => {
@@ -14,7 +14,7 @@ describe('EpisodeListPanel', () => {
     render(
       <EpisodeListPanel
         episodes={episodes}
-        selectedEpisodeId="episode-2"
+        selectedMovieId="movie-2"
         onSelectEpisode={handleSelect}
       />
     )
@@ -30,7 +30,7 @@ describe('EpisodeListPanel', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '第1話' }))
-    expect(handleSelect).toHaveBeenCalledWith('episode-1')
+    expect(handleSelect).toHaveBeenCalledWith('movie-1')
   })
 
   it('話数が存在しない場合は空状態を表示する', () => {

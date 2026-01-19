@@ -34,7 +34,7 @@ const mapEpisodeRow = (row) => ({
   thumbnailUrl: row.thumbnail_url ?? null,
   publishedAt: row.update ?? null,
   videoUrl: row.url ?? null,
-  isOshi: false,
+  isOshi: Array.isArray(row.movie_oshi) && row.movie_oshi.length > 0,
 })
 
 const toggleRecord = async ({
@@ -99,14 +99,14 @@ export const createWorkPageDataProvider = (supabaseClient) => ({
     return { ok: true, data: mapSeriesRow(data[0]) }
   },
 
-  async fetchEpisodes(seriesId, sortOrder) {
+  async fetchMovies(seriesId, sortOrder) {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
     }
 
     const { data, error } = await supabaseClient
       .from('movie')
-      .select('movie_id, movie_title, url, thumbnail_url, update')
+      .select('movie_id, movie_title, url, thumbnail_url, update, movie_oshi(user_id)')
       .eq('series_id', seriesId)
       .order('update', { ascending: sortOrder === 'oldest' })
 
@@ -132,16 +132,16 @@ export const createWorkPageDataProvider = (supabaseClient) => ({
     })
   },
 
-  async toggleEpisodeOshi(episodeId) {
+  async toggleMovieOshi(movieId) {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
     }
 
     return toggleRecord({
       client: supabaseClient,
-      table: 'episode_oshi',
+      table: 'movie_oshi',
       idField: 'movie_id',
-      idValue: episodeId,
+      idValue: movieId,
       resultKey: 'isOshi',
     })
   },

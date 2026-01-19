@@ -1,26 +1,26 @@
 const mockEpisodes = [
   {
-    id: 'episode-3',
+    id: 'movie-3',
     title: '第3話',
     thumbnailUrl: '/vite.svg',
     publishedAt: '2026-02-01T12:00:00Z',
-    videoUrl: '/videos/episode-3',
+    videoUrl: '/videos/movie-3',
     isOshi: false,
   },
   {
-    id: 'episode-2',
+    id: 'movie-2',
     title: '第2話',
     thumbnailUrl: null,
     publishedAt: '2026-01-15T12:00:00Z',
-    videoUrl: '/videos/episode-2',
+    videoUrl: '/videos/movie-2',
     isOshi: false,
   },
   {
-    id: 'episode-1',
+    id: 'movie-1',
     title: '第1話',
     thumbnailUrl: '/vite.svg',
     publishedAt: null,
-    videoUrl: '/videos/episode-1',
+    videoUrl: '/videos/movie-1',
     isOshi: false,
   },
 ]
@@ -42,7 +42,7 @@ const sortEpisodes = (episodes, sortOrder) => {
 
 export const createMockWorkPageDataProvider = () => {
   let isFavorited = false
-  const episodeOshi = new Map()
+  const movieOshi = new Map()
 
   return {
     async fetchSeriesOverview(seriesId) {
@@ -57,7 +57,7 @@ export const createMockWorkPageDataProvider = () => {
       }
     },
 
-    async fetchEpisodes(_seriesId, sortOrder) {
+    async fetchMovies(_seriesId, sortOrder) {
       const episodes = sortEpisodes(mockEpisodes, sortOrder)
       return { ok: true, data: episodes }
     },
@@ -67,9 +67,9 @@ export const createMockWorkPageDataProvider = () => {
       return { ok: true, data: { isFavorited } }
     },
 
-    async toggleEpisodeOshi(episodeId) {
-      const next = !(episodeOshi.get(episodeId) ?? false)
-      episodeOshi.set(episodeId, next)
+    async toggleMovieOshi(movieId) {
+      const next = !(movieOshi.get(movieId) ?? false)
+      movieOshi.set(movieId, next)
       return { ok: true, data: { isOshi: next } }
     },
   }

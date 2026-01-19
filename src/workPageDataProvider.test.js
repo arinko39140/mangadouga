@@ -94,21 +94,21 @@ describe('WorkPageDataProvider', () => {
   it('話数一覧を公開日順に並び替え、未設定は末尾に配置する', async () => {
     const rows = [
       {
-        movie_id: 'episode-null',
+        movie_id: 'movie-null',
         movie_title: '未設定',
         url: null,
         thumbnail_url: null,
         update: null,
       },
       {
-        movie_id: 'episode-old',
+        movie_id: 'movie-old',
         movie_title: '第1話',
         url: '/watch/old',
         thumbnail_url: null,
         update: '2025-12-01T00:00:00Z',
       },
       {
-        movie_id: 'episode-latest',
+        movie_id: 'movie-latest',
         movie_title: '最新話',
         url: '/watch/latest',
         thumbnail_url: null,
@@ -118,27 +118,27 @@ describe('WorkPageDataProvider', () => {
     const { client } = buildEpisodesSupabaseMock(rows)
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.fetchEpisodes('series-1', 'latest')
+    const result = await provider.fetchMovies('series-1', 'latest')
 
     expect(result.ok).toBe(true)
     expect(result.data.map((episode) => episode.id)).toEqual([
-      'episode-latest',
-      'episode-old',
-      'episode-null',
+      'movie-latest',
+      'movie-old',
+      'movie-null',
     ])
   })
 
   it('古い順を指定した場合は古い順で並び替える', async () => {
     const rows = [
       {
-        movie_id: 'episode-old',
+        movie_id: 'movie-old',
         movie_title: '第1話',
         url: '/watch/old',
         thumbnail_url: null,
         update: '2025-12-01T00:00:00Z',
       },
       {
-        movie_id: 'episode-latest',
+        movie_id: 'movie-latest',
         movie_title: '最新話',
         url: '/watch/latest',
         thumbnail_url: null,
@@ -148,37 +148,67 @@ describe('WorkPageDataProvider', () => {
     const { client, calls } = buildEpisodesSupabaseMock(rows)
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.fetchEpisodes('series-1', 'oldest')
+    const result = await provider.fetchMovies('series-1', 'oldest')
 
     expect(calls.fromMock).toHaveBeenCalledWith('movie')
-    expect(calls.selectMock).toHaveBeenCalled()
+    expect(calls.selectMock).toHaveBeenCalledWith(
+      'movie_id, movie_title, url, thumbnail_url, update, movie_oshi(user_id)'
+    )
     expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
     expect(calls.orderMock).toHaveBeenCalledWith('update', { ascending: true })
     expect(result.ok).toBe(true)
     expect(result.data.map((episode) => episode.id)).toEqual([
-      'episode-old',
-      'episode-latest',
+      'movie-old',
+      'movie-latest',
     ])
+  })
+
+  it('推し登録済みの動画はisOshiがtrueになる', async () => {
+    const rows = [
+      {
+        movie_id: 'movie-1',
+        movie_title: '第1話',
+        url: '/watch/1',
+        thumbnail_url: null,
+        update: '2026-01-01T00:00:00Z',
+        movie_oshi: [{ user_id: 'user-1' }],
+      },
+      {
+        movie_id: 'movie-2',
+        movie_title: '第2話',
+        url: '/watch/2',
+        thumbnail_url: null,
+        update: '2026-01-02T00:00:00Z',
+        movie_oshi: [],
+      },
+    ]
+    const { client } = buildEpisodesSupabaseMock(rows)
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchMovies('series-1', 'latest')
+
+    expect(result.ok).toBe(true)
+    expect(result.data.map((episode) => episode.isOshi)).toEqual([true, false])
   })
 
   it('古い順でも公開日未設定は末尾に配置する', async () => {
     const rows = [
       {
-        movie_id: 'episode-null',
+        movie_id: 'movie-null',
         movie_title: '未設定',
         url: null,
         thumbnail_url: null,
         update: null,
       },
       {
-        movie_id: 'episode-old',
+        movie_id: 'movie-old',
         movie_title: '第1話',
         url: '/watch/old',
         thumbnail_url: null,
         update: '2025-12-01T00:00:00Z',
       },
       {
-        movie_id: 'episode-latest',
+        movie_id: 'movie-latest',
         movie_title: '最新話',
         url: '/watch/latest',
         thumbnail_url: null,
@@ -188,13 +218,13 @@ describe('WorkPageDataProvider', () => {
     const { client } = buildEpisodesSupabaseMock(rows)
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.fetchEpisodes('series-1', 'oldest')
+    const result = await provider.fetchMovies('series-1', 'oldest')
 
     expect(result.ok).toBe(true)
     expect(result.data.map((episode) => episode.id)).toEqual([
-      'episode-old',
-      'episode-latest',
-      'episode-null',
+      'movie-old',
+      'movie-latest',
+      'movie-null',
     ])
   })
 
@@ -205,7 +235,7 @@ describe('WorkPageDataProvider', () => {
       ok: false,
       error: 'not_configured',
     })
-    await expect(provider.fetchEpisodes('series-1', 'latest')).resolves.toEqual({
+    await expect(provider.fetchMovies('series-1', 'latest')).resolves.toEqual({
       ok: false,
       error: 'not_configured',
     })
@@ -222,7 +252,7 @@ describe('WorkPageDataProvider', () => {
       ok: false,
       error: 'network',
     })
-    await expect(episodesProvider.fetchEpisodes('series-1', 'latest')).resolves.toEqual({
+    await expect(episodesProvider.fetchMovies('series-1', 'latest')).resolves.toEqual({
       ok: false,
       error: 'network',
     })
@@ -239,7 +269,7 @@ describe('WorkPageDataProvider', () => {
       ok: false,
       error: 'unknown',
     })
-    await expect(episodesProvider.fetchEpisodes('series-1', 'latest')).resolves.toEqual({
+    await expect(episodesProvider.fetchMovies('series-1', 'latest')).resolves.toEqual({
       ok: false,
       error: 'unknown',
     })
@@ -277,16 +307,16 @@ describe('WorkPageDataProvider', () => {
 
   it('推しが未登録の場合は登録して状態を返す', async () => {
     const { client, calls } = buildToggleSupabaseMock({
-      table: 'episode_oshi',
+      table: 'movie_oshi',
       existing: false,
     })
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.toggleEpisodeOshi('episode-1')
+    const result = await provider.toggleMovieOshi('movie-1')
 
-    expect(calls.fromMock).toHaveBeenCalledWith('episode_oshi')
-    expect(calls.eqMock).toHaveBeenCalledWith('movie_id', 'episode-1')
-    expect(calls.insertMock).toHaveBeenCalledWith({ movie_id: 'episode-1' })
+    expect(calls.fromMock).toHaveBeenCalledWith('movie_oshi')
+    expect(calls.eqMock).toHaveBeenCalledWith('movie_id', 'movie-1')
+    expect(calls.insertMock).toHaveBeenCalledWith({ movie_id: 'movie-1' })
     expect(result).toEqual({ ok: true, data: { isOshi: true } })
   })
 
@@ -297,7 +327,7 @@ describe('WorkPageDataProvider', () => {
       mutateError: new Error('NetworkError'),
     })
     const { client: oshiClient } = buildToggleSupabaseMock({
-      table: 'episode_oshi',
+      table: 'movie_oshi',
       existing: false,
       selectError: new Error('boom'),
     })
@@ -308,7 +338,7 @@ describe('WorkPageDataProvider', () => {
       ok: false,
       error: 'network',
     })
-    await expect(oshiProvider.toggleEpisodeOshi('episode-1')).resolves.toEqual({
+    await expect(oshiProvider.toggleMovieOshi('movie-1')).resolves.toEqual({
       ok: false,
       error: 'unknown',
     })

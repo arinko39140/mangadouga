@@ -8,19 +8,19 @@
 - **Feature**: oshi-list-user-registration-registered-only
 - **Discovery Scope**: Extension
 - **Key Findings**:
-  - 推し登録は`episode_oshi`でユーザー単位に保持され、RLSで`auth.uid()`に制限されている。
-  - 推し一覧は`episode_oshi`を起点に`movie`を参照することで、登録済みのみをユーザー単位で取得できる。
+  - 推し登録は`movie_oshi`でユーザー単位に保持され、RLSで`auth.uid()`に制限されている。
+  - 推し一覧は`movie_oshi`を起点に`movie`を参照することで、登録済みのみをユーザー単位で取得できる。
   - 既存の`AuthGate`と`LoginPage`のリダイレクト構成により、未認証時の誘導を統一できる。
 
 ## Research Log
 ### 既存データモデルとRLS
 - **Context**: 推し登録のユーザー紐づけと一覧取得の根拠確認が必要。
-- **Sources Consulted**: `supabase/migrations/20260115125500_create_episode_oshi.sql`, `supabase/migrations/20260115123000_update_read_policies.sql`
+- **Sources Consulted**: `supabase/migrations/20260115125500_create_episode_oshi.sql`, `supabase/migrations/20260115130000_rename_episode_oshi_to_movie_oshi.sql`, `supabase/migrations/20260115123000_update_read_policies.sql`
 - **Findings**:
-  - `episode_oshi`は`user_id` + `movie_id`の複合主キーで重複登録を防止。
+  - `movie_oshi`は`user_id` + `movie_id`の複合主キーで重複登録を防止。
   - `user_id`は`auth.uid()`がデフォルトで入り、RLSで本人のみ読取/挿入/削除を許可。
   - `movie`は`anon`/`authenticated`に公開され、参照は結合で可能。
-- **Implications**: 推し一覧は`episode_oshi`を起点に`movie`を結合する構成が最短で要件適合。
+- **Implications**: 推し一覧は`movie_oshi`を起点に`movie`を結合する構成が最短で要件適合。
 
 ### 既存フロント構成の拡張ポイント
 - **Context**: ページ実装の責務分割とパターン踏襲を確認。
@@ -46,12 +46,12 @@
 | 独自API層追加 | APIサーバを挟む | 集中管理・将来拡張性 | 現状スコープ超過 | 本機能では非採用 |
 
 ## Design Decisions
-### Decision: 推し一覧は`episode_oshi`起点で取得
+### Decision: 推し一覧は`movie_oshi`起点で取得
 - **Context**: 登録済み推しのみ表示（2.1, 2.2, 2.5）を満たす必要がある。
 - **Alternatives Considered**:
-  1. `movie`起点で`episode_oshi`を左結合しフィルタ
-  2. `episode_oshi`起点で`movie`を参照
-- **Selected Approach**: `episode_oshi`を基点に`movie`を結合し、登録済みのみ取得する。
+  1. `movie`起点で`movie_oshi`を左結合しフィルタ
+  2. `movie_oshi`起点で`movie`を参照
+- **Selected Approach**: `movie_oshi`を基点に`movie`を結合し、登録済みのみ取得する。
 - **Rationale**: RLSと複合主キーによりユーザー単位の絞り込みが自然に担保される。
 - **Trade-offs**: `movie`詳細の取得は結合に依存するため、クエリ設計の検証が必要。
 - **Follow-up**: 実装時に取得フィールドと結合方法の検証を行う。
@@ -70,8 +70,8 @@
 - **Context**: 登録済み状態の反映（3.1, 3.3）。
 - **Alternatives Considered**:
   1. 画面初期描画時に常に未登録表示
-  2. `episode_oshi`連動で`isOshi`を初期化
-- **Selected Approach**: 認証済みの場合は`episode_oshi`結合で`isOshi`を算出。
+  2. `movie_oshi`連動で`isOshi`を初期化
+- **Selected Approach**: 認証済みの場合は`movie_oshi`結合で`isOshi`を算出。
 - **Rationale**: 登録状態とUIの整合性を維持できる。
 - **Trade-offs**: 未認証時は常に未登録表示となる。
 - **Follow-up**: 実装時に未認証時の挙動をUI文言で補足する。
@@ -82,6 +82,7 @@
 - 登録直後の一覧反映が遅延する — 登録成功後に一覧再取得またはローカル更新。
 
 ## References
-- `supabase/migrations/20260115125500_create_episode_oshi.sql` — 推し登録テーブルとRLS
+- `supabase/migrations/20260115125500_create_episode_oshi.sql` — 推し登録テーブルとRLS（リネーム前）
+- `supabase/migrations/20260115130000_rename_episode_oshi_to_movie_oshi.sql` — テーブル名の統一
 - `src/workPageDataProvider.js` — 既存のデータプロバイダパターン
 - `src/AuthGate.js` — 認証ゲートの共通化

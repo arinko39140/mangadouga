@@ -2,7 +2,7 @@
 
 ## 分析サマリー
 - 既存実装は「作品ページ内の推し登録トグル」とSupabase RLSに偏っており、推しリストページ自体は未実装で大部分が欠落。
-- DBには`episode_oshi`/`series_favorite`があるが、公開/非公開・推しリストお気に入り・お気に入り数表示のためのテーブルとRLSが存在しない。
+- DBには`movie_oshi`/`series_favorite`があるが、公開/非公開・推しリストお気に入り・お気に入り数表示のためのテーブルとRLSが存在しない。
 - 認証導線は`authGate`/`LoginPage`/`AppShell`で整備済みで、推しリストページにも再利用可能。
 - 既存のデータ取得/エラー表現パターン（dataProvider + `ok/error`）を踏襲できるためUI実装方針は明確。
 - 設計フェーズでは「推しリストのデータモデル定義」と「公開設定/お気に入り集計の実装方式」が主要論点。
@@ -21,11 +21,11 @@
 
 ### 既存コンポーネント/データプロバイダ
 - 推し登録トグル: `WorkPage.jsx` + `EpisodeListItem.jsx` + `createWorkPageDataProvider`
-- `toggleEpisodeOshi`は`episode_oshi`を対象にトグル（ユーザーIDはRLS+`auth.uid()`依存）
+- `toggleMovieOshi`は`movie_oshi`を対象にトグル（ユーザーIDはRLS+`auth.uid()`依存）
 - ロード/エラー表示は`EpisodeListPanel`等で明示的に表現
 
 ### 既存DB/ポリシー
-- `episode_oshi`（user_id + movie_id, RLSで本人のみ）
+- `movie_oshi`（user_id + movie_id, RLSで本人のみ）
 - `series_favorite`（user_id + series_id, RLSで本人のみ）
 - `users`は公開読み取りのみ（認証ユーザーとの関連仕様が不明）
 - 公開/非公開、推しリストお気に入り、集計系のテーブルやポリシーは未整備
@@ -36,7 +36,7 @@
 
 ## 要件実現性とギャップ（Requirement-to-Asset Map）
 ### Requirement 1: 推し登録のユーザー紐づけ
-- 既存資産: `episode_oshi`テーブル + RLS、`toggleEpisodeOshi`
+- 既存資産: `movie_oshi`テーブル + RLS、`toggleMovieOshi`
 - ギャップ: 推し登録時のID妥当性エラー表示が未実装（現在は汎用エラーのみ）
 - 追加考慮: 既存UIは登録済み状態を「取得して反映」しておらず、初期状態は常に未登録
 - ステータス: **Partial（Missing/Unknown）**
@@ -96,7 +96,7 @@
 
 ## 実装上のギャップと制約
 - 認証前提の一覧取得: `authGate`はWorkPage専用導線。推しリストでの未認証表示/誘導は設計が必要
-- 取得時の「登録済み状態」: `episode_oshi`をjoinして初期表示に反映する仕組みが必要
+- 取得時の「登録済み状態」: `movie_oshi`をjoinして初期表示に反映する仕組みが必要
 - 公開/非公開: 現行DBに保持先がないため、新規テーブル・RLS・API設計が必須
 - お気に入り数: 集計更新方法（トリガー/ビュー/クエリ集計）を決める必要
 - UI状態設計: ロード/空/エラー表示と表示形式切替の状態管理が未整備
@@ -110,7 +110,7 @@
 - 主要な設計判断: 推しリストの単位（ユーザー単位/シリーズ単位/エピソード単位）、公開設定の保存先、集計方式
 
 ## Research Needed（設計フェーズでの追加調査）
-- 推しリストのドメインモデル: `episode_oshi`をそのまま一覧化するか、別エンティティを設けるか
+- 推しリストのドメインモデル: `movie_oshi`をそのまま一覧化するか、別エンティティを設けるか
 - 公開/非公開の保存先とRLSルール（他ユーザー閲覧、非公開時の非表示）
 - 推しリストお気に入りのテーブル設計と重複防止戦略
 - お気に入り数の集計方式（ビュー/マテビュー/トリガー/クエリ集計）

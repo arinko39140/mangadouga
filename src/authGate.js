@@ -11,8 +11,8 @@ export const buildLoginRedirectPath = (context) => {
   }
 
   const params = new URLSearchParams()
-  if (context.selectedEpisodeId) {
-    params.set('selectedEpisodeId', context.selectedEpisodeId)
+  if (context.selectedMovieId) {
+    params.set('selectedMovieId', context.selectedMovieId)
   }
   params.set('sortOrder', context.sortOrder ?? 'latest')
 

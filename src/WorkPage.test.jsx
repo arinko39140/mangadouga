@@ -39,11 +39,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-latest',
+            id: 'movie-latest',
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -51,7 +51,7 @@ describe('WorkPage state', () => {
             isOshi: false,
           },
           {
-            id: 'episode-old',
+            id: 'movie-old',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
@@ -80,11 +80,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-latest',
+            id: 'movie-latest',
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -92,7 +92,7 @@ describe('WorkPage state', () => {
             isOshi: false,
           },
           {
-            id: 'episode-old',
+            id: 'movie-old',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
@@ -123,13 +123,13 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
 
     renderWorkPage(dataProvider, 'series-99')
 
     await waitFor(() => {
-      expect(dataProvider.fetchEpisodes).toHaveBeenCalledWith('series-99', 'latest')
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-99', 'latest')
     })
   })
 
@@ -144,7 +144,7 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
 
     renderWorkPage(dataProvider, 'series-1')
@@ -164,13 +164,13 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn((seriesId, sortOrder) => {
+      fetchMovies: vi.fn((seriesId, sortOrder) => {
         if (sortOrder === 'oldest') {
           return Promise.resolve({
             ok: true,
             data: [
               {
-                id: 'episode-oldest',
+                id: 'movie-oldest',
                 title: '最古話',
                 thumbnailUrl: null,
                 publishedAt: '2024-01-01T00:00:00Z',
@@ -184,7 +184,7 @@ describe('WorkPage state', () => {
           ok: true,
           data: [
             {
-              id: 'episode-latest',
+              id: 'movie-latest',
               title: '最新話',
               thumbnailUrl: null,
               publishedAt: '2026-01-01T00:00:00Z',
@@ -192,7 +192,7 @@ describe('WorkPage state', () => {
               isOshi: false,
             },
             {
-              id: 'episode-middle',
+              id: 'movie-middle',
               title: '中間話',
               thumbnailUrl: null,
               publishedAt: '2025-06-01T00:00:00Z',
@@ -212,7 +212,7 @@ describe('WorkPage state', () => {
     fireEvent.click(screen.getByRole('button', { name: '古い順' }))
 
     await waitFor(() => {
-      expect(dataProvider.fetchEpisodes).toHaveBeenCalledWith('series-1', 'oldest')
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'oldest')
     })
 
     const oldestButton = await screen.findByRole('button', { name: '最古話' })
@@ -231,11 +231,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-latest',
+            id: 'movie-latest',
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -265,11 +265,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-a',
+            id: 'movie-a',
             title: 'A話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -277,7 +277,7 @@ describe('WorkPage state', () => {
             isOshi: false,
           },
           {
-            id: 'episode-b',
+            id: 'movie-b',
             title: 'B話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
@@ -298,11 +298,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-c',
+            id: 'movie-c',
             title: 'C話',
             thumbnailUrl: null,
             publishedAt: '2026-02-01T00:00:00Z',
@@ -354,11 +354,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-old',
+            id: 'movie-old',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
@@ -366,7 +366,7 @@ describe('WorkPage state', () => {
             isOshi: false,
           },
           {
-            id: 'episode-latest',
+            id: 'movie-latest',
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -379,7 +379,7 @@ describe('WorkPage state', () => {
 
     renderWorkPageWithUrl(
       dataProvider,
-      '/series/series-1/?selectedEpisodeId=episode-old&sortOrder=oldest'
+      '/series/series-1/?selectedMovieId=movie-old&sortOrder=oldest'
     )
 
     const selectedButton = await screen.findByRole('button', { name: '第1話' })
@@ -399,11 +399,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-latest',
+            id: 'movie-latest',
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -416,7 +416,7 @@ describe('WorkPage state', () => {
 
     renderWorkPageWithUrl(
       dataProvider,
-      '/series/series-1/?selectedEpisodeId=unknown&sortOrder=invalid'
+      '/series/series-1/?selectedMovieId=unknown&sortOrder=invalid'
     )
 
     const latestButton = await screen.findByRole('button', { name: '最新話' })
@@ -435,7 +435,7 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
       toggleSeriesFavorite: vi.fn().mockResolvedValue({
         ok: true,
         data: { isFavorited: true },
@@ -468,7 +468,7 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
       toggleSeriesFavorite: vi.fn(),
     }
     const authGate = {
@@ -498,11 +498,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-1',
+            id: 'movie-1',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -511,7 +511,7 @@ describe('WorkPage state', () => {
           },
         ],
       }),
-      toggleEpisodeOshi: vi.fn().mockResolvedValue({
+      toggleMovieOshi: vi.fn().mockResolvedValue({
         ok: true,
         data: { isOshi: true },
       }),
@@ -527,7 +527,7 @@ describe('WorkPage state', () => {
     fireEvent.click(oshiButton)
 
     await waitFor(() => {
-      expect(dataProvider.toggleEpisodeOshi).toHaveBeenCalledWith('episode-1')
+      expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
     })
     expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
   })
@@ -543,11 +543,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-1',
+            id: 'movie-1',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -556,7 +556,7 @@ describe('WorkPage state', () => {
           },
         ],
       }),
-      toggleEpisodeOshi: vi.fn().mockResolvedValue({
+      toggleMovieOshi: vi.fn().mockResolvedValue({
         ok: true,
         data: { isOshi: false },
       }),
@@ -572,7 +572,7 @@ describe('WorkPage state', () => {
     fireEvent.click(oshiButton)
 
     await waitFor(() => {
-      expect(dataProvider.toggleEpisodeOshi).toHaveBeenCalledWith('episode-1')
+      expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
     })
     expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
   })
@@ -588,11 +588,11 @@ describe('WorkPage state', () => {
           isFavorited: false,
         },
       }),
-      fetchEpisodes: vi.fn().mockResolvedValue({
+      fetchMovies: vi.fn().mockResolvedValue({
         ok: true,
         data: [
           {
-            id: 'episode-1',
+            id: 'movie-1',
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
@@ -601,7 +601,7 @@ describe('WorkPage state', () => {
           },
         ],
       }),
-      toggleEpisodeOshi: vi.fn(),
+      toggleMovieOshi: vi.fn(),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
@@ -616,6 +616,6 @@ describe('WorkPage state', () => {
     await waitFor(() => {
       expect(authGate.redirectToLogin).toHaveBeenCalledWith('oshi')
     })
-    expect(dataProvider.toggleEpisodeOshi).not.toHaveBeenCalled()
+    expect(dataProvider.toggleMovieOshi).not.toHaveBeenCalled()
   })
 })

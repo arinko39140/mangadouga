@@ -24,9 +24,9 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   const navigate = useNavigate()
   const [series, setSeries] = useState(null)
   const [episodes, setEpisodes] = useState([])
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState(() => {
+  const [selectedMovieId, setSelectedMovieId] = useState(() => {
     const params = new URLSearchParams(location.search)
-    return params.get('selectedEpisodeId')
+    return params.get('selectedMovieId')
   })
   const [sortOrder, setSortOrder] = useState(() => {
     const params = new URLSearchParams(location.search)
@@ -36,9 +36,9 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   const [loading, setLoading] = useState({ series: false, episodes: false })
   const [error, setError] = useState({ series: null, episodes: null })
 
-  const selectedEpisode = useMemo(
-    () => episodes.find((episode) => episode.id === selectedEpisodeId) ?? null,
-    [episodes, selectedEpisodeId]
+  const selectedMovie = useMemo(
+    () => episodes.find((episode) => episode.id === selectedMovieId) ?? null,
+    [episodes, selectedMovieId]
   )
 
   const authGateInstance = useMemo(() => {
@@ -48,11 +48,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       navigate,
       getRedirectContext: () => ({
         seriesId,
-        selectedEpisodeId,
+        selectedMovieId,
         sortOrder,
       }),
     })
-  }, [authGate, navigate, seriesId, selectedEpisodeId, sortOrder])
+  }, [authGate, navigate, seriesId, selectedMovieId, sortOrder])
 
   const handleFavoriteToggle = async () => {
     if (!seriesId || typeof dataProvider.toggleSeriesFavorite !== 'function') return
@@ -76,8 +76,8 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
     }
   }
 
-  const handleOshiToggle = async (episodeId) => {
-    if (!seriesId || typeof dataProvider.toggleEpisodeOshi !== 'function') return
+  const handleOshiToggle = async (movieId) => {
+    if (!seriesId || typeof dataProvider.toggleMovieOshi !== 'function') return
 
     const status = await authGateInstance.getStatus()
     if (!status.ok) {
@@ -85,11 +85,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       return
     }
 
-    const result = await dataProvider.toggleEpisodeOshi(episodeId)
+    const result = await dataProvider.toggleMovieOshi(movieId)
     if (result.ok) {
       setEpisodes((prev) =>
         prev.map((episode) =>
-          episode.id === episodeId
+          episode.id === movieId
             ? { ...episode, isOshi: result.data.isOshi }
             : episode
         )
@@ -100,14 +100,14 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const requestedSortOrder = params.get('sortOrder')
-    const requestedEpisodeId = params.get('selectedEpisodeId')
+    const requestedMovieId = params.get('selectedMovieId')
 
     if (requestedSortOrder) {
       setSortOrder(parseSortOrder(requestedSortOrder))
     }
 
-    if (requestedEpisodeId) {
-      setSelectedEpisodeId(requestedEpisodeId)
+    if (requestedMovieId) {
+      setSelectedMovieId(requestedMovieId)
     }
   }, [location.search])
 
@@ -146,7 +146,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
     setError((prev) => ({ ...prev, episodes: null }))
 
     dataProvider
-      .fetchEpisodes(seriesId, sortOrder)
+      .fetchMovies(seriesId, sortOrder)
       .then((result) => {
         if (!isMounted) return
         if (result.ok) {
@@ -168,11 +168,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
 
   useEffect(() => {
     if (episodes.length === 0) {
-      setSelectedEpisodeId(null)
+      setSelectedMovieId(null)
       return
     }
 
-    setSelectedEpisodeId((current) => {
+    setSelectedMovieId((current) => {
       if (current && episodes.some((episode) => episode.id === current)) {
         return current
       }
@@ -196,15 +196,15 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         />
       </header>
       <section className="work-page__playback" aria-label="再生領域">
-        <PlaybackPanel episode={selectedEpisode} isLoading={loading.episodes} />
+        <PlaybackPanel episode={selectedMovie} isLoading={loading.episodes} />
       </section>
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>
         <SortControl sortOrder={sortOrder} onChange={setSortOrder} />
         <EpisodeListPanel
           episodes={episodes}
-          selectedEpisodeId={selectedEpisodeId}
-          onSelectEpisode={setSelectedEpisodeId}
+          selectedMovieId={selectedMovieId}
+          onSelectEpisode={setSelectedMovieId}
           onToggleOshi={handleOshiToggle}
           isLoading={loading.episodes}
           error={error.episodes}

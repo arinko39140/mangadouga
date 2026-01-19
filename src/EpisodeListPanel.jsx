@@ -2,7 +2,7 @@ import EpisodeListItem from './EpisodeListItem.jsx'
 
 function EpisodeListPanel({
   episodes = [],
-  selectedEpisodeId = null,
+  selectedMovieId = null,
   onSelectEpisode,
   onToggleOshi,
   isLoading = false,
@@ -22,7 +22,7 @@ function EpisodeListPanel({
       ) : (
         <ul className="work-page__episode-list" aria-label="話数一覧のアイテム">
           {episodes.map((episode) => {
-            const isSelected = episode.id === selectedEpisodeId
+            const isSelected = episode.id === selectedMovieId
             return (
               <li key={episode.id} className="work-page__episode-item">
                 <EpisodeListItem

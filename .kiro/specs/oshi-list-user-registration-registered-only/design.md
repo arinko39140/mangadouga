@@ -3,7 +3,7 @@
 ## Overview
 本機能は、推し登録をユーザー単位で保持し、推しリストページに登録済みのみを表示する。認証済みユーザーに限定した取得と表示を徹底し、未認証時には一貫したログイン誘導を行う。
 
-推し登録結果を即時にUIへ反映し、登録済み状態の見える化を担保する。登録済み推しの一覧は`episode_oshi`を起点に取得し、既存のSupabase RLSによりユーザー境界を保証する。
+推し登録結果を即時にUIへ反映し、登録済み状態の見える化を担保する。登録済み推しの一覧は`movie_oshi`を起点に取得し、既存のSupabase RLSによりユーザー境界を保証する。
 
 ### Goals
 - 推し登録をユーザーIDに紐づけて保存し、重複登録を防止する。
@@ -21,12 +21,12 @@
 | 1.1 | 登録時にユーザーIDと推しを紐づける | WorkPageDataProvider, AuthGate | Service | 推し登録フロー |
 | 1.2 | 未認証時は登録せずログイン誘導 | AuthGate, WorkPage | Service | 推し登録フロー |
 | 1.3 | 無効な識別子は拒否し理由表示 | WorkPage, WorkPageDataProvider | Service | 推し登録フロー |
-| 1.4 | 同一ユーザーの重複登録防止 | episode_oshi, WorkPageDataProvider | Data | 推し登録フロー |
+| 1.4 | 同一ユーザーの重複登録防止 | movie_oshi, WorkPageDataProvider | Data | 推し登録フロー |
 | 2.1 | 推しリスト表示時に登録済みのみ | OshiListsPage, OshiListDataProvider | Service | 推し一覧表示フロー |
 | 2.2 | movieの推バッジ済のみ表示 | OshiListPanel, OshiListItemCard | State | 推し一覧表示フロー |
 | 2.3 | 未認証時は一覧を表示せず誘導 | AuthGate, OshiListsPage | Service | 推し一覧表示フロー |
 | 2.4 | 0件時に空状態表示 | OshiListsPage | State | 推し一覧表示フロー |
-| 2.5 | 他ユーザー分は表示しない | episode_oshi, Supabase RLS | Data | 推し一覧表示フロー |
+| 2.5 | 他ユーザー分は表示しない | movie_oshi, Supabase RLS | Data | 推し一覧表示フロー |
 | 3.1 | 登録済み状態を表示 | WorkPage, EpisodeListItem | State | 推し登録フロー |
 | 3.2 | 登録済み一覧へ反映 | OshiListDataProvider, OshiListsPage | Service | 推し一覧表示フロー |
 | 3.3 | 推しボタン初期状態は済 | WorkPageDataProvider, EpisodeListItem | Service | 推し登録フロー |
@@ -42,7 +42,7 @@
 ### Existing Architecture Analysis
 - ReactページがUI状態を保持し、`create*DataProvider`でSupabaseアクセスを抽象化している。
 - 認証判定は`AuthGate`が担い、未認証時は`/login/`へ統一的に誘導する。
-- `episode_oshi`はRLSによりユーザー単位のアクセスが保証されている。
+- `movie_oshi`はRLSによりユーザー単位のアクセスが保証されている。
 
 ### Architecture Pattern & Boundary Map
 ```mermaid
@@ -54,7 +54,7 @@ graph TB
   WorkPage --> WorkPageDataProvider
   OshiListDataProvider --> Supabase
   WorkPageDataProvider --> Supabase
-  Supabase --> EpisodeOshi
+  Supabase --> MovieOshi
   Supabase --> Movie
 ```
 
@@ -71,7 +71,7 @@ graph TB
 | Frontend | React 18.3.1 | 推し一覧ページと状態管理 | 既存構成を維持 |
 | Frontend | react-router-dom 6.30.1 | 未認証時の遷移 | AuthGateから利用 |
 | Backend Service | @supabase/supabase-js 2.90.1 | 推し一覧と登録の取得 | 既存依存 |
-| Data / Storage | Supabase Postgres | `episode_oshi`と`movie`の取得 | RLSでユーザー境界を担保 |
+| Data / Storage | Supabase Postgres | `movie_oshi`と`movie`の取得 | RLSでユーザー境界を担保 |
 | Infrastructure | Vite 5.4.10 | ビルド/開発環境 | 既存構成 |
 
 ## System Flows
@@ -114,8 +114,8 @@ sequenceDiagram
     AuthGate ->> WorkPage: auth required
     WorkPage ->> User: redirect to login
   else authenticated
-    WorkPage ->> WorkPageDataProvider: toggleEpisodeOshi
-    WorkPageDataProvider ->> Supabase: insert or delete episode oshi
+    WorkPage ->> WorkPageDataProvider: toggleMovieOshi
+    WorkPageDataProvider ->> Supabase: insert or delete movie oshi
     Supabase -->> WorkPageDataProvider: result
     WorkPageDataProvider -->> WorkPage: isOshi
     WorkPage -->> User: update badge
@@ -173,13 +173,13 @@ sequenceDiagram
 | Requirements | 2.1, 2.2, 2.5, 4.2 |
 
 **Responsibilities & Constraints**
-- `episode_oshi`を起点に`movie`を結合し、登録済みのみ取得する。
+- `movie_oshi`を起点に`movie`を結合し、登録済みのみ取得する。
 - 取得失敗時はエラー種別を正規化しUIに伝達する。
 - 未認証状態では呼び出し前にAuthGateで遮断する。
 
 **Dependencies**
 - Inbound: OshiListsPage — 一覧取得要求 (P0)
-- Outbound: Supabase — `episode_oshi`と`movie`の取得 (P0)
+- Outbound: Supabase — `movie_oshi`と`movie`の取得 (P0)
 
 **Contracts**: Service [x] / API [ ] / Event [ ] / Batch [ ] / State [ ]
 
@@ -209,7 +209,7 @@ interface OshiListService {
 - Invariants: `isOshi`は常に`true`。
 
 **Implementation Notes**
-- Integration: `episode_oshi`から`movie`への結合で必要項目を取得
+- Integration: `movie_oshi`から`movie`への結合で必要項目を取得
 - Validation: 空配列はエラーではなく空状態として扱う
 - Risks: 結合の指定誤りによる空取得
 
@@ -220,13 +220,13 @@ interface OshiListService {
 | Requirements | 1.1, 1.3, 1.4, 3.1, 3.3, 3.4 |
 
 **Responsibilities & Constraints**
-- 推し登録時は`episode_oshi`に`movie_id`を登録し、重複は許可しない。
-- `fetchEpisodes`は認証済みの場合に`isOshi`を反映する。
-- `episodeId`が無効な場合は即時エラーを返す。
+- 推し登録時は`movie_oshi`に`movie_id`を登録し、重複は許可しない。
+- `fetchMovies`は認証済みの場合に`isOshi`を反映する。
+- `movieId`が無効な場合は即時エラーを返す。
 
 **Dependencies**
 - Inbound: WorkPage — 推し操作と一覧取得 (P0)
-- Outbound: Supabase — `movie`と`episode_oshi`の取得/更新 (P0)
+- Outbound: Supabase — `movie`と`movie_oshi`の取得/更新 (P0)
 
 **Contracts**: Service [x] / API [ ] / Event [ ] / Batch [ ] / State [ ]
 
@@ -237,11 +237,11 @@ type ToggleOshiResult =
   | { ok: false; error: { type: 'invalid_input' | 'conflict' | 'network' | 'unknown' } };
 
 interface WorkPageOshiService {
-  toggleEpisodeOshi(episodeId: string): Promise<ToggleOshiResult>;
-  fetchEpisodes(seriesId: string, sortOrder: 'latest' | 'oldest'): Promise<{ ok: true; data: { id: string; isOshi: boolean }[] } | { ok: false; error: { type: 'not_configured' | 'network' | 'unknown' } }>;
+  toggleMovieOshi(movieId: string): Promise<ToggleOshiResult>;
+  fetchMovies(seriesId: string, sortOrder: 'latest' | 'oldest'): Promise<{ ok: true; data: { id: string; isOshi: boolean }[] } | { ok: false; error: { type: 'not_configured' | 'network' | 'unknown' } }>;
 }
 ```
-- Preconditions: `episodeId`が有効であること。
+- Preconditions: `movieId`が有効であること。
 - Postconditions: 登録成功時は`isOshi`が反転しUIへ反映される。
 - Invariants: 同一ユーザーの`movie_id`は一意。
 
@@ -286,29 +286,29 @@ interface AuthGateService {
 ## Data Models
 
 ### Domain Model
-- Aggregate: 推し登録（User + Episode）
-- Entities: User, Episode, OshiRegistration
+- Aggregate: 推し登録（User + Movie）
+- Entities: User, Movie, OshiRegistration
 - Business rules & invariants:
   - 同一ユーザーの同一`movie_id`は一意
   - 未認証ユーザーは登録不可
 
 ### Logical Data Model
 **Structure Definition**:
-- `episode_oshi`: `user_id` (uuid), `movie_id` (uuid), `created_at` (timestamptz)
+- `movie_oshi`: `user_id` (uuid), `movie_id` (uuid), `created_at` (timestamptz)
 - `movie`: `movie_id` (uuid), `movie_title` (text), `url` (text), `thumbnail_url` (text), `update` (timestamptz), `series_id` (text)
-- Relationship: `episode_oshi.movie_id` → `movie.movie_id` (1:N)
+- Relationship: `movie_oshi.movie_id` → `movie.movie_id` (1:N)
 
 **Consistency & Integrity**:
 - Transaction boundaries: 1件の推し登録が1トランザクション
-- Referential integrity: `movie`削除時に`episode_oshi`はCASCADE
+- Referential integrity: `movie`削除時に`movie_oshi`はCASCADE
 - Temporal aspects: `created_at`で登録順の並び替えが可能
 
 ### Physical Data Model
-- 既存テーブル構造のまま利用し、追加マイグレーションは不要。
+- `episode_oshi`から`movie_oshi`へのリネームマイグレーションを追加する。
 
 ### Data Contracts & Integration
 **API Data Transfer**
-- `episode_oshi` + `movie`結合結果を`OshiListItem`に正規化
+- `movie_oshi` + `movie`結合結果を`OshiListItem`に正規化
 - Validation rules: `movie_id`が欠損した行は破棄
 - Serialization format: JSON
 
@@ -333,9 +333,9 @@ interface AuthGateService {
 - E2E/UI Tests: 未認証時のリダイレクト、空状態表示、表示形式切替で一覧保持
 
 ## Security Considerations
-- RLSにより`episode_oshi`の参照範囲を`auth.uid()`に限定。
+- RLSにより`movie_oshi`の参照範囲を`auth.uid()`に限定。
 - 未認証時は一覧取得を行わず、ログイン画面へ遷移。
-- フロント側で`episodeId`の入力検証を行い、誤操作を抑制。
+- フロント側で`movieId`の入力検証を行い、誤操作を抑制。
 
 ## Performance & Scalability
 - 推し一覧取得は必要なカラムに限定し、一覧サイズに応じて将来のページングを検討。

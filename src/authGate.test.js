@@ -51,7 +51,7 @@ describe('AuthGate', () => {
       navigate,
       getRedirectContext: () => ({
         seriesId: 'series-1',
-        selectedEpisodeId: 'episode-1',
+        selectedMovieId: 'movie-1',
         sortOrder: 'oldest',
       }),
     })
@@ -59,7 +59,7 @@ describe('AuthGate', () => {
     authGate.redirectToLogin('favorite')
 
     expect(navigate).toHaveBeenCalledWith(
-      '/login/?redirect=%2Fseries%2Fseries-1%2F%3FselectedEpisodeId%3Depisode-1%26sortOrder%3Doldest'
+      '/login/?redirect=%2Fseries%2Fseries-1%2F%3FselectedMovieId%3Dmovie-1%26sortOrder%3Doldest'
     )
   })
 
