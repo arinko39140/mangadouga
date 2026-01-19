@@ -12,7 +12,7 @@
 
 ### Non-Goals
 - 未認証ユーザー向けの閲覧機能追加
-- 推し解除や並び替えの追加仕様（要件外）
+- 並び替えの追加仕様（要件外）
 - サーバーAPI層の新規導入
 
 ## Requirements Traceability
@@ -115,7 +115,7 @@ sequenceDiagram
     WorkPage ->> User: redirect to login
   else authenticated
     WorkPage ->> WorkPageDataProvider: toggleMovieOshi
-    WorkPageDataProvider ->> Supabase: insert or delete movie oshi
+    WorkPageDataProvider ->> Supabase: delete if exists, else insert movie oshi
     Supabase -->> WorkPageDataProvider: result
     WorkPageDataProvider -->> WorkPage: isOshi
     WorkPage -->> User: update badge
@@ -221,6 +221,7 @@ interface OshiListService {
 
 **Responsibilities & Constraints**
 - 推し登録時は`movie_oshi`に`movie_id`を登録し、重複は許可しない。
+- 登録済みの場合は解除として`movie_oshi`から削除する。
 - `fetchMovies`は認証済みの場合に`isOshi`を反映する。
 - `movieId`が無効な場合は即時エラーを返す。
 
@@ -246,7 +247,7 @@ interface WorkPageOshiService {
 - Invariants: 同一ユーザーの`movie_id`は一意。
 
 **Implementation Notes**
-- Integration: 登録は一意制約を前提に冪等に扱う
+- Integration: 存在確認を前提に、存在時は削除・非存在時は追加する
 - Validation: 空または形式不正のIDは`invalid_input`
 - Risks: 連続操作時の整合性
 
@@ -322,7 +323,7 @@ interface AuthGateService {
 ### Error Categories and Responses
 - **User Errors**: 未認証 → ログイン誘導、無効ID → 入力エラー表示
 - **System Errors**: ネットワーク障害 → 再試行導線とエラー表示
-- **Business Logic Errors**: 重複登録 → 既存状態の維持と通知
+- **Business Logic Errors**: 重複登録 → 既存状態の維持と通知（必要に応じて再取得）
 
 ### Monitoring
 - フロントでエラー種別を記録し、必要に応じてログ送信の拡張余地を確保する。
