@@ -1,10 +1,12 @@
 insert into public.series (series_id, title, favorite_count)
 values
-  ('1', 'あいうえお', 100);
+  ('1', 'あいうえお', 100)
+on conflict do nothing;
 
 insert into public.users (user_id, name, x_url, youtube_url, other_url)
 values
-  ('1', 'A', null, null, null);
+  ('1', 'A', null, null, null)
+on conflict do nothing;
 
 insert into public.movie (movie_title, url, favorite_count, "update", series_id, weekday)
 values
@@ -22,3 +24,19 @@ values
   ('星砂の午後', 'https://example.com/movies/12', 75, now() - interval '6 days', '1', 'sat'),
   ('日曜のバルコニー', 'https://example.com/movies/13', 125, now() - interval '3 days', '1', 'sun'),
   ('日曜日のサイン', 'https://example.com/movies/14', 60, now() - interval '5 days', '1', 'sun');
+
+insert into public.user_list (user_id, list_id)
+values
+  ('1', 2),
+  ('1', 3)
+on conflict do nothing;
+
+insert into public.user_series (user_id, series_id)
+values
+  ('1', '1')
+on conflict do nothing;
+
+insert into public.history (history_id, user_id, movie_id, clicked_at)
+values
+  (1, '1', '1', to_timestamp('2025/1/8/12:12', 'YYYY/MM/DD/HH24:MI'))
+on conflict do nothing;
