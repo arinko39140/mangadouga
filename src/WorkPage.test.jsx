@@ -580,6 +580,52 @@ describe('WorkPage state', () => {
     dispatchSpy.mockRestore()
   })
 
+  it('推し登録失敗時は失敗通知を表示し状態を更新しない', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-1',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: 'https://youtu.be/1',
+            isOshi: false,
+          },
+        ],
+      }),
+      toggleMovieOshi: vi.fn().mockResolvedValue({
+        ok: false,
+        error: { type: 'network' },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', authGate)
+
+    const oshiButton = await screen.findByRole('button', { name: '推' })
+    fireEvent.click(oshiButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('推し登録に失敗しました。')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '済' })).not.toBeInTheDocument()
+  })
+
   it('推し解除で一覧上の表示が推に戻る', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({

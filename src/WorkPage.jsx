@@ -36,6 +36,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   const [favoriteUpdating, setFavoriteUpdating] = useState(false)
   const [loading, setLoading] = useState({ series: false, episodes: false })
   const [error, setError] = useState({ series: null, episodes: null })
+  const [oshiError, setOshiError] = useState(null)
 
   const selectedMovie = useMemo(
     () => episodes.find((episode) => episode.id === selectedMovieId) ?? null,
@@ -79,6 +80,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
 
   const handleOshiToggle = async (movieId) => {
     if (!seriesId || typeof dataProvider.toggleMovieOshi !== 'function') return
+    setOshiError(null)
 
     const status = await authGateInstance.getStatus()
     if (!status.ok) {
@@ -96,6 +98,8 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         )
       )
       window.dispatchEvent(new Event(OSHI_LIST_UPDATED_EVENT))
+    } else {
+      setOshiError('failed')
     }
   }
 
@@ -203,6 +207,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>
         <SortControl sortOrder={sortOrder} onChange={setSortOrder} />
+        {oshiError ? (
+          <p className="work-page__status work-page__status--error">
+            推し登録に失敗しました。
+          </p>
+        ) : null}
         <EpisodeListPanel
           episodes={episodes}
           selectedMovieId={selectedMovieId}
