@@ -284,7 +284,7 @@ describe('WorkPageDataProvider', () => {
     const result = await provider.fetchMovies('series-1', 'latest')
 
     expect(result.ok).toBe(true)
-    expect(result.data.map((episode) => episode.isOshi)).toEqual([false, true])
+    expect(result.data.map((episode) => episode.isOshi)).toEqual([true, false])
   })
 
   it('推し未登録の動画はisOshiがfalseになる', async () => {

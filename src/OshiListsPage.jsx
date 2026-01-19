@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import { createOshiListDataProvider } from './oshiListDataProvider.js'
-import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
+import { subscribeOshiListUpdated } from './oshiListEvents.js'
 import { supabase } from './supabaseClient.js'
 import './OshiListsPage.css'
 
@@ -91,11 +91,11 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
     const handleOshiListUpdated = () => {
       fetchIfAuthenticated()
     }
-    window.addEventListener(OSHI_LIST_UPDATED_EVENT, handleOshiListUpdated)
+    const unsubscribe = subscribeOshiListUpdated(handleOshiListUpdated)
 
     return () => {
       isMounted = false
-      window.removeEventListener(OSHI_LIST_UPDATED_EVENT, handleOshiListUpdated)
+      unsubscribe()
     }
   }, [authGateInstance, dataProvider])
 
@@ -113,11 +113,14 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
     try {
       const result = await dataProvider.toggleMovieOshi(movieId)
       if (result.ok) {
-        setItems((prev) =>
-          prev.map((item) =>
+        setItems((prev) => {
+          if (!result.data.isOshi) {
+            return prev.filter((item) => item.id !== movieId)
+          }
+          return prev.map((item) =>
             item.id === movieId ? { ...item, isOshi: result.data.isOshi } : item
           )
-        )
+        })
       } else {
         setOshiError('failed')
       }

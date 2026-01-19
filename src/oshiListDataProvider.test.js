@@ -16,7 +16,7 @@ const buildOshiListSupabaseMock = ({
   const listMovieEqMovieMock = vi
     .fn()
     .mockResolvedValue({ data: listMovieRows, error: listMovieError })
-  const listMovieEqListMock = vi.fn().mockReturnValue({ eq: listMovieEqMovieMock })
+  const listMovieEqListMock = vi.fn().mockImplementation(() => listMovieEqMovieMock())
   const listMovieSelectMock = vi
     .fn()
     .mockReturnValue({ eq: listMovieEqListMock })
