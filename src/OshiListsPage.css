@@ -56,7 +56,7 @@
 }
 
 .oshi-lists__items--grid {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .oshi-lists__items--list {
@@ -219,6 +219,10 @@
 
 @media (max-width: 720px) {
   .oshi-lists__items--list .oshi-lists__card {
+    grid-template-columns: 1fr;
+  }
+
+  .oshi-lists__items--grid {
     grid-template-columns: 1fr;
   }
 }
