@@ -70,9 +70,9 @@ graph TB
   User --> OshiListsCatalogPage
   User --> OshiFavoritesPage
   User --> OshiListPage
-  OshiListsCatalogPage --> AuthGate
+  OshiListsCatalogPage --> SoftAuthGate
   OshiFavoritesPage --> AuthGate
-  OshiListPage --> AuthGate
+  OshiListPage --> SoftAuthGate
   OshiListsCatalogPage --> OshiListCatalogProvider
   OshiFavoritesPage --> OshiFavoritesProvider
   OshiListPage --> OshiListVisibilityPanel
@@ -88,8 +88,9 @@ graph TB
 **Architecture Integration**:
 - Selected pattern: UI + DataProvider分離。既存構成を維持し、画面ごとの責務を明確化する。
 - Domain/feature boundaries: 公開一覧、登録済み一覧、公開/非公開管理を分離し、状態の混在を防止する。
-- Existing patterns preserved: `AuthGate`による認証ガード、`OSHI_LIST_UPDATED_EVENT`による更新通知。
+- Existing patterns preserved: `AuthGate`による認証ガード（リダイレクト前提）、`OSHI_LIST_UPDATED_EVENT`による更新通知。
 - New components rationale: ユーザー単位の公開一覧用DataProviderと公開/非公開制御用DataProviderを新設し責務分割。
+- New components rationale: 公開ページ向けに`SoftAuthGate`（認証状態の取得のみでリダイレクトしない）を追加し、未ログイン時のUI表示を可能にする。
 - Steering compliance: React + Supabase構成とフロントエンド主導の責務分離に準拠。
 
 ### Technology Stack
@@ -108,12 +109,12 @@ graph TB
 sequenceDiagram
   participant User
   participant CatalogPage
-  participant AuthGate
+  participant SoftAuthGate
   participant CatalogProvider
   participant Supabase
   User ->> CatalogPage: open
-  CatalogPage ->> AuthGate: getStatus
-  AuthGate -->> CatalogPage: status
+  CatalogPage ->> SoftAuthGate: getStatus
+  SoftAuthGate -->> CatalogPage: status
   CatalogPage ->> CatalogProvider: fetchCatalog status
   CatalogProvider ->> Supabase: select user list summary view
   Supabase -->> CatalogProvider: rows
@@ -127,12 +128,15 @@ sequenceDiagram
 sequenceDiagram
   participant User
   participant CatalogPage
-  participant AuthGate
+  participant SoftAuthGate
   participant FavoritesProvider
   participant Supabase
   User ->> CatalogPage: toggle favorite
-  CatalogPage ->> AuthGate: getStatus
-  AuthGate -->> CatalogPage: auth ok
+  CatalogPage ->> SoftAuthGate: getStatus
+  SoftAuthGate -->> CatalogPage: auth ok / auth required
+  alt auth required
+    CatalogPage ->> AppRouter: redirect /login
+  end
   CatalogPage ->> FavoritesProvider: toggle oshi list favorite
   FavoritesProvider ->> Supabase: upsert or delete
   Supabase -->> FavoritesProvider: result
@@ -168,12 +172,12 @@ sequenceDiagram
 **Responsibilities & Constraints**
 - 公開リストを常に表示し、未ログイン時は個人状態を出さない
 - 並び替えは登録数の多い順を初期状態とする
-- お気に入りトグル操作は認証必須
+- お気に入りトグル操作は認証必須（未ログイン時は`/login`へ遷移）
 
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
 - Outbound: OshiListCatalogProvider — 一覧取得 (P0)
-- Outbound: AuthGate — 認証確認 (P0)
+- Outbound: SoftAuthGate — 認証確認 (P0)
 - External: window event — 更新通知 (P1)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
@@ -186,6 +190,7 @@ sequenceDiagram
 **Implementation Notes**
 - Integration: `OSHI_LIST_UPDATED_EVENT`受信時に一覧再取得
 - Validation: 未ログイン時は登録ボタンを無効化
+- Error handling: 未ログイン状態での登録操作は`/login`へ遷移
 - Risks: 未ログイン時に個人状態が混入しないよう`isFavorited`を固定
 
 #### OshiFavoritesPage
@@ -203,7 +208,7 @@ sequenceDiagram
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
 - Outbound: OshiFavoritesProvider — お気に入り一覧取得 (P0)
-- Outbound: AuthGate — 認証確認 (P0)
+- Outbound: AuthGate — 認証確認（未ログインはリダイレクト） (P0)
 - External: window event — 更新通知 (P1)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
@@ -232,7 +237,7 @@ sequenceDiagram
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
 - Outbound: OshiListVisibilityPanel — 公開/非公開UI (P0)
-- Outbound: AuthGate — 認証確認 (P0)
+- Outbound: SoftAuthGate — 認証確認 (P0)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
 
@@ -480,7 +485,7 @@ interface OshiListVisibilityProvider {
 ## Error Handling
 
 ### Error Strategy
-- 認証が必要な操作は`auth_required`で即時停止
+- 認証が必要な操作は`auth_required`で即時停止し、未ログイン時は`/login`へ遷移
 - 取得失敗は`network`/`unknown`で分類しUIで通知
 
 ### Error Categories and Responses
