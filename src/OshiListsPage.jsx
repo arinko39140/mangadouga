@@ -11,6 +11,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
   const [isLoading, setIsLoading] = useState(true)
   const [errorType, setErrorType] = useState(null)
   const [items, setItems] = useState([])
+  const [viewMode, setViewMode] = useState('list')
   const authGateInstance = useMemo(() => {
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
@@ -74,6 +75,23 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
   return (
     <main>
       <h1>推しリスト</h1>
+      <div>
+        <span>表示形式:</span>
+        <button
+          type="button"
+          aria-pressed={viewMode === 'list'}
+          onClick={() => setViewMode('list')}
+        >
+          リスト
+        </button>
+        <button
+          type="button"
+          aria-pressed={viewMode === 'grid'}
+          onClick={() => setViewMode('grid')}
+        >
+          グリッド
+        </button>
+      </div>
       {renderContent()}
     </main>
   )
