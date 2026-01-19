@@ -25,16 +25,16 @@ describe('OshiListsPage', () => {
   it('見出しと読み込み状態が表示される', () => {
     const deferred = createDeferred()
     renderOshiListsPage(
-      { fetchOshiList: vi.fn().mockReturnValue(deferred.promise) },
+      { fetchCatalog: vi.fn().mockReturnValue(deferred.promise) },
       { getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }) }
     )
-    expect(screen.getByRole('heading', { name: '推しリスト' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'みんなの推しリスト' })).toBeInTheDocument()
     expect(screen.getByText('読み込み中です。')).toBeInTheDocument()
   })
 
   it('認証済みなら推し一覧の取得を開始する', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchCatalog: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -44,14 +44,14 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(dataProvider.fetchOshiList).toHaveBeenCalled()
+      expect(dataProvider.fetchCatalog).toHaveBeenCalledWith({ sortOrder: 'favorite_desc' })
     })
     expect(authGate.redirectToLogin).not.toHaveBeenCalled()
   })
 
   it('未認証ならログインへ誘導し取得は開始しない', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn(),
+      fetchCatalog: vi.fn(),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
@@ -63,16 +63,28 @@ describe('OshiListsPage', () => {
     await waitFor(() => {
       expect(authGate.redirectToLogin).toHaveBeenCalled()
     })
-    expect(dataProvider.fetchOshiList).not.toHaveBeenCalled()
+    expect(dataProvider.fetchCatalog).not.toHaveBeenCalled()
   })
 
   it('取得成功で一覧を表示する', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({
+      fetchCatalog: vi.fn().mockResolvedValue({
         ok: true,
         data: [
-          { id: 'movie-1', title: '推し動画', isOshi: true },
-          { id: 'movie-2', title: '推し動画2', isOshi: true },
+          {
+            listId: '1',
+            name: '推しリスト',
+            favoriteCount: 5,
+            isFavorited: true,
+            visibility: 'public',
+          },
+          {
+            listId: '2',
+            name: '推しリスト2',
+            favoriteCount: 2,
+            isFavorited: false,
+            visibility: 'public',
+          },
         ],
       }),
     }
@@ -84,21 +96,17 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByText('推し動画')).toBeInTheDocument()
+      expect(screen.getByText('推しリスト')).toBeInTheDocument()
     })
-    expect(screen.getByText('推し動画2')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: '済' })).toHaveLength(2)
+    expect(screen.getByText('推しリスト2')).toBeInTheDocument()
+    expect(screen.getByText('お気に入り数: 5')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '登録' })).toBeInTheDocument()
   })
 
-  it('推し状態に応じてボタン表示を切り替える', async () => {
+  it('並び替え条件を切り替える', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({
-        ok: true,
-        data: [
-          { id: 'movie-1', title: '推し動画', isOshi: true },
-          { id: 'movie-2', title: '未登録動画', isOshi: false },
-        ],
-      }),
+      fetchCatalog: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -108,84 +116,103 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByText('推し動画')).toBeInTheDocument()
+      expect(dataProvider.fetchCatalog).toHaveBeenCalledTimes(1)
     })
-    expect(screen.getByText('未登録動画')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
-  })
-
-  it('表示形式の切替後も一覧を維持する', async () => {
-    const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({
-        ok: true,
-        data: [
-          { id: 'movie-1', title: '推し動画', isOshi: true },
-          { id: 'movie-2', title: '推し動画2', isOshi: true },
-        ],
-      }),
-    }
-    const authGate = {
-      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
-      redirectToLogin: vi.fn(),
-    }
-
-    renderOshiListsPage(dataProvider, authGate)
+    fireEvent.click(screen.getByRole('button', { name: '少ない順' }))
 
     await waitFor(() => {
-      expect(screen.getByText('推し動画')).toBeInTheDocument()
+      expect(dataProvider.fetchCatalog).toHaveBeenCalledWith({
+        sortOrder: 'favorite_asc',
+      })
     })
-    fireEvent.click(screen.getByRole('button', { name: 'グリッド' }))
-
-    expect(screen.getByText('推し動画')).toBeInTheDocument()
-    expect(screen.getByText('推し動画2')).toBeInTheDocument()
-    expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(1)
   })
 
-  it('推しトグルで解除した項目を一覧から外す', async () => {
+  it('お気に入りトグルで状態と登録数を更新する', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({
-        ok: true,
-        data: [{ id: 'movie-1', title: '推し動画', isOshi: true }],
-      }),
-      toggleMovieOshi: vi.fn().mockResolvedValue({
-        ok: true,
-        data: { isOshi: false },
-      }),
-    }
-    const authGate = {
-      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
-      redirectToLogin: vi.fn(),
-    }
-
-    renderOshiListsPage(dataProvider, authGate)
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: '済' }))
-
-    await waitFor(() => {
-      expect(screen.queryByText('推し動画')).not.toBeInTheDocument()
-      expect(screen.getByText('登録済みの推しがありません。')).toBeInTheDocument()
-    })
-    expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
-  })
-
-  it('推し更新イベントで一覧を再取得する', async () => {
-    const dataProvider = {
-      fetchOshiList: vi
+      fetchCatalog: vi
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          data: [{ id: 'movie-1', title: '推し動画', isOshi: true }],
+          data: [
+            {
+              listId: '1',
+              name: '推しリスト',
+              favoriteCount: 5,
+              isFavorited: true,
+              visibility: 'public',
+            },
+          ],
         })
         .mockResolvedValueOnce({
           ok: true,
           data: [
-            { id: 'movie-1', title: '推し動画', isOshi: true },
-            { id: 'movie-2', title: '推し動画2', isOshi: true },
+            {
+              listId: '1',
+              name: '推しリスト',
+              favoriteCount: 4,
+              isFavorited: false,
+              visibility: 'public',
+            },
+          ],
+        }),
+      toggleFavorite: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { isFavorited: false },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListsPage(dataProvider, authGate)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '解除' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '登録' })).toBeInTheDocument()
+      expect(screen.getByText('お気に入り数: 4')).toBeInTheDocument()
+    })
+    expect(dataProvider.toggleFavorite).toHaveBeenCalledWith('1')
+  })
+
+  it('推し更新イベントで一覧を再取得する', async () => {
+    const dataProvider = {
+      fetchCatalog: vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            {
+              listId: '1',
+              name: '推しリスト',
+              favoriteCount: 5,
+              isFavorited: true,
+              visibility: 'public',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            {
+              listId: '1',
+              name: '推しリスト',
+              favoriteCount: 5,
+              isFavorited: true,
+              visibility: 'public',
+            },
+            {
+              listId: '2',
+              name: '推しリスト2',
+              favoriteCount: 2,
+              isFavorited: true,
+              visibility: 'public',
+            },
           ],
         }),
     }
@@ -197,7 +224,7 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByText('推し動画')).toBeInTheDocument()
+      expect(screen.getByText('推しリスト')).toBeInTheDocument()
     })
 
     await act(async () => {
@@ -205,14 +232,14 @@ describe('OshiListsPage', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('推し動画2')).toBeInTheDocument()
+      expect(screen.getByText('推しリスト2')).toBeInTheDocument()
     })
-    expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(2)
+    expect(dataProvider.fetchCatalog).toHaveBeenCalledTimes(2)
   })
 
   it('取得結果が空なら空状態を表示する', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchCatalog: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -222,13 +249,13 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByText('登録済みの推しがありません。')).toBeInTheDocument()
+      expect(screen.getByText('公開されている推しリストがありません。')).toBeInTheDocument()
     })
   })
 
   it('取得失敗時はエラー表示を出し一覧は表示しない', async () => {
     const dataProvider = {
-      fetchOshiList: vi.fn().mockResolvedValue({ ok: false, error: { type: 'network' } }),
+      fetchCatalog: vi.fn().mockResolvedValue({ ok: false, error: 'network' }),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -238,7 +265,7 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByText('推し一覧の取得に失敗しました。')).toBeInTheDocument()
+      expect(screen.getByText('推しリストの取得に失敗しました。')).toBeInTheDocument()
     })
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
