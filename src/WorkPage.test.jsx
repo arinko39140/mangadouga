@@ -47,7 +47,7 @@ describe('WorkPage state', () => {
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
-            videoUrl: '/video/latest',
+            videoUrl: 'https://youtu.be/latest',
             isOshi: false,
           },
           {
@@ -55,7 +55,7 @@ describe('WorkPage state', () => {
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
-            videoUrl: '/video/old',
+            videoUrl: 'https://youtu.be/old',
             isOshi: false,
           },
         ],
@@ -66,7 +66,7 @@ describe('WorkPage state', () => {
 
     const latestButton = await screen.findByRole('button', { name: '最新話' })
     expect(latestButton).toHaveAttribute('aria-pressed', 'true')
-    expect(await screen.findByText('再生中: 最新話')).toBeInTheDocument()
+    expect(await screen.findByTitle('再生中: 最新話')).toBeInTheDocument()
   })
 
   it('話数選択の変更で再生対象が更新される', async () => {
@@ -88,7 +88,7 @@ describe('WorkPage state', () => {
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
-            videoUrl: '/video/latest',
+            videoUrl: 'https://youtu.be/latest',
             isOshi: false,
           },
           {
@@ -96,7 +96,7 @@ describe('WorkPage state', () => {
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
-            videoUrl: '/video/old',
+            videoUrl: 'https://youtu.be/old',
             isOshi: false,
           },
         ],
@@ -109,7 +109,7 @@ describe('WorkPage state', () => {
     fireEvent.click(oldButton)
 
     expect(oldButton).toHaveAttribute('aria-pressed', 'true')
-    expect(await screen.findByText('再生中: 第1話')).toBeInTheDocument()
+    expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
   })
 
   it('初期ソート順は最新話で取得される', async () => {
@@ -169,17 +169,17 @@ describe('WorkPage state', () => {
           return Promise.resolve({
             ok: true,
             data: [
-              {
-                id: 'movie-oldest',
-                title: '最古話',
-                thumbnailUrl: null,
-                publishedAt: '2024-01-01T00:00:00Z',
-                videoUrl: '/video/oldest',
-                isOshi: false,
-              },
-            ],
-          })
-        }
+            {
+              id: 'movie-oldest',
+              title: '最古話',
+              thumbnailUrl: null,
+              publishedAt: '2024-01-01T00:00:00Z',
+              videoUrl: 'https://youtu.be/oldest',
+              isOshi: false,
+            },
+          ],
+        })
+      }
         return Promise.resolve({
           ok: true,
           data: [
@@ -188,7 +188,7 @@ describe('WorkPage state', () => {
               title: '最新話',
               thumbnailUrl: null,
               publishedAt: '2026-01-01T00:00:00Z',
-              videoUrl: '/video/latest',
+              videoUrl: 'https://youtu.be/latest',
               isOshi: false,
             },
             {
@@ -196,7 +196,7 @@ describe('WorkPage state', () => {
               title: '中間話',
               thumbnailUrl: null,
               publishedAt: '2025-06-01T00:00:00Z',
-              videoUrl: '/video/middle',
+              videoUrl: 'https://youtu.be/middle',
               isOshi: false,
             },
           ],
@@ -217,7 +217,7 @@ describe('WorkPage state', () => {
 
     const oldestButton = await screen.findByRole('button', { name: '最古話' })
     expect(oldestButton).toHaveAttribute('aria-pressed', 'true')
-    expect(await screen.findByText('再生中: 最古話')).toBeInTheDocument()
+    expect(await screen.findByTitle('再生中: 最古話')).toBeInTheDocument()
   })
 
   it('並び順の切り替えで表示ラベルが更新される', async () => {
@@ -362,7 +362,7 @@ describe('WorkPage state', () => {
             title: '第1話',
             thumbnailUrl: null,
             publishedAt: '2025-12-01T00:00:00Z',
-            videoUrl: '/video/old',
+            videoUrl: 'https://youtu.be/old',
             isOshi: false,
           },
           {
@@ -370,7 +370,7 @@ describe('WorkPage state', () => {
             title: '最新話',
             thumbnailUrl: null,
             publishedAt: '2026-01-01T00:00:00Z',
-            videoUrl: '/video/latest',
+            videoUrl: 'https://youtu.be/latest',
             isOshi: false,
           },
         ],
@@ -385,7 +385,7 @@ describe('WorkPage state', () => {
     const selectedButton = await screen.findByRole('button', { name: '第1話' })
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('並び順: 古い順')).toBeInTheDocument()
-    expect(await screen.findByText('再生中: 第1話')).toBeInTheDocument()
+    expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
   })
 
   it('不正なパラメータは既定値へフォールバックする', async () => {
@@ -617,5 +617,36 @@ describe('WorkPage state', () => {
       expect(authGate.redirectToLogin).toHaveBeenCalledWith('oshi')
     })
     expect(dataProvider.toggleMovieOshi).not.toHaveBeenCalled()
+  })
+
+  it('推し登録済みの初期状態を表示する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-1',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: '/video/1',
+            isOshi: true,
+          },
+        ],
+      }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1')
+
+    expect(await screen.findByRole('button', { name: '済' })).toBeInTheDocument()
   })
 })
