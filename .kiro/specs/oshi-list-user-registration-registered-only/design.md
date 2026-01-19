@@ -305,7 +305,7 @@ interface AuthGateService {
 - Temporal aspects: `created_at`で登録順の並び替えが可能
 
 ### Physical Data Model
-- `episode_oshi`から`movie_oshi`へのリネームマイグレーションを追加する。
+- 物理スキーマは既に`movie_oshi`が存在しており、追加のリネームマイグレーションは不要。
 
 ### Data Contracts & Integration
 **API Data Transfer**
