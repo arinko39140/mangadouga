@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import LoginPage from './LoginPage.jsx'
 import TopPage from './TopPage.jsx'
+import OshiFavoritesPage from './OshiFavoritesPage.jsx'
 import OshiListsPage from './OshiListsPage.jsx'
 import WorkPage from './WorkPage.jsx'
 
@@ -10,6 +11,7 @@ function AppRouter() {
       <Route path="/" element={<TopPage />} />
       <Route path="/login/" element={<LoginPage />} />
       <Route path="/oshi-lists/" element={<OshiListsPage />} />
+      <Route path="/oshi-lists/favorites/" element={<OshiFavoritesPage />} />
       <Route path="/series/:seriesId/" element={<WorkPage />} />
     </Routes>
   )
