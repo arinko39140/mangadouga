@@ -12,8 +12,8 @@
 **Objective:** As a ログインユーザー, I want お気に入り操作が自分のアカウントに紐づくこと, so that 他人の状態と混ざらず安全に管理できる
 
 #### Acceptance Criteria
-1. When ユーザーが未ログインでお気に入り推しリストにアクセスする, the Oshi List UI shall ログインが必要である旨を表示する
-2. While ユーザーが未ログインである, the Oshi List UI shall お気に入り登録/解除の操作を無効または非表示にする
+1. When ユーザーが未ログインでお気に入り推しリストにアクセスする, the Oshi List UI shall ログインページへ遷移する
+2. While ユーザーが未ログインである, the Oshi List UI shall お気に入り登録/解除の操作を実行しない
 3. The Oshi List UI shall お気に入り登録/解除の操作を現在のログインユーザーに紐づける
 4. If お気に入り操作中に認証状態が無効になった, the Oshi List UI shall 操作を完了せず認証が必要である旨を表示する
 5. The Oshi List UI shall お気に入り推しリストで他ユーザーの登録結果を表示しない

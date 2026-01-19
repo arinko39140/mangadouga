@@ -150,7 +150,7 @@ sequenceDiagram
 | Component | Domain/Layer | Intent | Req Coverage | Key Dependencies (P0/P1) | Contracts |
 |-----------|--------------|--------|--------------|--------------------------|-----------|
 | OshiListsCatalogPage | UI | みんなの推しリスト一覧を表示 | 4.1-4.7, 6.1-6.5 | OshiListCatalogProvider(P0), SoftAuthGate(P0) | State |
-| OshiFavoritesPage | UI | 登録済みのみの推しリスト一覧 | 1.1-1.5, 2.1-2.6, 3.1-3.4 | OshiFavoritesProvider(P0), SoftAuthGate(P0) | State |
+| OshiFavoritesPage | UI | 登録済みのみの推しリスト一覧 | 1.1-1.5, 2.1-2.6, 3.1-3.4 | OshiFavoritesProvider(P0), AuthGate(P0) | State |
 | OshiListPage | UI | 特定ユーザーの推しリスト詳細 | 5.4, 6.1-6.5 | OshiListVisibilityPanel(P0), OshiListVisibilityProvider(P0), SoftAuthGate(P0) | State |
 | OshiListVisibilityPanel | UI | 公開/非公開の切替UI | 5.1-5.6 | OshiListVisibilityProvider(P0), AuthGate(P0) | State |
 | OshiListCatalogProvider | Data | 公開一覧の取得と並び替え | 4.1-4.7, 6.1, 6.4 | Supabase(P0) | Service |
@@ -201,14 +201,14 @@ sequenceDiagram
 | Requirements | 1.1-1.5, 2.1-2.6, 3.1-3.4 |
 
 **Responsibilities & Constraints**
-- 未ログイン時はログイン必要メッセージを表示
+- 未ログイン時はログインページへ遷移
 - 一覧は登録済みのみ、空状態を表示
 - 登録/解除時は一覧の状態を更新
 
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
 - Outbound: OshiFavoritesProvider — お気に入り一覧取得 (P0)
-- Outbound: SoftAuthGate — 認証確認（未ログインはページ内表示） (P0)
+- Outbound: AuthGate — 認証確認（未ログインはログインページへ遷移） (P0)
 - External: window event — 更新通知 (P1)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
@@ -219,7 +219,7 @@ sequenceDiagram
 - Concurrency strategy: 操作中は対象ボタンを無効化
 
 **Implementation Notes**
-- Integration: 未ログイン時は一覧取得を行わずログインCTAを表示
+- Integration: 未ログイン時は一覧取得を行わずログインページへ遷移
 - Validation: `userId`の入力検証
 - Risks: 認証状態の変化で一覧が表示されない場合がある
 
@@ -339,6 +339,7 @@ interface OshiListCatalogProvider {
 
 **Responsibilities & Constraints**
 - ログインユーザーの`oshi_list_favorite`のみを取得
+- 非公開に切り替わった推しリストは一覧から除外する
 - 重複登録を防止し、解除で即時反映
 
 **Dependencies**
@@ -369,9 +370,11 @@ interface OshiFavoritesProvider {
 - Preconditions: 認証済みであること
 - Postconditions: 一覧は登録済みのみ
 - Invariants: 他ユーザーの登録情報は返さない
+- Invariants: 非公開ユーザーの推しリストは返さない
 
 **Implementation Notes**
 - Integration: RLSによりユーザー単位制御
+- Integration: `users.oshi_list_visibility = 'public'`を条件に含める
 - Validation: `targetUserId`の空値は即時エラー
 - Risks: 認証切替で一覧が空になる
 
