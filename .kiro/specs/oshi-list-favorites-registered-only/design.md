@@ -1,12 +1,12 @@
 # Design Document
 
 ## Overview
-本機能は、みんなの推しリスト一覧を公開しつつ、ログインユーザーの「お気に入り推しリスト」は登録済みのみを表示する体験を提供する。推しリストの実体は`movie_oshi`であり、一覧表示は`user_id`単位で集約したユーザーの推しリストを公開する。公開/非公開制御はユーザー単位で行い、未ログインユーザーの閲覧安全性とログインユーザーの操作性を両立する。
+本機能は、みんなの推しリスト一覧をログインユーザー向けに公開しつつ、ログインユーザーの「お気に入り推しリスト」は登録済みのみを表示する体験を提供する。推しリストの実体は`movie_oshi`であり、一覧表示は`user_id`単位で集約したユーザーの推しリストを公開する。公開/非公開制御はユーザー単位で行い、ログインユーザーの操作性と公開設定の安全性を両立する。
 
-対象ユーザーは一覧閲覧ユーザーとログインユーザーであり、前者は公開リストのみ閲覧可能、後者はお気に入り登録/解除や公開設定を管理できる。既存のReact + Supabase構成を維持し、UIの境界とデータ取得契約を明確化する。
+対象ユーザーはログインユーザーであり、一覧の閲覧とお気に入り登録/解除や公開設定を管理できる。既存のReact + Supabase構成を維持し、UIの境界とデータ取得契約を明確化する。
 
 ### Goals
-- みんなの推しリスト一覧をログイン状態に関わらず閲覧可能にする
+- みんなの推しリスト一覧をログインユーザーのみ閲覧可能にする
 - お気に入り推しリストはログインユーザーの登録済みのみを表示する
 - 公開/非公開設定と登録数表示の整合性を保つ
 - 一覧はユーザー単位で集約表示し、ユーザー名を表示する
@@ -37,7 +37,7 @@
 | 3.4 | 重複表示防止 | OshiFavoritesProvider | State | Favorites Auth Flow |
 | 4.1 | 公開一覧の表示 | OshiListsCatalogPage | UI State | Catalog Load Flow |
 | 4.2 | ログイン時のお気に入り状態表示 | OshiListsCatalogPage, OshiListCatalogProvider | State | Catalog Load Flow |
-| 4.3 | 未ログイン時の個人状態非表示 | OshiListCatalogProvider | Service | Catalog Load Flow |
+| 4.3 | 未ログイン時はログイン遷移 | OshiListsCatalogPage, AuthGate | UI State | Catalog Load Flow |
 | 4.4 | 一覧からお気に入り登録 | OshiListsCatalogPage, OshiListCatalogProvider | Service | Catalog Toggle Flow |
 | 4.5 | 登録数表示 | OshiListsCatalogPage, OshiListFavoriteCounter | State | Catalog Load Flow |
 | 4.6 | 登録数で並び替え | OshiListsCatalogPage, OshiListCatalogProvider | Service | Catalog Load Flow |
@@ -60,7 +60,7 @@
 
 ### Existing Architecture Analysis (if applicable)
 - Reactページは`DataProvider`を通してSupabaseへアクセスする構成。
-- 認証は`AuthGate`と`SoftAuthGate`でセッションを確認し、未ログイン時はページ内でログイン誘導を行う（強制リダイレクトは行わない）。
+- 認証は`AuthGate`と`SoftAuthGate`でセッションを確認し、`AuthGate`は未ログイン時にログインページへ遷移する。
 - 推しリストの実体は`movie_oshi`で、ユーザー単位で集約する必要がある。
 
 ### Architecture Pattern & Boundary Map
@@ -70,7 +70,7 @@ graph TB
   User --> OshiListsCatalogPage
   User --> OshiFavoritesPage
   User --> OshiListPage
-  OshiListsCatalogPage --> SoftAuthGate
+  OshiListsCatalogPage --> AuthGate
   OshiFavoritesPage --> AuthGate
   OshiListPage --> SoftAuthGate
   OshiListsCatalogPage --> OshiListCatalogProvider
@@ -88,9 +88,9 @@ graph TB
 **Architecture Integration**:
 - Selected pattern: UI + DataProvider分離。既存構成を維持し、画面ごとの責務を明確化する。
 - Domain/feature boundaries: 公開一覧、登録済み一覧、公開/非公開管理を分離し、状態の混在を防止する。
-- Existing patterns preserved: `AuthGate`/`SoftAuthGate`による認証ガード（ページ内ログイン誘導）、`OSHI_LIST_UPDATED_EVENT`による更新通知。
+- Existing patterns preserved: `AuthGate`はログインページへ遷移、`SoftAuthGate`は状態取得のみを行う認証ガード、`OSHI_LIST_UPDATED_EVENT`による更新通知。
 - New components rationale: ユーザー単位の公開一覧用DataProviderと公開/非公開制御用DataProviderを新設し責務分割。
-- New components rationale: 公開ページ向けに`SoftAuthGate`（認証状態の取得のみでリダイレクトしない）を追加し、未ログイン時のUI表示を可能にする。
+- New components rationale: みんなの推しリスト一覧は`AuthGate`を適用し、未ログイン時はログインページへ遷移する。
 - Steering compliance: React + Supabase構成とフロントエンド主導の責務分離に準拠。
 
 ### Technology Stack
@@ -109,18 +109,22 @@ graph TB
 sequenceDiagram
   participant User
   participant CatalogPage
-  participant SoftAuthGate
+  participant AuthGate
   participant CatalogProvider
   participant Supabase
   User ->> CatalogPage: open
-  CatalogPage ->> SoftAuthGate: getStatus
-  SoftAuthGate -->> CatalogPage: status
-  CatalogPage ->> CatalogProvider: fetchCatalog status
-  CatalogProvider ->> Supabase: select user list summary view
-  Supabase -->> CatalogProvider: rows
-  CatalogProvider -->> CatalogPage: catalog items
+  CatalogPage ->> AuthGate: getStatus
+  AuthGate -->> CatalogPage: auth ok / auth required
+  alt auth required
+    CatalogPage ->> CatalogPage: redirect login
+  else auth ok
+    CatalogPage ->> CatalogProvider: fetchCatalog
+    CatalogProvider ->> Supabase: select user list summary view
+    Supabase -->> CatalogProvider: rows
+    CatalogProvider -->> CatalogPage: catalog items
+  end
 ```
-- 未ログイン時は`isFavorited`を`false`に固定し、公開リストのみを返す（ビュー側で計算）。
+- 未ログイン時はログインページへ遷移する。
 - 初期の並び順は`favorite_count`降順で固定。
 
 ### Favorites Toggle Flow
@@ -128,14 +132,14 @@ sequenceDiagram
 sequenceDiagram
   participant User
   participant CatalogPage
-  participant SoftAuthGate
+  participant AuthGate
   participant FavoritesProvider
   participant Supabase
   User ->> CatalogPage: toggle favorite
-  CatalogPage ->> SoftAuthGate: getStatus
-  SoftAuthGate -->> CatalogPage: auth ok / auth required
+  CatalogPage ->> AuthGate: getStatus
+  AuthGate -->> CatalogPage: auth ok / auth required
   alt auth required
-    CatalogPage ->> CatalogPage: show login CTA
+    CatalogPage ->> CatalogPage: redirect login
   end
   CatalogPage ->> FavoritesProvider: toggle oshi list favorite
   FavoritesProvider ->> Supabase: upsert or delete
@@ -143,13 +147,13 @@ sequenceDiagram
   FavoritesProvider -->> CatalogPage: favorite state
   CatalogPage ->> OshiListEventBus: publish update
 ```
-- 認証失敗時は操作を中断し、ページ内でログイン誘導を行う。
+- 認証失敗時は操作を中断し、ログインページへ遷移する。
 
 ## Components and Interfaces
 
 | Component | Domain/Layer | Intent | Req Coverage | Key Dependencies (P0/P1) | Contracts |
 |-----------|--------------|--------|--------------|--------------------------|-----------|
-| OshiListsCatalogPage | UI | みんなの推しリスト一覧を表示 | 4.1-4.7, 6.1-6.5 | OshiListCatalogProvider(P0), SoftAuthGate(P0) | State |
+| OshiListsCatalogPage | UI | みんなの推しリスト一覧を表示 | 4.1-4.7, 6.1-6.5 | OshiListCatalogProvider(P0), AuthGate(P0) | State |
 | OshiFavoritesPage | UI | 登録済みのみの推しリスト一覧 | 1.1-1.5, 2.1-2.6, 3.1-3.4 | OshiFavoritesProvider(P0), AuthGate(P0) | State |
 | OshiListPage | UI | 特定ユーザーの推しリスト詳細 | 5.4, 6.1-6.5 | OshiListVisibilityPanel(P0), OshiListVisibilityProvider(P0), SoftAuthGate(P0) | State |
 | OshiListVisibilityPanel | UI | 公開/非公開の切替UI | 5.1-5.6 | OshiListVisibilityProvider(P0), AuthGate(P0) | State |
@@ -170,14 +174,14 @@ sequenceDiagram
 | Requirements | 4.1-4.7, 6.1-6.5 |
 
 **Responsibilities & Constraints**
-- 公開リストを常に表示し、未ログイン時は個人状態を出さない
+- ログインユーザーのみ一覧を表示し、未ログイン時はログインページへ遷移する
 - 並び替えは登録数の多い順を初期状態とする
-- お気に入りトグル操作は認証必須（未ログイン時はページ内でログイン誘導）
+- お気に入りトグル操作は認証必須（未ログイン時はログインページへ遷移）
 
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
 - Outbound: OshiListCatalogProvider — 一覧取得 (P0)
-- Outbound: SoftAuthGate — 認証確認 (P0)
+- Outbound: AuthGate — 認証確認 (P0)
 - External: window event — 更新通知 (P1)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
@@ -189,9 +193,9 @@ sequenceDiagram
 
 **Implementation Notes**
 - Integration: `OSHI_LIST_UPDATED_EVENT`受信時に一覧再取得
-- Validation: 未ログイン時は登録ボタンを無効化
-- Error handling: 未ログイン状態での登録操作はページ内ログイン誘導
-- Risks: 未ログイン時に個人状態が混入しないよう`isFavorited`を固定
+- Validation: 未ログイン時はログインページへ遷移
+- Error handling: 認証切れの場合はログインページへ遷移
+- Risks: 認証切れ時の遷移が失敗すると一覧表示が不整合になる
 
 #### OshiFavoritesPage
 
@@ -291,7 +295,7 @@ sequenceDiagram
 
 **Responsibilities & Constraints**
 - 公開リストのみ取得し、`favorite_count`で並び替え
-- 認証状態に応じて`isFavorited`を付加
+- ログインユーザーの`isFavorited`を付加
 
 **Dependencies**
 - Inbound: OshiListsCatalogPage — 一覧取得要求 (P0)
@@ -314,7 +318,7 @@ type OshiListCatalogItem = {
 
 type CatalogResult =
   | { ok: true; data: OshiListCatalogItem[] }
-  | { ok: false; error: 'network' | 'unknown' | 'not_configured' }
+  | { ok: false; error: 'auth_required' | 'network' | 'unknown' | 'not_configured' }
 
 interface OshiListCatalogProvider {
   fetchCatalog(params: { sortOrder: 'favorite_desc' | 'favorite_asc' }): Promise<CatalogResult>
@@ -327,7 +331,7 @@ interface OshiListCatalogProvider {
 
 **Implementation Notes**
 - Integration: `user_oshi_list_catalog`ビューを使用し、`is_favorited`はSQLで算出する
-- Validation: 未ログイン時は`toggleFavorite`を`auth_required`で失敗させる
+- Validation: 未ログイン時は`fetchCatalog`/`toggleFavorite`を`auth_required`で失敗させる
 - Risks: ビューの権限不足による取得失敗
 
 #### OshiFavoritesProvider
@@ -478,7 +482,7 @@ interface OshiListVisibilityProvider {
 **API Data Transfer**
 - `user_oshi_list_catalog` view
   - `user_id: text`, `name: text`, `oshi_list_favorite_count: integer`, `oshi_list_visibility: text`, `is_favorited: boolean`
-  - `is_favorited`は`auth.uid()`に基づいて算出し、未ログイン時は`false`を返す
+  - `is_favorited`は`auth.uid()`に基づいて算出する
 - `oshi_list_favorite` toggle
   - Request: `{ target_user_id: text }`
   - Response: `{ is_favorited: boolean }`
@@ -490,11 +494,11 @@ interface OshiListVisibilityProvider {
 ## Error Handling
 
 ### Error Strategy
-- 認証が必要な操作は`auth_required`で即時停止し、未ログイン時はページ内ログイン誘導
+- 認証が必要な操作は`auth_required`で即時停止し、未ログイン時はログインページへ遷移
 - 取得失敗は`network`/`unknown`で分類しUIで通知
 
 ### Error Categories and Responses
-- User Errors: 未ログイン → ページ内ログイン誘導、無効入力 → 操作中止
+- User Errors: 未ログイン → ログインページへ遷移、無効入力 → 操作中止
 - System Errors: 通信失敗 → 再試行提示、Supabase障害 → 一覧を空状態に
 - Business Logic Errors: 所有者以外の公開切替 → 操作不可メッセージ
 
@@ -514,7 +518,7 @@ interface OshiListVisibilityProvider {
 - 非公開リストが未ログインに非表示になること
 
 ### E2E/UI Tests
-- 未ログインでお気に入り一覧にアクセスするとログイン必要表示
+- 未ログインでお気に入り一覧にアクセスするとログインページへ遷移
 - 公開一覧でお気に入りトグルが正常動作
 - 公開/非公開切替が推しリストページに反映される
 
@@ -522,7 +526,7 @@ interface OshiListVisibilityProvider {
 - `users`のRLSを`user_id = auth.uid()`で更新許可、閲覧は`oshi_list_visibility = 'public'`に限定
 - `movie_oshi`は所有者または公開ユーザーのデータのみ閲覧可（RLSで拒否）
 - `oshi_list_favorite`は`user_id = auth.uid()`で読み書き可能
-- 未ログイン時の個人状態取得を禁止
+- 未ログイン時の一覧取得を禁止
 
 ## Performance & Scalability
 - `oshi_list_favorite_count`のインデックスで並び替えコストを抑制

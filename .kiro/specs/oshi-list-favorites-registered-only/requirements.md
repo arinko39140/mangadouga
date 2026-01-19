@@ -42,9 +42,9 @@
 **Objective:** As a 利用者, I want みんなの推しリスト一覧を閲覧できること, so that 推しリストを探せる
 
 #### Acceptance Criteria
-1. The Oshi List UI shall みんなの推しリスト一覧をログイン状態に関わらず表示する
+1. The Oshi List UI shall みんなの推しリスト一覧をログインユーザーのみに表示する
 2. When ログインユーザーがみんなの推しリスト一覧を閲覧する, the Oshi List UI shall 当該ユーザーのお気に入り登録状態を表示する
-3. While 未ログインユーザーがみんなの推しリスト一覧を閲覧する, the Oshi List UI shall 個人に紐づくお気に入り状態を表示しない
+3. When 未ログインユーザーがみんなの推しリスト一覧へアクセスする, the Oshi List UI shall ログインページへ遷移する
 4. When ログインユーザーがみんなの推しリスト一覧の推しリストをお気に入り推しリストに登録する操作を行う, the Oshi List UI shall 当該推しリストをそのユーザーのお気に入り推しリストに登録する
 5. The Oshi List UI shall みんなの推しリスト一覧にお気に入り登録数を表示する
 6. When みんなの推しリスト一覧で並び替え条件を選択する, the Oshi List UI shall お気に入り登録数が多い順または少ない順で表示する
