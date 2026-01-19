@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import { createOshiListDataProvider } from './oshiListDataProvider.js'
+import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 import { supabase } from './supabaseClient.js'
 
 const defaultDataProvider = createOshiListDataProvider(supabase)
@@ -46,9 +47,14 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
     }
 
     fetchIfAuthenticated()
+    const handleOshiListUpdated = () => {
+      fetchIfAuthenticated()
+    }
+    window.addEventListener(OSHI_LIST_UPDATED_EVENT, handleOshiListUpdated)
 
     return () => {
       isMounted = false
+      window.removeEventListener(OSHI_LIST_UPDATED_EVENT, handleOshiListUpdated)
     }
   }, [authGateInstance, dataProvider])
 

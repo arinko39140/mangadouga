@@ -7,6 +7,7 @@ import PlaybackPanel from './PlaybackPanel.jsx'
 import SeriesHeader from './SeriesHeader.jsx'
 import SortControl from './SortControl.jsx'
 import { createMockWorkPageDataProvider } from './mockWorkPageDataProvider.js'
+import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 import './WorkPage.css'
@@ -94,6 +95,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
             : episode
         )
       )
+      window.dispatchEvent(new Event(OSHI_LIST_UPDATED_EVENT))
     }
   }
 

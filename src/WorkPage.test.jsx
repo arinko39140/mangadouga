@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import WorkPage from './WorkPage.jsx'
+import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 
 const renderWorkPage = (dataProvider, seriesId = 'series-1', authGate) =>
   render(
@@ -530,6 +531,53 @@ describe('WorkPage state', () => {
       expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
     })
     expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
+  })
+
+  it('推し登録成功時に推し一覧更新イベントを送信する', async () => {
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-1',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: 'https://youtu.be/1',
+            isOshi: false,
+          },
+        ],
+      }),
+      toggleMovieOshi: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { isOshi: true },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', authGate)
+
+    const oshiButton = await screen.findByRole('button', { name: '推' })
+    fireEvent.click(oshiButton)
+
+    await waitFor(() => {
+      expect(dispatchSpy).toHaveBeenCalled()
+    })
+    expect(dispatchSpy.mock.calls[0][0].type).toBe(OSHI_LIST_UPDATED_EVENT)
+    dispatchSpy.mockRestore()
   })
 
   it('推し解除で一覧上の表示が推に戻る', async () => {

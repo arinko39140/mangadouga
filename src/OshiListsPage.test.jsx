@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import OshiListsPage from './OshiListsPage.jsx'
+import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 
 const renderOshiListsPage = (dataProvider, authGate) =>
   render(
@@ -136,6 +137,43 @@ describe('OshiListsPage', () => {
     expect(screen.getByText('推し動画')).toBeInTheDocument()
     expect(screen.getByText('推し動画2')).toBeInTheDocument()
     expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(1)
+  })
+
+  it('推し更新イベントで一覧を再取得する', async () => {
+    const dataProvider = {
+      fetchOshiList: vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [{ id: 'movie-1', title: '推し動画', isOshi: true }],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            { id: 'movie-1', title: '推し動画', isOshi: true },
+            { id: 'movie-2', title: '推し動画2', isOshi: true },
+          ],
+        }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListsPage(dataProvider, authGate)
+
+    await waitFor(() => {
+      expect(screen.getByText('推し動画')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      window.dispatchEvent(new Event(OSHI_LIST_UPDATED_EVENT))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('推し動画2')).toBeInTheDocument()
+    })
+    expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(2)
   })
 
   it('取得結果が空なら空状態を表示する', async () => {
