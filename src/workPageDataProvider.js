@@ -4,7 +4,10 @@ const isNetworkError = (error) => {
   return message.includes('Failed to fetch') || message.includes('NetworkError')
 }
 
-const normalizeError = (error) => (isNetworkError(error) ? 'network' : 'unknown')
+const normalizeError = (error) => {
+  if (error?.code === '23505') return 'conflict'
+  return isNetworkError(error) ? 'network' : 'unknown'
+}
 
 const sortEpisodes = (episodes, sortOrder) => {
   const sorted = [...episodes]
@@ -133,6 +136,9 @@ export const createWorkPageDataProvider = (supabaseClient) => ({
   },
 
   async toggleMovieOshi(movieId) {
+    if (typeof movieId !== 'string' || movieId.trim() === '') {
+      return { ok: false, error: 'invalid_input' }
+    }
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
     }

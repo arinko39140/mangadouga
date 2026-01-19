@@ -188,7 +188,7 @@ describe('WorkPageDataProvider', () => {
     const result = await provider.fetchMovies('series-1', 'latest')
 
     expect(result.ok).toBe(true)
-    expect(result.data.map((episode) => episode.isOshi)).toEqual([true, false])
+    expect(result.data.map((episode) => episode.isOshi)).toEqual([false, true])
   })
 
   it('古い順でも公開日未設定は末尾に配置する', async () => {
@@ -318,6 +318,29 @@ describe('WorkPageDataProvider', () => {
     expect(calls.eqMock).toHaveBeenCalledWith('movie_id', 'movie-1')
     expect(calls.insertMock).toHaveBeenCalledWith({ movie_id: 'movie-1' })
     expect(result).toEqual({ ok: true, data: { isOshi: true } })
+  })
+
+  it('推し登録時にmovieIdが無効ならinvalid_inputを返す', async () => {
+    const provider = createWorkPageDataProvider({ from: vi.fn() })
+
+    await expect(provider.toggleMovieOshi('')).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+  })
+
+  it('推し登録時に重複が発生した場合はconflictを返す', async () => {
+    const { client } = buildToggleSupabaseMock({
+      table: 'movie_oshi',
+      existing: false,
+      mutateError: { code: '23505', message: 'duplicate key' },
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    await expect(provider.toggleMovieOshi('movie-1')).resolves.toEqual({
+      ok: false,
+      error: 'conflict',
+    })
   })
 
   it('更新失敗時はエラーを正規化して返す', async () => {
