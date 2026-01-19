@@ -60,7 +60,7 @@
 
 ### Existing Architecture Analysis (if applicable)
 - Reactページは`DataProvider`を通してSupabaseへアクセスする構成。
-- 認証は`AuthGate`でセッションを確認し、未ログイン時はログイン画面へ誘導している。
+- 認証は`AuthGate`でセッションを確認し、未ログイン時はログイン画面へリダイレクトする。
 - 推しリストの実体は`movie_oshi`で、ユーザー単位で集約する必要がある。
 
 ### Architecture Pattern & Boundary Map
@@ -119,7 +119,7 @@ sequenceDiagram
   Supabase -->> CatalogProvider: rows
   CatalogProvider -->> CatalogPage: catalog items
 ```
-- 未ログイン時は`isFavorited`を`false`に固定し、公開リストのみを返す。
+- 未ログイン時は`isFavorited`を`false`に固定し、公開リストのみを返す（ビュー側で計算）。
 - 初期の並び順は`favorite_count`降順で固定。
 
 ### Favorites Toggle Flow
@@ -320,7 +320,7 @@ interface OshiListCatalogProvider {
 - Invariants: 公開一覧には非公開リストを含めない
 
 **Implementation Notes**
-- Integration: `user_oshi_list_catalog`ビューを使用
+- Integration: `user_oshi_list_catalog`ビューを使用し、`is_favorited`はSQLで算出する
 - Validation: 未ログイン時は`toggleFavorite`を`auth_required`で失敗させる
 - Risks: ビューの権限不足による取得失敗
 
@@ -468,6 +468,7 @@ interface OshiListVisibilityProvider {
 **API Data Transfer**
 - `user_oshi_list_catalog` view
   - `user_id: text`, `name: text`, `oshi_list_favorite_count: integer`, `oshi_list_visibility: text`, `is_favorited: boolean`
+  - `is_favorited`は`auth.uid()`に基づいて算出し、未ログイン時は`false`を返す
 - `oshi_list_favorite` toggle
   - Request: `{ target_user_id: text }`
   - Response: `{ is_favorited: boolean }`
