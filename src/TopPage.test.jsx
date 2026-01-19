@@ -45,20 +45,27 @@ describe('TopPage layout', () => {
     expect(listLink).toHaveClass('top-page__link--cta')
   })
 
+  it('推しリスト導線からみんなの推しリストページへ遷移できる', () => {
+    renderTopPage()
+
+    const link = screen.getByRole('link', { name: 'みんなの推しリスト一覧へ' })
+    expect(link).toHaveAttribute('href', '/oshi-lists/catalog/')
+  })
+
+  it('推しリスト導線のリンク先がみんなの推しリストページである', () => {
+    renderTopPage()
+
+    expect(screen.getByRole('link', { name: 'みんなの推しリスト一覧へ' })).toHaveAttribute(
+      'href',
+      '/oshi-lists/catalog/'
+    )
+  })
+
   it('推しリスト導線から推しリストページへ遷移できる', () => {
     renderTopPage()
 
-    const link = screen.getByRole('link', { name: '推しリスト一覧へ' })
+    const link = screen.getByRole('link', { name: '推しリストへ' })
     expect(link).toHaveAttribute('href', '/oshi-lists/')
-  })
-
-  it('推しリスト導線のリンク先が推しリストページである', () => {
-    renderTopPage()
-
-    expect(screen.getByRole('link', { name: '推しリスト一覧へ' })).toHaveAttribute(
-      'href',
-      '/oshi-lists/'
-    )
   })
 
   it('JST基準の現在曜日が初期選択になり、一覧が表示される', () => {

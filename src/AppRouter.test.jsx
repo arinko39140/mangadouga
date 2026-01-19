@@ -17,6 +17,11 @@ describe('AppRouter', () => {
 
   it('ルート/oshi-lists/で推しリストが表示される', () => {
     renderWithRoute('/oshi-lists/')
+    expect(screen.getByRole('heading', { name: '推しリスト' })).toBeInTheDocument()
+  })
+
+  it('ルート/oshi-lists/catalog/でみんなの推しリストが表示される', () => {
+    renderWithRoute('/oshi-lists/catalog/')
     expect(
       screen.getByRole('heading', { name: 'みんなの推しリスト' })
     ).toBeInTheDocument()
