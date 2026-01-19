@@ -191,6 +191,33 @@ describe('WorkPageDataProvider', () => {
     expect(result.data.map((episode) => episode.isOshi)).toEqual([false, true])
   })
 
+  it('推し未登録の動画はisOshiがfalseになる', async () => {
+    const rows = [
+      {
+        movie_id: 'movie-1',
+        movie_title: '第1話',
+        url: '/watch/1',
+        thumbnail_url: null,
+        update: '2026-01-01T00:00:00Z',
+        movie_oshi: null,
+      },
+      {
+        movie_id: 'movie-2',
+        movie_title: '第2話',
+        url: '/watch/2',
+        thumbnail_url: null,
+        update: '2026-01-02T00:00:00Z',
+      },
+    ]
+    const { client } = buildEpisodesSupabaseMock(rows)
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchMovies('series-1', 'latest')
+
+    expect(result.ok).toBe(true)
+    expect(result.data.map((episode) => episode.isOshi)).toEqual([false, false])
+  })
+
   it('古い順でも公開日未設定は末尾に配置する', async () => {
     const rows = [
       {
