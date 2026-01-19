@@ -9,11 +9,12 @@ const isNetworkError = (error) => {
 
 const normalizeError = (error) => (isNetworkError(error) ? 'network' : 'unknown')
 
-const toggleRecord = async ({ client, table, idField, idValue, resultKey }) => {
+const toggleListMovie = async ({ client, listId, movieId }) => {
   const { data, error } = await client
-    .from(table)
-    .select(idField)
-    .eq(idField, idValue)
+    .from('list_movie')
+    .select('list_id, movie_id')
+    .eq('list_id', listId)
+    .eq('movie_id', movieId)
     .limit(1)
 
   if (error) {
@@ -24,23 +25,26 @@ const toggleRecord = async ({ client, table, idField, idValue, resultKey }) => {
 
   if (exists) {
     const { error: deleteError } = await client
-      .from(table)
+      .from('list_movie')
       .delete()
-      .eq(idField, idValue)
+      .eq('list_id', listId)
+      .eq('movie_id', movieId)
 
     if (deleteError) {
       return { ok: false, error: normalizeError(deleteError) }
     }
 
-    return { ok: true, data: { [resultKey]: false } }
+    return { ok: true, data: { isOshi: false } }
   }
 
-  const { error: insertError } = await client.from(table).insert({ [idField]: idValue })
+  const { error: insertError } = await client
+    .from('list_movie')
+    .insert({ list_id: listId, movie_id: movieId })
   if (insertError) {
     return { ok: false, error: normalizeError(insertError) }
   }
 
-  return { ok: true, data: { [resultKey]: true } }
+  return { ok: true, data: { isOshi: true } }
 }
 
 const mapMovieRow = (movie) => ({
@@ -59,39 +63,73 @@ const normalizeOshiRows = (rows) =>
     .filter(hasRequiredMovieFields)
     .map(mapMovieRow)
 
-export const createOshiListDataProvider = (supabaseClient) => ({
-  async fetchOshiList() {
-    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
-      return { ok: false, error: 'not_configured' }
-    }
+export const createOshiListDataProvider = (supabaseClient) => {
+  let cachedListId = null
+
+  const fetchListId = async () => {
+    if (cachedListId !== null) return { ok: true, listId: cachedListId }
 
     const { data, error } = await supabaseClient
-      .from('movie_oshi')
-      .select(
-        'movie:movie_id (movie_id, movie_title, url, thumbnail_url, update, series_id)'
-      )
+      .from('list')
+      .select('list_id')
+      .order('list_id', { ascending: true })
+      .limit(1)
 
     if (error) {
       return { ok: false, error: normalizeError(error) }
     }
 
-    return { ok: true, data: normalizeOshiRows(data) }
-  },
+    const listId = data?.[0]?.list_id ?? null
+    cachedListId = listId
+    return { ok: true, listId }
+  }
 
-  async toggleMovieOshi(movieId) {
-    if (typeof movieId !== 'string' || movieId.trim() === '') {
-      return { ok: false, error: 'invalid_input' }
-    }
-    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
-      return { ok: false, error: 'not_configured' }
-    }
+  return {
+    async fetchOshiList() {
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
 
-    return toggleRecord({
-      client: supabaseClient,
-      table: 'movie_oshi',
-      idField: 'movie_id',
-      idValue: movieId,
-      resultKey: 'isOshi',
-    })
-  },
-})
+      const listResult = await fetchListId()
+      if (!listResult.ok) {
+        return { ok: false, error: listResult.error }
+      }
+      if (!listResult.listId) {
+        return { ok: true, data: [] }
+      }
+
+      const { data, error } = await supabaseClient
+        .from('list_movie')
+        .select(
+          'movie:movie_id (movie_id, movie_title, url, thumbnail_url, update, series_id)'
+        )
+        .eq('list_id', listResult.listId)
+
+      if (error) {
+        return { ok: false, error: normalizeError(error) }
+      }
+
+      return { ok: true, data: normalizeOshiRows(data) }
+    },
+
+    async toggleMovieOshi(movieId) {
+      if (typeof movieId !== 'string' || movieId.trim() === '') {
+        return { ok: false, error: 'invalid_input' }
+      }
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
+
+      const listResult = await fetchListId()
+      if (!listResult.ok || !listResult.listId) {
+        return { ok: false, error: listResult.error ?? 'not_configured' }
+      }
+
+      return toggleListMovie({
+        client: supabaseClient,
+        listId: listResult.listId,
+        movieId,
+      })
+    },
+  }
+}

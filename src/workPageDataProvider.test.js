@@ -1,15 +1,51 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 
-const buildEpisodesSupabaseMock = (rows, error = null) => {
-  const orderMock = vi.fn().mockResolvedValue({ data: rows, error })
-  const eqMock = vi.fn().mockReturnValue({ order: orderMock })
-  const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+const buildEpisodesSupabaseMock = ({
+  movieRows = [],
+  movieError = null,
+  listRows = [{ list_id: 1 }],
+  listError = null,
+  listMovieRows = [],
+  listMovieError = null,
+} = {}) => {
+  const listLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: listRows, error: listError })
+  const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
+  const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
+
+  const movieOrderMock = vi.fn().mockResolvedValue({ data: movieRows, error: movieError })
+  const movieEqMock = vi.fn().mockReturnValue({ order: movieOrderMock })
+  const movieSelectMock = vi.fn().mockReturnValue({ eq: movieEqMock })
+
+  const listMovieInMock = vi
+    .fn()
+    .mockResolvedValue({ data: listMovieRows, error: listMovieError })
+  const listMovieEqMock = vi.fn().mockReturnValue({ in: listMovieInMock })
+  const listMovieSelectMock = vi.fn().mockReturnValue({ eq: listMovieEqMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'list') return { select: listSelectMock }
+    if (table === 'movie') return { select: movieSelectMock }
+    if (table === 'list_movie') return { select: listMovieSelectMock }
+    return {}
+  })
 
   return {
     client: { from: fromMock },
-    calls: { fromMock, selectMock, eqMock, orderMock },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listOrderMock,
+      listLimitMock,
+      movieSelectMock,
+      movieEqMock,
+      movieOrderMock,
+      listMovieSelectMock,
+      listMovieEqMock,
+      listMovieInMock,
+    },
   }
 }
 
@@ -54,6 +90,61 @@ const buildToggleSupabaseMock = ({
       deleteMock,
       deleteEqMock,
       insertMock,
+    },
+  }
+}
+
+const buildToggleMovieSupabaseMock = ({
+  listId = 1,
+  existing,
+  listError = null,
+  selectError = null,
+  mutateError = null,
+} = {}) => {
+  const listLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: listId ? [{ list_id: listId }] : [], error: listError })
+  const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
+  const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
+
+  const listMovieLimitMock = vi.fn().mockResolvedValue({
+    data: existing ? [{ list_id: listId, movie_id: 'movie-1' }] : [],
+    error: selectError,
+  })
+  const listMovieEqMovieMock = vi.fn().mockReturnValue({ limit: listMovieLimitMock })
+  const listMovieEqListMock = vi.fn().mockReturnValue({ eq: listMovieEqMovieMock })
+  const listMovieSelectMock = vi.fn().mockReturnValue({ eq: listMovieEqListMock })
+
+  const listMovieDeleteEqMovieMock = vi
+    .fn()
+    .mockResolvedValue({ data: null, error: mutateError })
+  const listMovieDeleteEqListMock = vi.fn().mockReturnValue({ eq: listMovieDeleteEqMovieMock })
+  const listMovieDeleteMock = vi.fn().mockReturnValue({ eq: listMovieDeleteEqListMock })
+  const listMovieInsertMock = vi
+    .fn()
+    .mockResolvedValue({ data: null, error: mutateError })
+
+  const fromMock = vi.fn((name) => {
+    if (name === 'list') return { select: listSelectMock }
+    if (name !== 'list_movie') return {}
+    return { select: listMovieSelectMock, delete: listMovieDeleteMock, insert: listMovieInsertMock }
+  })
+
+  return {
+    client: { from: fromMock },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listOrderMock,
+      listLimitMock,
+      listMovieSelectMock,
+      listMovieEqListMock,
+      listMovieEqMovieMock,
+      listMovieLimitMock,
+      listMovieDeleteMock,
+      listMovieDeleteEqListMock,
+      listMovieDeleteEqMovieMock,
+      listMovieInsertMock,
     },
   }
 }
@@ -115,7 +206,7 @@ describe('WorkPageDataProvider', () => {
         update: '2026-01-01T00:00:00Z',
       },
     ]
-    const { client } = buildEpisodesSupabaseMock(rows)
+    const { client } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchMovies('series-1', 'latest')
@@ -145,17 +236,21 @@ describe('WorkPageDataProvider', () => {
         update: '2026-01-01T00:00:00Z',
       },
     ]
-    const { client, calls } = buildEpisodesSupabaseMock(rows)
+    const { client, calls } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchMovies('series-1', 'oldest')
 
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.listOrderMock).toHaveBeenCalledWith('list_id', { ascending: true })
+    expect(calls.listLimitMock).toHaveBeenCalledWith(1)
     expect(calls.fromMock).toHaveBeenCalledWith('movie')
-    expect(calls.selectMock).toHaveBeenCalledWith(
-      'movie_id, movie_title, url, thumbnail_url, update, movie_oshi(user_id)'
+    expect(calls.movieSelectMock).toHaveBeenCalledWith(
+      'movie_id, movie_title, url, thumbnail_url, update'
     )
-    expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
-    expect(calls.orderMock).toHaveBeenCalledWith('update', { ascending: true })
+    expect(calls.movieEqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: true })
     expect(result.ok).toBe(true)
     expect(result.data.map((episode) => episode.id)).toEqual([
       'movie-old',
@@ -171,7 +266,6 @@ describe('WorkPageDataProvider', () => {
         url: '/watch/1',
         thumbnail_url: null,
         update: '2026-01-01T00:00:00Z',
-        movie_oshi: [{ user_id: 'user-1' }],
       },
       {
         movie_id: 'movie-2',
@@ -179,10 +273,12 @@ describe('WorkPageDataProvider', () => {
         url: '/watch/2',
         thumbnail_url: null,
         update: '2026-01-02T00:00:00Z',
-        movie_oshi: [],
       },
     ]
-    const { client } = buildEpisodesSupabaseMock(rows)
+    const { client } = buildEpisodesSupabaseMock({
+      movieRows: rows,
+      listMovieRows: [{ movie_id: 'movie-2' }],
+    })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchMovies('series-1', 'latest')
@@ -199,7 +295,6 @@ describe('WorkPageDataProvider', () => {
         url: '/watch/1',
         thumbnail_url: null,
         update: '2026-01-01T00:00:00Z',
-        movie_oshi: null,
       },
       {
         movie_id: 'movie-2',
@@ -209,7 +304,7 @@ describe('WorkPageDataProvider', () => {
         update: '2026-01-02T00:00:00Z',
       },
     ]
-    const { client } = buildEpisodesSupabaseMock(rows)
+    const { client } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchMovies('series-1', 'latest')
@@ -242,7 +337,7 @@ describe('WorkPageDataProvider', () => {
         update: '2026-01-01T00:00:00Z',
       },
     ]
-    const { client } = buildEpisodesSupabaseMock(rows)
+    const { client } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchMovies('series-1', 'oldest')
@@ -270,7 +365,9 @@ describe('WorkPageDataProvider', () => {
 
   it('通信失敗時はnetworkとして返す', async () => {
     const { client: seriesClient } = buildSeriesSupabaseMock(null, new Error('Failed to fetch'))
-    const { client: episodesClient } = buildEpisodesSupabaseMock(null, new Error('NetworkError'))
+    const { client: episodesClient } = buildEpisodesSupabaseMock({
+      movieError: new Error('NetworkError'),
+    })
 
     const seriesProvider = createWorkPageDataProvider(seriesClient)
     const episodesProvider = createWorkPageDataProvider(episodesClient)
@@ -287,7 +384,9 @@ describe('WorkPageDataProvider', () => {
 
   it('不明な失敗時はunknownとして返す', async () => {
     const { client: seriesClient } = buildSeriesSupabaseMock(null, new Error('boom'))
-    const { client: episodesClient } = buildEpisodesSupabaseMock(null, new Error('boom'))
+    const { client: episodesClient } = buildEpisodesSupabaseMock({
+      movieError: new Error('boom'),
+    })
 
     const seriesProvider = createWorkPageDataProvider(seriesClient)
     const episodesProvider = createWorkPageDataProvider(episodesClient)
@@ -333,17 +432,22 @@ describe('WorkPageDataProvider', () => {
   })
 
   it('推しが未登録の場合は登録して状態を返す', async () => {
-    const { client, calls } = buildToggleSupabaseMock({
-      table: 'movie_oshi',
+    const { client, calls } = buildToggleMovieSupabaseMock({
       existing: false,
     })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.toggleMovieOshi('movie-1')
 
-    expect(calls.fromMock).toHaveBeenCalledWith('movie_oshi')
-    expect(calls.eqMock).toHaveBeenCalledWith('movie_id', 'movie-1')
-    expect(calls.insertMock).toHaveBeenCalledWith({ movie_id: 'movie-1' })
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.fromMock).toHaveBeenCalledWith('list_movie')
+    expect(calls.listMovieEqListMock).toHaveBeenCalledWith('list_id', 1)
+    expect(calls.listMovieEqMovieMock).toHaveBeenCalledWith('movie_id', 'movie-1')
+    expect(calls.listMovieInsertMock).toHaveBeenCalledWith({
+      list_id: 1,
+      movie_id: 'movie-1',
+    })
     expect(result).toEqual({ ok: true, data: { isOshi: true } })
   })
 
@@ -357,8 +461,7 @@ describe('WorkPageDataProvider', () => {
   })
 
   it('推し登録時に重複が発生した場合はconflictを返す', async () => {
-    const { client } = buildToggleSupabaseMock({
-      table: 'movie_oshi',
+    const { client } = buildToggleMovieSupabaseMock({
       existing: false,
       mutateError: { code: '23505', message: 'duplicate key' },
     })
@@ -376,8 +479,7 @@ describe('WorkPageDataProvider', () => {
       existing: false,
       mutateError: new Error('NetworkError'),
     })
-    const { client: oshiClient } = buildToggleSupabaseMock({
-      table: 'movie_oshi',
+    const { client: oshiClient } = buildToggleMovieSupabaseMock({
       existing: false,
       selectError: new Error('boom'),
     })

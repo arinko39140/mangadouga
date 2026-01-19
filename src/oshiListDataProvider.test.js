@@ -1,19 +1,54 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createOshiListDataProvider } from './oshiListDataProvider.js'
 
-const buildOshiListSupabaseMock = (rows, error = null) => {
-  const selectMock = vi.fn().mockResolvedValue({ data: rows, error })
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+const buildOshiListSupabaseMock = ({
+  listRows = [],
+  listError = null,
+  listMovieRows = [],
+  listMovieError = null,
+} = {}) => {
+  const listLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: listRows, error: listError })
+  const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
+  const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
+
+  const listMovieEqMovieMock = vi
+    .fn()
+    .mockResolvedValue({ data: listMovieRows, error: listMovieError })
+  const listMovieEqListMock = vi.fn().mockReturnValue({ eq: listMovieEqMovieMock })
+  const listMovieSelectMock = vi
+    .fn()
+    .mockReturnValue({ eq: listMovieEqListMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'list_movie') {
+      return { select: listMovieSelectMock }
+    }
+    return { select: vi.fn() }
+  })
 
   return {
     client: { from: fromMock },
-    calls: { fromMock, selectMock },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listOrderMock,
+      listLimitMock,
+      listMovieSelectMock,
+      listMovieEqListMock,
+      listMovieEqMovieMock,
+    },
   }
 }
 
 describe('OshiListDataProvider', () => {
-  it('movie_oshiを起点に登録済み推しを正規化して返す', async () => {
-    const rows = [
+  it('list_movieを起点に登録済み推しを正規化して返す', async () => {
+    const listRows = [{ list_id: 1 }]
+    const listMovieRows = [
       {
         movie: {
           movie_id: 'movie-1',
@@ -25,15 +60,23 @@ describe('OshiListDataProvider', () => {
         },
       },
     ]
-    const { client, calls } = buildOshiListSupabaseMock(rows)
+    const { client, calls } = buildOshiListSupabaseMock({
+      listRows,
+      listMovieRows,
+    })
     const provider = createOshiListDataProvider(client)
 
     const result = await provider.fetchOshiList()
 
-    expect(calls.fromMock).toHaveBeenCalledWith('movie_oshi')
-    expect(calls.selectMock).toHaveBeenCalledWith(
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.listOrderMock).toHaveBeenCalledWith('list_id', { ascending: true })
+    expect(calls.listLimitMock).toHaveBeenCalledWith(1)
+    expect(calls.fromMock).toHaveBeenCalledWith('list_movie')
+    expect(calls.listMovieSelectMock).toHaveBeenCalledWith(
       'movie:movie_id (movie_id, movie_title, url, thumbnail_url, update, series_id)'
     )
+    expect(calls.listMovieEqListMock).toHaveBeenCalledWith('list_id', 1)
     expect(result).toEqual({
       ok: true,
       data: [
@@ -51,7 +94,8 @@ describe('OshiListDataProvider', () => {
   })
 
   it('必須項目が欠損している行は除外する', async () => {
-    const rows = [
+    const listRows = [{ list_id: 1 }]
+    const listMovieRows = [
       { movie: null },
       {
         movie: {
@@ -84,7 +128,10 @@ describe('OshiListDataProvider', () => {
         },
       },
     ]
-    const { client } = buildOshiListSupabaseMock(rows)
+    const { client } = buildOshiListSupabaseMock({
+      listRows,
+      listMovieRows,
+    })
     const provider = createOshiListDataProvider(client)
 
     const result = await provider.fetchOshiList()
@@ -115,10 +162,10 @@ describe('OshiListDataProvider', () => {
   })
 
   it('通信失敗時はnetworkとして返す', async () => {
-    const { client } = buildOshiListSupabaseMock(
-      null,
-      new Error('Failed to fetch')
-    )
+    const { client } = buildOshiListSupabaseMock({
+      listRows: [{ list_id: 1 }],
+      listMovieError: new Error('Failed to fetch'),
+    })
     const provider = createOshiListDataProvider(client)
 
     await expect(provider.fetchOshiList()).resolves.toEqual({
@@ -128,7 +175,10 @@ describe('OshiListDataProvider', () => {
   })
 
   it('不明な失敗時はunknownとして返す', async () => {
-    const { client } = buildOshiListSupabaseMock(null, new Error('boom'))
+    const { client } = buildOshiListSupabaseMock({
+      listRows: [{ list_id: 1 }],
+      listMovieError: new Error('boom'),
+    })
     const provider = createOshiListDataProvider(client)
 
     await expect(provider.fetchOshiList()).resolves.toEqual({

@@ -1,7 +1,7 @@
 # Design Document
 
 ## Overview
-本機能は、みんなの推しリスト一覧をログインユーザー向けに公開しつつ、ログインユーザーの「お気に入り推しリスト」は登録済みのみを表示する体験を提供する。推しリストの実体は`movie_oshi`であり、一覧表示は`user_id`単位で集約したユーザーの推しリストを公開する。公開/非公開制御はユーザー単位で行い、ログインユーザーの操作性と公開設定の安全性を両立する。
+本機能は、みんなの推しリスト一覧をログインユーザー向けに公開しつつ、ログインユーザーの「お気に入り推しリスト」は登録済みのみを表示する体験を提供する。推しリストの実体は`list`と`list_movie`であり、一覧表示は`list_id`単位で集約した推しリストを公開する。公開/非公開制御はリスト単位で行い、ログインユーザーの操作性と公開設定の安全性を両立する。
 
 対象ユーザーはログインユーザーであり、一覧の閲覧とお気に入り登録/解除や公開設定を管理できる。既存のReact + Supabase構成を維持し、UIの境界とデータ取得契約を明確化する。
 
@@ -9,7 +9,7 @@
 - みんなの推しリスト一覧をログインユーザーのみ閲覧可能にする
 - お気に入り推しリストはログインユーザーの登録済みのみを表示する
 - 公開/非公開設定と登録数表示の整合性を保つ
-- 一覧はユーザー単位で集約表示し、ユーザー名を表示する
+- 一覧はリスト単位で集約表示し、ユーザー名を表示する
 
 ### Non-Goals
 - 新規の認証基盤導入やIDプロバイダ追加
@@ -61,7 +61,7 @@
 ### Existing Architecture Analysis (if applicable)
 - Reactページは`DataProvider`を通してSupabaseへアクセスする構成。
 - 認証は`AuthGate`と`SoftAuthGate`でセッションを確認し、`AuthGate`は未ログイン時にログインページへ遷移する。
-- 推しリストの実体は`movie_oshi`で、ユーザー単位で集約する必要がある。
+- 推しリストの実体は`list`と`list_movie`で、`list_id`単位で集約する必要がある。
 
 ### Architecture Pattern & Boundary Map
 
@@ -89,7 +89,7 @@ graph TB
 - Selected pattern: UI + DataProvider分離。既存構成を維持し、画面ごとの責務を明確化する。
 - Domain/feature boundaries: 公開一覧、登録済み一覧、公開/非公開管理を分離し、状態の混在を防止する。
 - Existing patterns preserved: `AuthGate`はログインページへ遷移、`SoftAuthGate`は状態取得のみを行う認証ガード、`OSHI_LIST_UPDATED_EVENT`による更新通知。
-- New components rationale: ユーザー単位の公開一覧用DataProviderと公開/非公開制御用DataProviderを新設し責務分割。
+- New components rationale: リスト単位の公開一覧用DataProviderと公開/非公開制御用DataProviderを新設し責務分割。
 - New components rationale: みんなの推しリスト一覧は`AuthGate`を適用し、未ログイン時はログインページへ遷移する。
 - Steering compliance: React + Supabase構成とフロントエンド主導の責務分離に準拠。
 
@@ -119,7 +119,7 @@ sequenceDiagram
     CatalogPage ->> CatalogPage: redirect login
   else auth ok
     CatalogPage ->> CatalogProvider: fetchCatalog
-    CatalogProvider ->> Supabase: select user list summary view
+    CatalogProvider ->> Supabase: select list catalog view
     Supabase -->> CatalogProvider: rows
     CatalogProvider -->> CatalogPage: catalog items
   end
@@ -155,7 +155,7 @@ sequenceDiagram
 |-----------|--------------|--------|--------------|--------------------------|-----------|
 | OshiListsCatalogPage | UI | みんなの推しリスト一覧を表示 | 4.1-4.7, 6.1-6.5 | OshiListCatalogProvider(P0), AuthGate(P0) | State |
 | OshiFavoritesPage | UI | 登録済みのみの推しリスト一覧 | 1.1-1.5, 2.1-2.6, 3.1-3.4 | OshiFavoritesProvider(P0), AuthGate(P0) | State |
-| OshiListPage | UI | 特定ユーザーの推しリスト詳細 | 5.4, 6.1-6.5 | OshiListVisibilityPanel(P0), OshiListVisibilityProvider(P0), SoftAuthGate(P0) | State |
+| OshiListPage | UI | 特定リストの推しリスト詳細 | 5.4, 6.1-6.5 | OshiListVisibilityPanel(P0), OshiListVisibilityProvider(P0), SoftAuthGate(P0) | State |
 | OshiListVisibilityPanel | UI | 公開/非公開の切替UI | 5.1-5.6 | OshiListVisibilityProvider(P0), AuthGate(P0) | State |
 | OshiListCatalogProvider | Data | 公開一覧の取得と並び替え | 4.1-4.7, 6.1, 6.4 | Supabase(P0) | Service |
 | OshiFavoritesProvider | Data | お気に入り一覧と登録/解除 | 1.3, 2.1-2.6, 3.1-3.4 | Supabase(P0) | Service |
@@ -224,19 +224,19 @@ sequenceDiagram
 
 **Implementation Notes**
 - Integration: 未ログイン時は一覧取得を行わずログインページへ遷移
-- Validation: `userId`の入力検証
+- Validation: `listId`の入力検証
 - Risks: 認証状態の変化で一覧が表示されない場合がある
 
 #### OshiListPage
 
 | Field | Detail |
 |-------|--------|
-| Intent | 特定ユーザーの推しリスト詳細を表示 |
+| Intent | 特定リストの推しリスト詳細を表示 |
 | Requirements | 5.4, 6.1-6.5 |
 
 **Responsibilities & Constraints**
 - 公開設定が非公開の場合は未ログインに表示しない
-- 表示対象は`movie_oshi`の`user_id`で絞り込んだ一覧
+- 表示対象は`list_movie`の`list_id`で絞り込んだ一覧
 
 **Dependencies**
 - Inbound: AppRouter — ルート/導線 (P0)
@@ -299,7 +299,7 @@ sequenceDiagram
 
 **Dependencies**
 - Inbound: OshiListsCatalogPage — 一覧取得要求 (P0)
-- Outbound: Supabase — `user_oshi_list_catalog`ビュー取得 (P0)
+- Outbound: Supabase — `oshi_list_catalog`ビュー取得 (P0)
 - External: Supabase Auth — `auth.uid()`参照 (P1)
 
 **Contracts**: Service [x] / API [ ] / Event [ ] / Batch [ ] / State [ ]
@@ -309,6 +309,7 @@ sequenceDiagram
 type Visibility = 'public' | 'private'
 
 type OshiListCatalogItem = {
+  listId: string
   userId: string
   name: string
   favoriteCount: number
@@ -322,15 +323,15 @@ type CatalogResult =
 
 interface OshiListCatalogProvider {
   fetchCatalog(params: { sortOrder: 'favorite_desc' | 'favorite_asc' }): Promise<CatalogResult>
-  toggleFavorite(targetUserId: string): Promise<{ ok: true; data: { isFavorited: boolean } } | { ok: false; error: 'auth_required' | 'network' | 'conflict' | 'unknown' }>
+  toggleFavorite(targetListId: string): Promise<{ ok: true; data: { isFavorited: boolean } } | { ok: false; error: 'auth_required' | 'network' | 'conflict' | 'unknown' }>
 }
 ```
-- Preconditions: `targetUserId`は空文字不可
+- Preconditions: `targetListId`は空文字不可
 - Postconditions: `isFavorited`は最新状態を返す
 - Invariants: 公開一覧には非公開リストを含めない
 
 **Implementation Notes**
-- Integration: `user_oshi_list_catalog`ビューを使用し、`is_favorited`はSQLで算出する
+- Integration: `oshi_list_catalog`ビューを使用し、`is_favorited`はSQLで算出する
 - Validation: 未ログイン時は`fetchCatalog`/`toggleFavorite`を`auth_required`で失敗させる
 - Risks: ビューの権限不足による取得失敗
 
@@ -356,6 +357,7 @@ interface OshiListCatalogProvider {
 ##### Service Interface
 ```typescript
 type OshiFavoriteItem = {
+  listId: string
   userId: string
   name: string
   favoriteCount: number
@@ -368,18 +370,18 @@ type FavoritesResult =
 
 interface OshiFavoritesProvider {
   fetchFavorites(): Promise<FavoritesResult>
-  toggleFavorite(targetUserId: string): Promise<{ ok: true; data: { isFavorited: boolean } } | { ok: false; error: 'auth_required' | 'network' | 'conflict' | 'unknown' }>
+  toggleFavorite(targetListId: string): Promise<{ ok: true; data: { isFavorited: boolean } } | { ok: false; error: 'auth_required' | 'network' | 'conflict' | 'unknown' }>
 }
 ```
 - Preconditions: 認証済みであること
 - Postconditions: 一覧は登録済みのみ
 - Invariants: 他ユーザーの登録情報は返さない
-- Invariants: 非公開ユーザーの推しリストは返さない
+- Invariants: 非公開リストは返さない
 
 **Implementation Notes**
-- Integration: RLSによりユーザー単位制御
-- Integration: `users.oshi_list_visibility = 'public'`を条件に含める
-- Validation: `targetUserId`の空値は即時エラー
+- Integration: RLSによりリスト単位制御
+- Integration: `list.can_display = true`を条件に含める
+- Validation: `targetListId`の空値は即時エラー
 - Risks: 認証切替で一覧が空になる
 
 #### OshiListVisibilityProvider
@@ -395,7 +397,7 @@ interface OshiFavoritesProvider {
 
 **Dependencies**
 - Inbound: OshiListVisibilityPanel — 更新要求 (P0)
-- Outbound: Supabase — `users`取得/更新 (P0)
+- Outbound: Supabase — `list`取得/更新 (P0)
 - External: Supabase Auth — `auth.uid()` (P0)
 
 **Contracts**: Service [x] / API [ ] / Event [ ] / Batch [ ] / State [ ]
@@ -409,16 +411,17 @@ type VisibilityResult =
   | { ok: false; error: 'auth_required' | 'forbidden' | 'network' | 'unknown' }
 
 interface OshiListVisibilityProvider {
-  fetchVisibility(targetUserId: string): Promise<VisibilityResult>
+  fetchVisibility(targetListId: string): Promise<VisibilityResult>
   updateVisibility(visibility: Visibility): Promise<VisibilityResult>
 }
 ```
-- Preconditions: `targetUserId`は空文字不可
+- Preconditions: `targetListId`は空文字不可
 - Postconditions: `visibility`が取得/更新される
 - Invariants: 非公開は未ログイン/非所有者に返さない
 
 **Implementation Notes**
 - Integration: RLSポリシーで閲覧と更新を制御
+- Integration: `visibility`は`list.can_display`にマッピングする（`public`=true, `private`=false）
 - Validation: 取得/変更後に一覧とページを再取得
 - Risks: 所有者判定ミスで公開範囲が漏れる
 
@@ -430,66 +433,68 @@ interface OshiListVisibilityProvider {
 | Requirements | 4.5-4.7, 6.4-6.5 |
 
 **Responsibilities & Constraints**
-- `oshi_list_favorite`の増減に連動し`users.oshi_list_favorite_count`を更新
+- `oshi_list_favorite`の増減に連動し`list.favorite_count`を更新
 
 **Dependencies**
 - Inbound: Supabase trigger — 登録/解除 (P0)
-- Outbound: PostgreSQL — `users`更新 (P0)
+- Outbound: PostgreSQL — `list`更新 (P0)
 
 **Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [x] / State [ ]
 
 ##### Batch / Job Contract
 - Trigger: `oshi_list_favorite`のinsert/delete
-- Input / validation: `target_user_id`が存在
-- Output / destination: `users.oshi_list_favorite_count`
+- Input / validation: `target_list_id`が存在
+- Output / destination: `list.favorite_count`
 - Idempotency & recovery: トランザクション内で加減算
 
 **Implementation Notes**
 - Integration: DBトリガーで更新
-- Validation: `oshi_list_favorite_count`が負数にならないことを保証
+- Validation: `favorite_count`が負数にならないことを保証
 - Risks: トリガー未設定時の表示不整合
 
 ## Data Models
 
 ### Domain Model
-- Aggregates: `UserOshiList` (ユーザー単位の推しリスト)
-- Entities: `MovieOshi`, `OshiListFavorite`
+- Aggregates: `OshiList` (リスト単位の推しリスト)
+- Entities: `ListMovie`, `OshiListFavorite`
 - Business rules: 非公開リストは未ログインに表示しない
 
 ### Logical Data Model
 
 **Structure Definition**:
-- `users`: `user_id` (PK), `name`, `oshi_list_visibility`, `oshi_list_favorite_count`
-- `movie_oshi`: `user_id` + `movie_id` (PK), `created_at`
-- `oshi_list_favorite`: `user_id` + `target_user_id` (PK), `created_at`
+- `users`: `user_id` (PK), `name`
+- `list`: `list_id` (PK), `user_id`, `favorite_count`, `can_display`
+- `list_movie`: `list_id` + `movie_id` (PK), `created_at`
+- `oshi_list_favorite`: `user_id` + `target_list_id` (PK), `created_at`
 
 **Consistency & Integrity**:
-- `movie_oshi.user_id`は`users.user_id`にFK
-- `oshi_list_favorite.target_user_id`は`users.user_id`にFK
-- `oshi_list_favorite_count`はトリガーで同期
-- `oshi_list_visibility`は`public`/`private`の列挙値
+- `list.user_id`は`users.user_id`にFK
+- `list_movie.list_id`は`list.list_id`にFK
+- `oshi_list_favorite.target_list_id`は`list.list_id`にFK
+- `favorite_count`はトリガーで同期
+- `can_display`は`true/false`で公開/非公開を表現
 
 ### Physical Data Model
 
 **For Relational Databases**:
-- `users`追加列: `oshi_list_visibility text default 'public'`, `oshi_list_favorite_count integer default 0`
-- `movie_oshi`インデックス: `(user_id)`で一覧取得を高速化
-- `oshi_list_favorite`インデックス: `(target_user_id)`で並び替えと集計を支援
-- `users`インデックス: `(oshi_list_favorite_count)`で並び替えを高速化
+- `list`追加列: `can_display boolean default true`, `favorite_count integer default 0`
+- `list_movie`インデックス: `(list_id)`で一覧取得を高速化
+- `oshi_list_favorite`インデックス: `(target_list_id)`で並び替えと集計を支援
+- `list`インデックス: `(favorite_count)`で並び替えを高速化
 
 ### Data Contracts & Integration
 
 **API Data Transfer**
-- `user_oshi_list_catalog` view
-  - `user_id: text`, `name: text`, `oshi_list_favorite_count: integer`, `oshi_list_visibility: text`, `is_favorited: boolean`
+- `oshi_list_catalog` view
+  - `list_id: text`, `user_id: text`, `name: text`, `favorite_count: integer`, `can_display: boolean`, `is_favorited: boolean`
   - `is_favorited`は`auth.uid()`に基づいて算出する
 - `oshi_list_favorite` toggle
-  - Request: `{ target_user_id: text }`
+  - Request: `{ target_list_id: text }`
   - Response: `{ is_favorited: boolean }`
 
 **Cross-Service Data Management**
-- RLSで`auth.uid()`に基づきユーザー単位の読み書きを保証
-- `movie_oshi`の閲覧は対象ユーザーの`oshi_list_visibility = 'public'`を条件に許可
+- RLSで`auth.uid()`に基づきリスト単位の読み書きを保証
+- `list_movie`の閲覧は対象リストの`can_display = true`を条件に許可
 
 ## Error Handling
 
@@ -514,7 +519,7 @@ interface OshiListVisibilityProvider {
 
 ### Integration Tests
 - 公開一覧取得とお気に入り状態の反映
-- お気に入り登録/解除後の`oshi_list_favorite_count`更新
+- お気に入り登録/解除後の`favorite_count`更新
 - 非公開リストが未ログインに非表示になること
 
 ### E2E/UI Tests
@@ -523,13 +528,13 @@ interface OshiListVisibilityProvider {
 - 公開/非公開切替が推しリストページに反映される
 
 ## Security Considerations
-- `users`のRLSを`user_id = auth.uid()`で更新許可、閲覧は`oshi_list_visibility = 'public'`に限定
-- `movie_oshi`は所有者または公開ユーザーのデータのみ閲覧可（RLSで拒否）
+- `list`のRLSを`user_id = auth.uid()`で更新許可、閲覧は`can_display = true`に限定
+- `list_movie`は所有者または公開リストのデータのみ閲覧可（RLSで拒否）
 - `oshi_list_favorite`は`user_id = auth.uid()`で読み書き可能
 - 未ログイン時の一覧取得を禁止
 
 ## Performance & Scalability
-- `oshi_list_favorite_count`のインデックスで並び替えコストを抑制
+- `favorite_count`のインデックスで並び替えコストを抑制
 - 一覧取得はページサイズ制限を後続で検討
 
 ## Migration Strategy
@@ -542,7 +547,7 @@ flowchart TD
   UpdatePolicies --> Verify
   Verify --> End
 ```
-- AddColumns: `users.oshi_list_visibility`と`users.oshi_list_favorite_count`追加
-- Backfill: 既存ユーザーを`public`に設定しカウントは0
-- UpdatePolicies: `users`/`movie_oshi`/`oshi_list_favorite`のRLS更新とビュー作成
+- AddColumns: `list.can_display`と`list.favorite_count`追加
+- Backfill: 既存`oshi_list_favorite`を集計して`list.favorite_count`を算出
+- UpdatePolicies: `list`/`list_movie`/`oshi_list_favorite`のRLS更新とビュー作成
 - Verify: 公開一覧と非公開制御の回帰確認

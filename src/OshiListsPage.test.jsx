@@ -142,7 +142,7 @@ describe('OshiListsPage', () => {
     expect(dataProvider.fetchOshiList).toHaveBeenCalledTimes(1)
   })
 
-  it('推しトグルで表示状態を更新する', async () => {
+  it('推しトグルで解除した項目を一覧から外す', async () => {
     const dataProvider = {
       fetchOshiList: vi.fn().mockResolvedValue({
         ok: true,
@@ -167,7 +167,8 @@ describe('OshiListsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '済' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
+      expect(screen.queryByText('推し動画')).not.toBeInTheDocument()
+      expect(screen.getByText('登録済みの推しがありません。')).toBeInTheDocument()
     })
     expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
   })
