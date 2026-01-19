@@ -22,6 +22,11 @@ describe('AppRouter', () => {
     ).toBeInTheDocument()
   })
 
+  it('ルート/oshi-lists/:listId/で推しリスト詳細が表示される', () => {
+    renderWithRoute('/oshi-lists/1/')
+    expect(screen.getByRole('heading', { name: '推しリスト' })).toBeInTheDocument()
+  })
+
   it('ルート/oshi-lists/favorites/でお気に入り推しリストが表示される', () => {
     renderWithRoute('/oshi-lists/favorites/')
     expect(
