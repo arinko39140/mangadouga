@@ -8,8 +8,8 @@ import './OshiListsPage.css'
 
 const defaultDataProvider = createOshiListDataProvider(supabase)
 const VIEW_MODES = [
-  { id: 'grid', label: 'グリッド' },
   { id: 'list', label: 'リスト' },
+  { id: 'grid', label: 'グリッド' },
 ]
 
 const getYouTubeVideoId = (videoUrl) => {
@@ -65,6 +65,7 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
   const [visibility, setVisibility] = useState(null)
   const [visibilityUpdating, setVisibilityUpdating] = useState(false)
   const [visibilityError, setVisibilityError] = useState(null)
+  const [favoriteCount, setFavoriteCount] = useState(null)
   const authGateInstance = useMemo(() => {
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
@@ -91,14 +92,19 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
       const canUseVisibility =
         typeof dataProvider.fetchVisibility === 'function' &&
         typeof dataProvider.updateVisibility === 'function'
+      const canUseFavoriteCount = typeof dataProvider.fetchFavoriteCount === 'function'
       if (!canUseVisibility) {
         setCanManageVisibility(false)
         setVisibility(null)
       }
+      if (!canUseFavoriteCount) {
+        setFavoriteCount(null)
+      }
 
-      const [result, visibilityResult] = await Promise.all([
+      const [result, visibilityResult, favoriteResult] = await Promise.all([
         dataProvider.fetchOshiList(),
         canUseVisibility ? dataProvider.fetchVisibility() : Promise.resolve(null),
+        canUseFavoriteCount ? dataProvider.fetchFavoriteCount() : Promise.resolve(null),
       ])
       if (!isMounted) return
       if (result.ok) {
@@ -115,6 +121,11 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
           setCanManageVisibility(false)
           setVisibility(null)
         }
+      }
+      if (favoriteResult?.ok) {
+        setFavoriteCount(favoriteResult.data.favoriteCount ?? 0)
+      } else if (favoriteResult) {
+        setFavoriteCount(null)
       }
       setIsLoading(false)
     }
@@ -145,10 +156,14 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
     try {
       const result = await dataProvider.toggleMovieOshi(movieId)
       if (result.ok) {
-        if (!result.data.isOshi) {
-          setItems((prev) => prev.filter((item) => item.id !== movieId))
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === movieId ? { ...item, isOshi: result.data.isOshi } : item
+          )
+        )
+        if (result.data.isOshi) {
+          publishOshiListUpdated()
         }
-        publishOshiListUpdated()
       } else if (result.error === 'auth_required') {
         authGateInstance.redirectToLogin('oshi')
       } else {
@@ -216,7 +231,6 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
                     <h2 className="oshi-lists__title">{item.title}</h2>
-                    <span className="oshi-lists__chip">推</span>
                   </div>
                   {item.seriesId ? (
                     <Link className="oshi-lists__link" to={`/series/${item.seriesId}/`}>
@@ -224,7 +238,6 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
                     </Link>
                   ) : null}
                   <div className="oshi-lists__actions">
-                    <span className="oshi-lists__muted">登録済み</span>
                     <button
                       type="button"
                       className="oshi-lists__oshi-button is-registered"
@@ -232,7 +245,7 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
                       disabled={isUpdating}
                       onClick={() => handleOshiToggle(item.id)}
                     >
-                      解除
+                      {item.isOshi ? '済' : '推'}
                     </button>
                   </div>
                 </div>
@@ -249,6 +262,9 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
   return (
     <main className="oshi-lists">
       <h1>推しリスト</h1>
+      {favoriteCount !== null ? (
+        <p className="oshi-lists__meta">お気に入り登録数: {favoriteCount}</p>
+      ) : null}
       <div className="oshi-lists__controls">
         <span className="oshi-lists__label">表示形式:</span>
         <div className="oshi-lists__toggle-group" role="group" aria-label="表示形式">

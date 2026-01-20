@@ -80,6 +80,10 @@ describe('OshiMyListPage', () => {
           },
         ],
       }),
+      fetchFavoriteCount: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { favoriteCount: 3 },
+      }),
     }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -91,13 +95,14 @@ describe('OshiMyListPage', () => {
     await waitFor(() => {
       expect(screen.getByText('推し動画')).toBeInTheDocument()
     })
+    expect(screen.getByText('お気に入り登録数: 3')).toBeInTheDocument()
     const list = screen.getByRole('list', { name: '推し作品一覧' })
     expect(list).toHaveClass('oshi-lists__items--grid')
     expect(screen.getByRole('link', { name: '作品ページへ' })).toHaveAttribute(
       'href',
       '/series/series-1/'
     )
-    expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
   })
 
   it('表示形式を切り替えても一覧を維持する', async () => {
@@ -196,7 +201,7 @@ describe('OshiMyListPage', () => {
     )
   })
 
-  it('解除操作で一覧から削除する', async () => {
+  it('解除操作で推へ切り替えるが一覧は維持する', async () => {
     const dataProvider = {
       fetchOshiList: vi.fn().mockResolvedValue({
         ok: true,
@@ -223,13 +228,14 @@ describe('OshiMyListPage', () => {
     renderOshiMyListPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: '解除' }))
+    fireEvent.click(screen.getByRole('button', { name: '済' }))
 
     await waitFor(() => {
-      expect(screen.queryByText('推し動画')).not.toBeInTheDocument()
+      expect(screen.getByText('推し動画')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '推' })).toBeInTheDocument()
     })
     expect(dataProvider.toggleMovieOshi).toHaveBeenCalledWith('movie-1')
   })

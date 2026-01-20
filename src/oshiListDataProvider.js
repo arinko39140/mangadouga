@@ -193,6 +193,37 @@ export const createOshiListDataProvider = (supabaseClient) => {
       return { ok: true, data: { visibility: mapVisibility(row.can_display) } }
     },
 
+    async fetchFavoriteCount() {
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
+
+      const listResult = await fetchListId()
+      if (!listResult.ok) {
+        return { ok: false, error: listResult.error }
+      }
+      if (!listResult.listId) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      const { data, error } = await supabaseClient
+        .from('list')
+        .select('favorite_count')
+        .eq('list_id', listResult.listId)
+        .limit(1)
+
+      if (error) {
+        return { ok: false, error: normalizeError(error) }
+      }
+
+      const row = data?.[0]
+      if (!row) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      return { ok: true, data: { favoriteCount: row.favorite_count ?? 0 } }
+    },
+
     async updateVisibility(visibility) {
       if (visibility !== 'public' && visibility !== 'private') {
         return { ok: false, error: 'invalid_input' }

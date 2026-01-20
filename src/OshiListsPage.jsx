@@ -119,7 +119,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
                     <h2 className="oshi-lists__title">{item.name}</h2>
-                    {isFavorited ? <span className="oshi-lists__chip">推</span> : null}
+                    <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
                   </div>
                   <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
                   <div className="oshi-lists__actions">

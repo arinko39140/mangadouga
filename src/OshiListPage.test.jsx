@@ -95,7 +95,7 @@ describe('OshiListPage', () => {
       expect(screen.getByText('推しリストA')).toBeInTheDocument()
     })
     expect(screen.getByText('お気に入り数: 4')).toBeInTheDocument()
-    expect(screen.getByText('推')).toBeInTheDocument()
+    expect(screen.getByText('済')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
     expect(screen.getByText('推し作品')).toBeInTheDocument()
   })

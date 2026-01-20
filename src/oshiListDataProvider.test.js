@@ -6,6 +6,8 @@ const buildOshiListSupabaseMock = ({
   listError = null,
   listVisibilityRows = [],
   listVisibilityError = null,
+  listFavoriteCountRows = [],
+  listFavoriteCountError = null,
   listUpdateRows = [],
   listUpdateError = null,
   listMovieRows = [],
@@ -28,12 +30,22 @@ const buildOshiListSupabaseMock = ({
     .mockResolvedValue({ data: listVisibilityRows, error: listVisibilityError })
   const listVisibilityEqMock = vi.fn().mockReturnValue({ limit: listVisibilityLimitMock })
 
+  const listFavoriteCountLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: listFavoriteCountRows, error: listFavoriteCountError })
+  const listFavoriteCountEqMock = vi
+    .fn()
+    .mockReturnValue({ limit: listFavoriteCountLimitMock })
+
   const listSelectMock = vi.fn((columns) => {
     if (columns === 'list_id') {
       return { eq: listEqMock }
     }
     if (columns === 'can_display') {
       return { eq: listVisibilityEqMock }
+    }
+    if (columns === 'favorite_count') {
+      return { eq: listFavoriteCountEqMock }
     }
     return { order: listOrderMock }
   })
@@ -72,6 +84,8 @@ const buildOshiListSupabaseMock = ({
       listEqMock,
       listVisibilityEqMock,
       listVisibilityLimitMock,
+      listFavoriteCountEqMock,
+      listFavoriteCountLimitMock,
       listUpdateMock,
       listUpdateEqMock,
       listUpdateSelectMock,
@@ -260,5 +274,24 @@ describe('OshiListDataProvider', () => {
     expect(calls.listUpdateMock).toHaveBeenCalledWith({ can_display: true })
     expect(calls.listUpdateEqMock).toHaveBeenCalledWith('list_id', 1)
     expect(calls.listUpdateSelectMock).toHaveBeenCalledWith('can_display')
+  })
+
+  it('お気に入り登録数を取得できる', async () => {
+    const { client, calls } = buildOshiListSupabaseMock({
+      listRows: [{ list_id: 1 }],
+      listFavoriteCountRows: [{ favorite_count: 5 }],
+    })
+    const provider = createOshiListDataProvider(client)
+
+    await expect(provider.fetchFavoriteCount()).resolves.toEqual({
+      ok: true,
+      data: { favoriteCount: 5 },
+    })
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.listEqMock).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(calls.listSelectMock).toHaveBeenCalledWith('favorite_count')
+    expect(calls.listFavoriteCountEqMock).toHaveBeenCalledWith('list_id', 1)
+    expect(calls.listFavoriteCountLimitMock).toHaveBeenCalledWith(1)
   })
 })

@@ -202,7 +202,7 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
         <h1>推しリスト</h1>
         {summary?.name ? <p className="oshi-lists__meta">{summary.name}</p> : null}
         <p className="oshi-lists__meta">お気に入り数: {summary?.favoriteCount ?? 0}</p>
-        {isFavorited ? <span className="oshi-lists__chip">推</span> : null}
+        <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
         <button
           type="button"
           className={isFavorited ? 'oshi-lists__oshi-button is-registered' : 'oshi-lists__oshi-button'}
