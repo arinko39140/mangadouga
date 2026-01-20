@@ -1,3 +1,5 @@
+import { resolveCurrentUserId } from './supabaseSession.js'
+
 const isNetworkError = (error) => {
   if (!error) return false
   const message = String(error.message ?? '')
@@ -36,16 +38,22 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
       return { ok: false, error: 'not_configured' }
     }
 
+    const userResult = await resolveCurrentUserId(supabaseClient)
+    if (!userResult.ok) {
+      return { ok: false, error: userResult.error }
+    }
+
     const { data: favoriteData, error: favoriteError } = await supabaseClient
-      .from('oshi_list_favorite')
-      .select('target_list_id')
+      .from('user_list')
+      .select('list_id')
+      .eq('user_id', userResult.userId)
 
     if (favoriteError) {
       return { ok: false, error: normalizeError(favoriteError) }
     }
 
     const targetIds = Array.from(
-      new Set((favoriteData ?? []).map((row) => String(row.target_list_id)).filter(Boolean))
+      new Set((favoriteData ?? []).map((row) => String(row.list_id)).filter(Boolean))
     )
     if (targetIds.length === 0) {
       return { ok: true, data: [] }
@@ -102,10 +110,16 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
       return { ok: false, error: 'not_configured' }
     }
 
+    const userResult = await resolveCurrentUserId(supabaseClient)
+    if (!userResult.ok) {
+      return { ok: false, error: userResult.error }
+    }
+
     const { data, error } = await supabaseClient
-      .from('oshi_list_favorite')
-      .select('target_list_id')
-      .eq('target_list_id', targetListId)
+      .from('user_list')
+      .select('list_id')
+      .eq('user_id', userResult.userId)
+      .eq('list_id', targetListId)
       .limit(1)
 
     if (error) {
@@ -116,9 +130,10 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
 
     if (exists) {
       const { error: deleteError } = await supabaseClient
-        .from('oshi_list_favorite')
+        .from('user_list')
         .delete()
-        .eq('target_list_id', targetListId)
+        .eq('user_id', userResult.userId)
+        .eq('list_id', targetListId)
 
       if (deleteError) {
         return { ok: false, error: normalizeError(deleteError) }
@@ -128,8 +143,8 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
     }
 
     const { error: insertError } = await supabaseClient
-      .from('oshi_list_favorite')
-      .insert({ target_list_id: targetListId })
+      .from('user_list')
+      .insert({ user_id: userResult.userId, list_id: targetListId })
 
     if (insertError) {
       return { ok: false, error: normalizeError(insertError) }

@@ -1,3 +1,5 @@
+import { resolveCurrentUserId } from './supabaseSession.js'
+
 const isNetworkError = (error) => {
   if (!error) return false
   const message = String(error.message ?? '')
@@ -38,11 +40,12 @@ const mapMovieRow = (movie) => ({
 })
 
 export const createOshiListPageProvider = (supabaseClient) => {
-  const fetchFavoriteState = async (targetListId) => {
+  const fetchFavoriteState = async (targetListId, userId) => {
     const { data, error } = await supabaseClient
-      .from('oshi_list_favorite')
-      .select('target_list_id')
-      .eq('target_list_id', targetListId)
+      .from('user_list')
+      .select('list_id')
+      .eq('user_id', userId)
+      .eq('list_id', targetListId)
       .limit(1)
 
     if (error) {
@@ -76,10 +79,15 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: 'not_found' }
       }
 
-      const favoriteState = await fetchFavoriteState(targetListId)
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
+      const favoriteState = await fetchFavoriteState(targetListId, userResult.userId)
       if (!favoriteState.ok) {
         return { ok: false, error: favoriteState.error }
       }
+
       const summary = mapListRow(listRow)
       summary.isFavorited = favoriteState.isFavorited
       return { ok: true, data: summary }
@@ -120,10 +128,16 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: 'not_configured' }
       }
 
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
+
       const { data, error } = await supabaseClient
-        .from('oshi_list_favorite')
-        .select('target_list_id')
-        .eq('target_list_id', targetListId)
+        .from('user_list')
+        .select('list_id')
+        .eq('user_id', userResult.userId)
+        .eq('list_id', targetListId)
         .limit(1)
 
       if (error) {
@@ -134,9 +148,10 @@ export const createOshiListPageProvider = (supabaseClient) => {
 
       if (exists) {
         const { error: deleteError } = await supabaseClient
-          .from('oshi_list_favorite')
+          .from('user_list')
           .delete()
-          .eq('target_list_id', targetListId)
+          .eq('user_id', userResult.userId)
+          .eq('list_id', targetListId)
 
         if (deleteError) {
           return { ok: false, error: normalizeError(deleteError) }
@@ -146,8 +161,8 @@ export const createOshiListPageProvider = (supabaseClient) => {
       }
 
       const { error: insertError } = await supabaseClient
-        .from('oshi_list_favorite')
-        .insert({ target_list_id: targetListId })
+        .from('user_list')
+        .insert({ user_id: userResult.userId, list_id: targetListId })
 
       if (insertError) {
         return { ok: false, error: normalizeError(insertError) }

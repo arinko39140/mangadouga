@@ -8,8 +8,13 @@ const buildFavoritesSupabaseMock = ({
   listError = null,
   usersRows = [],
   usersError = null,
+  sessionUserId = 'user-1',
+  sessionError = null,
 } = {}) => {
-  const favoriteSelectMock = vi.fn().mockResolvedValue({ data: favoriteRows, error: favoriteError })
+  const favoriteSelectMock = vi.fn().mockResolvedValue({
+    data: favoriteRows,
+    error: favoriteError,
+  })
   const listEqMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
   const listInMock = vi.fn().mockReturnValue({ eq: listEqMock })
   const listSelectMock = vi.fn().mockReturnValue({ in: listInMock })
@@ -17,7 +22,7 @@ const buildFavoritesSupabaseMock = ({
   const usersSelectMock = vi.fn().mockReturnValue({ in: usersInMock })
 
   const fromMock = vi.fn((table) => {
-    if (table === 'oshi_list_favorite') {
+    if (table === 'user_list') {
       return { select: favoriteSelectMock }
     }
     if (table === 'list') {
@@ -29,8 +34,13 @@ const buildFavoritesSupabaseMock = ({
     return { select: vi.fn() }
   })
 
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
+
   return {
-    client: { from: fromMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
     calls: {
       fromMock,
       favoriteSelectMock,
@@ -39,6 +49,7 @@ const buildFavoritesSupabaseMock = ({
       listEqMock,
       usersSelectMock,
       usersInMock,
+      getSessionMock,
     },
   }
 }
@@ -48,12 +59,14 @@ const buildToggleSupabaseMock = ({
   selectError = null,
   insertError = null,
   deleteError = null,
-} = {}) => {
+}) => {
   const limitMock = vi.fn().mockResolvedValue({
-    data: existing ? [{ target_list_id: 1 }] : [],
+    data: existing ? [{ list_id: 1 }] : [],
     error: selectError,
   })
-  const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const eqMock = vi
+    .fn()
+    .mockReturnValue({ eq: eqMock, limit: limitMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: insertError })
   const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: deleteError })
@@ -63,17 +76,30 @@ const buildToggleSupabaseMock = ({
     insert: insertMock,
     delete: deleteMock,
   })
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: { session: { user: { id: 'user-1' } } },
+    error: null,
+  })
 
   return {
-    client: { from: fromMock },
-    calls: { fromMock, selectMock, eqMock, limitMock, insertMock, deleteMock, deleteEqMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    calls: {
+      fromMock,
+      selectMock,
+      eqMock,
+      limitMock,
+      insertMock,
+      deleteMock,
+      deleteEqMock,
+      getSessionMock,
+    },
   }
 }
 
 describe('OshiFavoritesProvider', () => {
   it('登録済み推しリストのみを重複なしで返す', async () => {
     const { client, calls } = buildFavoritesSupabaseMock({
-      favoriteRows: [{ target_list_id: 1 }, { target_list_id: 1 }, { target_list_id: 2 }],
+      favoriteRows: [{ list_id: 1 }, { list_id: 1 }, { list_id: 2 }],
       listRows: [
         {
           list_id: 1,
@@ -97,8 +123,9 @@ describe('OshiFavoritesProvider', () => {
 
     const result = await provider.fetchFavorites()
 
-    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
-    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('target_list_id')
+    expect(calls.getSessionMock).toHaveBeenCalled()
+    expect(calls.fromMock).toHaveBeenCalledWith('user_list')
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('list_id')
     expect(calls.fromMock).toHaveBeenCalledWith('list')
     expect(calls.listSelectMock).toHaveBeenCalledWith(
       'list_id, user_id, favorite_count, can_display'
@@ -124,7 +151,7 @@ describe('OshiFavoritesProvider', () => {
 
   it('未認証時はauth_requiredとして返す', async () => {
     const { client } = buildFavoritesSupabaseMock({
-      favoriteError: { status: 401, message: 'JWT expired' },
+      sessionUserId: null,
     })
     const provider = createOshiFavoritesProvider(client)
 
@@ -149,10 +176,12 @@ describe('OshiFavoritesProvider', () => {
 
     const result = await provider.toggleFavorite('1')
 
-    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
-    expect(calls.selectMock).toHaveBeenCalledWith('target_list_id')
-    expect(calls.eqMock).toHaveBeenCalledWith('target_list_id', '1')
-    expect(calls.insertMock).toHaveBeenCalledWith({ target_list_id: '1' })
+    expect(calls.getSessionMock).toHaveBeenCalled()
+    expect(calls.fromMock).toHaveBeenCalledWith('user_list')
+    expect(calls.selectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.eqMock).toHaveBeenNthCalledWith(1, 'user_id', 'user-1')
+    expect(calls.eqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
+    expect(calls.insertMock).toHaveBeenCalledWith({ user_id: 'user-1', list_id: '1' })
     expect(result).toEqual({ ok: true, data: { isFavorited: true } })
   })
 
@@ -163,7 +192,8 @@ describe('OshiFavoritesProvider', () => {
     const result = await provider.toggleFavorite('1')
 
     expect(calls.deleteMock).toHaveBeenCalled()
-    expect(calls.deleteEqMock).toHaveBeenCalledWith('target_list_id', '1')
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'user-1')
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
     expect(result).toEqual({ ok: true, data: { isFavorited: false } })
   })
 

@@ -30,9 +30,15 @@ const normalizeWeekdayLists = (rows) => {
   return lists
 }
 
-const buildWeekThreshold = () => {
-  const sixDaysInMs = 6 * 24 * 60 * 60 * 1000
-  return new Date(Date.now() - sixDaysInMs).toISOString()
+const WEEK_RANGE_MS = 7 * 24 * 60 * 60 * 1000
+
+const buildWeekThresholdDate = () =>
+  new Date(Date.now() - WEEK_RANGE_MS)
+
+const isWithinWeekRange = (value, thresholdMs) => {
+  const time = Date.parse(value)
+  if (!Number.isFinite(time)) return false
+  return time >= thresholdMs
 }
 
 const isNetworkError = (error) => {
@@ -47,12 +53,15 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       return { ok: false, error: 'not_configured' }
     }
 
+    const thresholdDate = buildWeekThresholdDate()
+    const thresholdIso = thresholdDate.toISOString()
+    const thresholdMs = thresholdDate.getTime()
     const { data, error } = await supabaseClient
       .from('movie')
       .select(
         'movie_id, movie_title, url, favorite_count, update, series_id, weekday'
       )
-      .gte('update', buildWeekThreshold())
+      .gte('update', thresholdIso)
       .order('favorite_count', { ascending: false })
 
     if (error) {
@@ -64,7 +73,9 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
 
     return {
       ok: true,
-      data: normalizeWeekdayLists(data ?? []),
+      data: normalizeWeekdayLists(
+        (data ?? []).filter((row) => isWithinWeekRange(row.update, thresholdMs))
+      ),
     }
   },
 })

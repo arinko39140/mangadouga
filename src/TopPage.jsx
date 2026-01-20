@@ -17,10 +17,20 @@ const WEEKDAYS = [
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const JST_WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const WEEK_RANGE_MS = 7 * 24 * 60 * 60 * 1000
 
 const getJstWeekdayKey = () => {
   const jstDate = new Date(Date.now() + JST_OFFSET_MS)
   return JST_WEEKDAY_KEYS[jstDate.getUTCDay()]
+}
+
+const buildWeekThresholdMs = () => Date.now() - WEEK_RANGE_MS
+
+const isWithinWeekRange = (item, thresholdMs) => {
+  const publishedAt = item?.publishedAt ?? item?.update
+  const time = Date.parse(publishedAt)
+  if (!Number.isFinite(time)) return false
+  return time >= thresholdMs
 }
 
 const defaultWeekdayDataProvider = createWeekdayDataProvider(supabase)
@@ -59,7 +69,12 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
       .then((result) => {
         if (!isMounted) return
         if (result.ok) {
-          setWeekdayLists(result.data)
+          const thresholdMs = buildWeekThresholdMs()
+          const filteredLists = result.data.map((list) => ({
+            ...list,
+            items: list.items.filter((item) => isWithinWeekRange(item, thresholdMs)),
+          }))
+          setWeekdayLists(filteredLists)
         } else {
           setError(result.error)
         }

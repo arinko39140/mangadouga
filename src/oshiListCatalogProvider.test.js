@@ -30,7 +30,7 @@ const buildCatalogSupabaseMock = ({
     if (table === 'users') {
       return { select: usersSelectMock }
     }
-    if (table === 'oshi_list_favorite') {
+    if (table === 'user_list') {
       return { select: favoriteSelectMock }
     }
     return { select: vi.fn() }
@@ -64,10 +64,12 @@ const buildToggleSupabaseMock = ({
   deleteError = null,
 } = {}) => {
   const limitMock = vi.fn().mockResolvedValue({
-    data: existing ? [{ target_list_id: 1 }] : [],
+    data: existing ? [{ list_id: 1 }] : [],
     error: selectError,
   })
-  const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const eqMock = vi
+    .fn()
+    .mockReturnValue({ eq: eqMock, limit: limitMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: insertError })
   const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: deleteError })
@@ -77,10 +79,23 @@ const buildToggleSupabaseMock = ({
     insert: insertMock,
     delete: deleteMock,
   })
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: { session: { user: { id: 'user-1' } } },
+    error: null,
+  })
 
   return {
-    client: { from: fromMock },
-    calls: { fromMock, selectMock, eqMock, limitMock, insertMock, deleteMock, deleteEqMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    calls: {
+      fromMock,
+      selectMock,
+      eqMock,
+      limitMock,
+      insertMock,
+      deleteMock,
+      deleteEqMock,
+      getSessionMock,
+    },
   }
 }
 
@@ -96,7 +111,7 @@ describe('OshiListCatalogProvider', () => {
         },
       ],
       usersRows: [{ user_id: 'user-1', name: '推しリスト' }],
-      favoriteRows: [{ target_list_id: 1 }],
+      favoriteRows: [{ list_id: 1 }],
     })
     const provider = createOshiListCatalogProvider(client)
 
@@ -111,8 +126,8 @@ describe('OshiListCatalogProvider', () => {
     expect(calls.fromMock).toHaveBeenCalledWith('users')
     expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name')
     expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
-    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
-    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('target_list_id')
+    expect(calls.fromMock).toHaveBeenCalledWith('user_list')
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('list_id')
     expect(calls.favoriteEqMock).toHaveBeenCalledWith('user_id', 'user-1')
     expect(result).toEqual({
       ok: true,
@@ -156,10 +171,12 @@ describe('OshiListCatalogProvider', () => {
 
     const result = await provider.toggleFavorite('1')
 
-    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
-    expect(calls.selectMock).toHaveBeenCalledWith('target_list_id')
-    expect(calls.eqMock).toHaveBeenCalledWith('target_list_id', '1')
-    expect(calls.insertMock).toHaveBeenCalledWith({ target_list_id: '1' })
+    expect(calls.getSessionMock).toHaveBeenCalled()
+    expect(calls.fromMock).toHaveBeenCalledWith('user_list')
+    expect(calls.selectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.eqMock).toHaveBeenNthCalledWith(1, 'user_id', 'user-1')
+    expect(calls.eqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
+    expect(calls.insertMock).toHaveBeenCalledWith({ user_id: 'user-1', list_id: '1' })
     expect(result).toEqual({ ok: true, data: { isFavorited: true } })
   })
 
@@ -170,7 +187,8 @@ describe('OshiListCatalogProvider', () => {
     const result = await provider.toggleFavorite('1')
 
     expect(calls.deleteMock).toHaveBeenCalled()
-    expect(calls.deleteEqMock).toHaveBeenCalledWith('target_list_id', '1')
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'user-1')
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
     expect(result).toEqual({ ok: true, data: { isFavorited: false } })
   })
 

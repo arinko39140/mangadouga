@@ -60,7 +60,7 @@ describe('WeekdayDataProvider', () => {
     expect(calls.selectMock).toHaveBeenCalled()
     expect(calls.selectMock.mock.calls[0][0]).toContain('favorite_count')
     expect(calls.selectMock.mock.calls[0][0]).toContain('update')
-    expect(calls.gteMock).toHaveBeenCalledWith('update', '2026-01-14T12:00:00.000Z')
+    expect(calls.gteMock).toHaveBeenCalledWith('update', '2026-01-13T12:00:00.000Z')
     expect(calls.orderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
 
     expect(result.ok).toBe(true)
@@ -106,6 +106,44 @@ describe('WeekdayDataProvider', () => {
     const monday = result.data.find((list) => list.weekday === 'mon')
     expect(monday.items).toHaveLength(1)
     expect(monday.items[0].title).toBe('月曜のレター')
+  })
+
+  it('過去1週間より前のデータは一覧に含めない', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const rows = [
+      {
+        movie_id: 'm1',
+        movie_title: '月曜のレター',
+        url: '/movies/m1',
+        favorite_count: 120,
+        update: '2026-01-19T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 'o1',
+        movie_title: '古い作品',
+        url: '/movies/o1',
+        favorite_count: 999,
+        update: '2026-01-10T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+    ]
+
+    const { client } = buildSupabaseMock(rows)
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayLists()
+
+    expect(result.ok).toBe(true)
+    const monday = result.data.find((list) => list.weekday === 'mon')
+    expect(monday.items).toHaveLength(1)
+    expect(monday.items[0].title).toBe('月曜のレター')
+
+    vi.useRealTimers()
   })
 
   it('Supabase未設定の場合はnot_configuredとして返す', async () => {

@@ -97,6 +97,9 @@ describe('TopPage layout', () => {
   })
 
   it('取得データが曜日別一覧に反映され、人気順で表示される', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
     const dataProvider = {
       fetchWeekdayLists: vi.fn().mockResolvedValue({
         ok: true,
@@ -109,12 +112,14 @@ describe('TopPage layout', () => {
                 title: '人気一位',
                 popularityScore: 200,
                 seriesId: 'series-1',
+                publishedAt: '2026-01-19T10:00:00Z',
               },
               {
                 id: 'm2',
                 title: '人気二位',
                 popularityScore: 120,
                 seriesId: 'series-2',
+                publishedAt: '2026-01-18T10:00:00Z',
               },
             ],
           },
@@ -142,6 +147,55 @@ describe('TopPage layout', () => {
       'href',
       '/series/series-1/'
     )
+
+    vi.useRealTimers()
+  })
+
+  it('過去1週間より前のアイテムは曜日別一覧に表示しない', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'mon',
+            items: [
+              {
+                id: 'm1',
+                title: '最近の作品',
+                popularityScore: 200,
+                seriesId: 'series-1',
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+              {
+                id: 'm2',
+                title: '古い作品',
+                popularityScore: 999,
+                seriesId: 'series-2',
+                publishedAt: '2026-01-10T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'tue', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    fireEvent.click(screen.getByRole('button', { name: '月' }))
+
+    await screen.findByText('最近の作品')
+    expect(screen.queryByText('古い作品')).not.toBeInTheDocument()
+
+    vi.useRealTimers()
   })
 
   it('読み込み中はローディング状態を表示する', () => {
