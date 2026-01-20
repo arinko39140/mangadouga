@@ -7,7 +7,19 @@ const isNetworkError = (error) => {
   return message.includes('Failed to fetch') || message.includes('NetworkError')
 }
 
-const normalizeError = (error) => (isNetworkError(error) ? 'network' : 'unknown')
+const isAuthError = (error) => {
+  if (!error) return false
+  if (error.status === 401) return true
+  const code = String(error.code ?? '')
+  if (code === 'PGRST301') return true
+  const message = String(error.message ?? '')
+  return message.includes('JWT') || message.includes('auth') || message.includes('Authentication')
+}
+
+const normalizeError = (error) => {
+  if (isAuthError(error)) return 'auth_required'
+  return isNetworkError(error) ? 'network' : 'unknown'
+}
 
 const toggleListMovie = async ({ client, listId, movieId }) => {
   const { data, error } = await client
@@ -57,6 +69,8 @@ const mapMovieRow = (movie) => ({
   isOshi: true,
 })
 
+const mapVisibility = (canDisplay) => (canDisplay ? 'public' : 'private')
+
 const normalizeOshiRows = (rows) =>
   (rows ?? [])
     .map((row) => row.movie)
@@ -65,13 +79,28 @@ const normalizeOshiRows = (rows) =>
 
 export const createOshiListDataProvider = (supabaseClient) => {
   let cachedListId = null
+  let cachedUserId = null
 
   const fetchListId = async () => {
-    if (cachedListId !== null) return { ok: true, listId: cachedListId }
+    if (!supabaseClient?.auth?.getSession) {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession()
+    const userId = sessionData?.session?.user?.id ?? null
+    if (sessionError || !userId) {
+      return { ok: false, error: 'auth_required' }
+    }
+
+    if (cachedListId !== null && cachedUserId === userId) {
+      return { ok: true, listId: cachedListId }
+    }
 
     const { data, error } = await supabaseClient
       .from('list')
       .select('list_id')
+      .eq('user_id', userId)
       .order('list_id', { ascending: true })
       .limit(1)
 
@@ -81,6 +110,7 @@ export const createOshiListDataProvider = (supabaseClient) => {
 
     const listId = data?.[0]?.list_id ?? null
     cachedListId = listId
+    cachedUserId = userId
     return { ok: true, listId }
   }
 
@@ -130,6 +160,72 @@ export const createOshiListDataProvider = (supabaseClient) => {
         listId: listResult.listId,
         movieId,
       })
+    },
+
+    async fetchVisibility() {
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
+
+      const listResult = await fetchListId()
+      if (!listResult.ok) {
+        return { ok: false, error: listResult.error }
+      }
+      if (!listResult.listId) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      const { data, error } = await supabaseClient
+        .from('list')
+        .select('can_display')
+        .eq('list_id', listResult.listId)
+        .limit(1)
+
+      if (error) {
+        return { ok: false, error: normalizeError(error) }
+      }
+
+      const row = data?.[0]
+      if (!row) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      return { ok: true, data: { visibility: mapVisibility(row.can_display) } }
+    },
+
+    async updateVisibility(visibility) {
+      if (visibility !== 'public' && visibility !== 'private') {
+        return { ok: false, error: 'invalid_input' }
+      }
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
+
+      const listResult = await fetchListId()
+      if (!listResult.ok) {
+        return { ok: false, error: listResult.error }
+      }
+      if (!listResult.listId) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      const canDisplay = visibility === 'public'
+      const { data, error } = await supabaseClient
+        .from('list')
+        .update({ can_display: canDisplay })
+        .eq('list_id', listResult.listId)
+        .select('can_display')
+
+      if (error) {
+        return { ok: false, error: normalizeError(error) }
+      }
+
+      const row = data?.[0]
+      if (!row) {
+        return { ok: false, error: 'not_found' }
+      }
+
+      return { ok: true, data: { visibility: mapVisibility(row.can_display) } }
     },
   }
 }

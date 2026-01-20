@@ -26,23 +26,3 @@ to authenticated
 using (user_id = auth.uid());
 
 grant select, insert, delete on table public.oshi_list_favorite to authenticated;
-
-create or replace view public.oshi_list_catalog as
-select
-  list.list_id,
-  list.user_id,
-  users.name,
-  list.favorite_count,
-  list.can_display,
-  exists (
-    select 1
-    from public.oshi_list_favorite
-    where oshi_list_favorite.target_list_id = list.list_id
-      and oshi_list_favorite.user_id = auth.uid()
-  ) as is_favorited
-from public.list
-left join public.users on users.user_id = list.user_id::text
-where list.can_display = true;
-
-revoke all on table public.oshi_list_catalog from anon;
-grant select on table public.oshi_list_catalog to authenticated;

@@ -19,10 +19,10 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const mapCatalogRow = (row) => ({
+const mapCatalogRow = (row, userName) => ({
   listId: row.list_id != null ? String(row.list_id) : '',
   userId: row.user_id != null ? String(row.user_id) : '',
-  name: row.name ?? '',
+  name: userName ?? '',
   favoriteCount: row.favorite_count ?? 0,
   isFavorited: Boolean(row.is_favorited),
   visibility: row.can_display ? 'public' : 'private',
@@ -34,17 +34,69 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
       return { ok: false, error: 'not_configured' }
     }
 
-    const ascending = sortOrder === 'favorite_asc'
-    const { data, error } = await supabaseClient
-      .from('oshi_list_catalog')
-      .select('list_id, user_id, name, favorite_count, can_display, is_favorited')
-      .order('favorite_count', { ascending })
-
-    if (error) {
-      return { ok: false, error: normalizeError(error) }
+    if (!supabaseClient?.auth?.getSession) {
+      return { ok: false, error: 'not_configured' }
     }
 
-    return { ok: true, data: (data ?? []).map(mapCatalogRow) }
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession()
+    const userId = sessionData?.session?.user?.id ?? null
+    if (sessionError || !userId) {
+      return { ok: false, error: 'auth_required' }
+    }
+
+    const ascending = sortOrder === 'favorite_asc'
+    const { data: listData, error: listError } = await supabaseClient
+      .from('list')
+      .select('list_id, user_id, favorite_count, can_display')
+      .eq('can_display', true)
+      .order('favorite_count', { ascending })
+
+    if (listError) {
+      return { ok: false, error: normalizeError(listError) }
+    }
+
+    const userIds = Array.from(
+      new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
+    )
+    let userNameMap = new Map()
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabaseClient
+        .from('users')
+        .select('user_id, name')
+        .in('user_id', userIds)
+
+      if (usersError) {
+        return { ok: false, error: normalizeError(usersError) }
+      }
+
+      userNameMap = new Map(
+        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      )
+    }
+
+    const { data: favoriteData, error: favoriteError } = await supabaseClient
+      .from('oshi_list_favorite')
+      .select('target_list_id')
+      .eq('user_id', userId)
+
+    if (favoriteError) {
+      return { ok: false, error: normalizeError(favoriteError) }
+    }
+
+    const favoriteSet = new Set(
+      (favoriteData ?? []).map((row) => String(row.target_list_id))
+    )
+    const items = (listData ?? []).map((row) => {
+      const mappedUserId = row.user_id != null ? String(row.user_id) : ''
+      const userName = userNameMap.get(mappedUserId) ?? ''
+      return {
+        ...mapCatalogRow(row, userName),
+        isFavorited: favoriteSet.has(String(row.list_id)),
+      }
+    })
+
+    return { ok: true, data: items }
   },
 
   async toggleFavorite(targetListId) {

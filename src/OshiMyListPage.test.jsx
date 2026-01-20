@@ -135,6 +135,37 @@ describe('OshiMyListPage', () => {
     expect(screen.getByText('推し動画')).toBeInTheDocument()
   })
 
+  it('公開設定のUIを表示して更新できる', async () => {
+    const dataProvider = {
+      fetchOshiList: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { visibility: 'private' },
+      }),
+      updateVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { visibility: 'public' },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiMyListPage(dataProvider, authGate)
+
+    await waitFor(() => {
+      expect(screen.getByText('公開設定:')).toBeInTheDocument()
+    })
+    expect(screen.getByText('現在: 非公開')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '公開' }))
+
+    await waitFor(() => {
+      expect(dataProvider.updateVisibility).toHaveBeenCalledWith('public')
+    })
+  })
+
   it('サムネイルが未設定でも動画URLからサムネイルを表示する', async () => {
     const dataProvider = {
       fetchOshiList: vi.fn().mockResolvedValue({

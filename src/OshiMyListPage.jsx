@@ -61,6 +61,10 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
   const [oshiError, setOshiError] = useState(null)
   const [oshiUpdatingIds, setOshiUpdatingIds] = useState([])
   const [viewMode, setViewMode] = useState('grid')
+  const [canManageVisibility, setCanManageVisibility] = useState(false)
+  const [visibility, setVisibility] = useState(null)
+  const [visibilityUpdating, setVisibilityUpdating] = useState(false)
+  const [visibilityError, setVisibilityError] = useState(null)
   const authGateInstance = useMemo(() => {
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
@@ -76,6 +80,7 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
       }
       setIsLoading(true)
       setErrorType(null)
+      setVisibilityError(null)
       const status = await authGateInstance.getStatus()
       if (!isMounted) return
       if (!status.ok) {
@@ -83,13 +88,33 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
         authGateInstance.redirectToLogin()
         return
       }
-      const result = await dataProvider.fetchOshiList()
+      const canUseVisibility =
+        typeof dataProvider.fetchVisibility === 'function' &&
+        typeof dataProvider.updateVisibility === 'function'
+      if (!canUseVisibility) {
+        setCanManageVisibility(false)
+        setVisibility(null)
+      }
+
+      const [result, visibilityResult] = await Promise.all([
+        dataProvider.fetchOshiList(),
+        canUseVisibility ? dataProvider.fetchVisibility() : Promise.resolve(null),
+      ])
       if (!isMounted) return
       if (result.ok) {
         setItems(result.data)
       } else {
         setItems([])
         setErrorType(result.error ?? 'unknown')
+      }
+      if (visibilityResult) {
+        if (visibilityResult.ok) {
+          setCanManageVisibility(true)
+          setVisibility(visibilityResult.data.visibility ?? null)
+        } else {
+          setCanManageVisibility(false)
+          setVisibility(null)
+        }
       }
       setIsLoading(false)
     }
@@ -131,6 +156,32 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
       }
     } finally {
       setOshiUpdatingIds((prev) => prev.filter((id) => id !== movieId))
+    }
+  }
+
+  const handleVisibilityChange = async (nextVisibility) => {
+    if (!dataProvider || typeof dataProvider.updateVisibility !== 'function') return
+    setVisibilityError(null)
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      authGateInstance.redirectToLogin()
+      return
+    }
+
+    setVisibilityUpdating(true)
+    try {
+      const result = await dataProvider.updateVisibility(nextVisibility)
+      if (result.ok) {
+        setVisibility(result.data.visibility ?? null)
+        publishOshiListUpdated()
+      } else if (result.error === 'auth_required') {
+        authGateInstance.redirectToLogin()
+      } else {
+        setVisibilityError('failed')
+      }
+    } finally {
+      setVisibilityUpdating(false)
     }
   }
 
@@ -193,6 +244,8 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
     )
   }
 
+  const visibilityLabel = visibility === 'private' ? '非公開' : '公開'
+
   return (
     <main className="oshi-lists">
       <h1>推しリスト</h1>
@@ -216,9 +269,44 @@ function OshiMyListPage({ dataProvider = defaultDataProvider, authGate }) {
           ))}
         </div>
       </div>
+      {canManageVisibility ? (
+        <div className="oshi-lists__controls" role="group" aria-label="公開設定">
+          <span className="oshi-lists__label">公開設定:</span>
+          <div className="oshi-lists__toggle-group">
+            <button
+              type="button"
+              className={
+                visibility === 'public' ? 'oshi-lists__toggle is-active' : 'oshi-lists__toggle'
+              }
+              aria-pressed={visibility === 'public'}
+              disabled={visibilityUpdating}
+              onClick={() => handleVisibilityChange('public')}
+            >
+              公開
+            </button>
+            <button
+              type="button"
+              className={
+                visibility === 'private' ? 'oshi-lists__toggle is-active' : 'oshi-lists__toggle'
+              }
+              aria-pressed={visibility === 'private'}
+              disabled={visibilityUpdating}
+              onClick={() => handleVisibilityChange('private')}
+            >
+              非公開
+            </button>
+          </div>
+          <span className="oshi-lists__muted">現在: {visibilityLabel}</span>
+        </div>
+      ) : null}
       {oshiError ? (
         <p className="oshi-lists__status oshi-lists__status--error">
           推し登録の更新に失敗しました。
+        </p>
+      ) : null}
+      {visibilityError ? (
+        <p className="oshi-lists__status oshi-lists__status--error">
+          公開設定の更新に失敗しました。
         </p>
       ) : null}
       {renderContent()}

@@ -1,14 +1,59 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createOshiListCatalogProvider } from './oshiListCatalogProvider.js'
 
-const buildCatalogSupabaseMock = ({ rows = [], error = null } = {}) => {
-  const orderMock = vi.fn().mockResolvedValue({ data: rows, error })
-  const selectMock = vi.fn().mockReturnValue({ order: orderMock })
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+const buildCatalogSupabaseMock = ({
+  listRows = [],
+  listError = null,
+  favoriteRows = [],
+  favoriteError = null,
+  usersRows = [],
+  usersError = null,
+  sessionUserId = 'user-1',
+  sessionError = null,
+} = {}) => {
+  const listOrderMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listEqMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
+
+  const usersInMock = vi.fn().mockResolvedValue({ data: usersRows, error: usersError })
+  const usersSelectMock = vi.fn().mockReturnValue({ in: usersInMock })
+
+  const favoriteEqMock = vi
+    .fn()
+    .mockResolvedValue({ data: favoriteRows, error: favoriteError })
+  const favoriteSelectMock = vi.fn().mockReturnValue({ eq: favoriteEqMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'users') {
+      return { select: usersSelectMock }
+    }
+    if (table === 'oshi_list_favorite') {
+      return { select: favoriteSelectMock }
+    }
+    return { select: vi.fn() }
+  })
+
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
 
   return {
-    client: { from: fromMock },
-    calls: { fromMock, selectMock, orderMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listEqMock,
+      listOrderMock,
+      usersSelectMock,
+      usersInMock,
+      favoriteSelectMock,
+      favoriteEqMock,
+      getSessionMock,
+    },
   }
 }
 
@@ -42,26 +87,33 @@ const buildToggleSupabaseMock = ({
 describe('OshiListCatalogProvider', () => {
   it('お気に入り数の多い順で公開一覧を取得して整形する', async () => {
     const { client, calls } = buildCatalogSupabaseMock({
-      rows: [
+      listRows: [
         {
           list_id: 1,
           user_id: 'user-1',
-          name: '推しリスト',
           favorite_count: 5,
           can_display: true,
-          is_favorited: true,
         },
       ],
+      usersRows: [{ user_id: 'user-1', name: '推しリスト' }],
+      favoriteRows: [{ target_list_id: 1 }],
     })
     const provider = createOshiListCatalogProvider(client)
 
     const result = await provider.fetchCatalog({ sortOrder: 'favorite_desc' })
 
-    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_catalog')
-    expect(calls.selectMock).toHaveBeenCalledWith(
-      'list_id, user_id, name, favorite_count, can_display, is_favorited'
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith(
+      'list_id, user_id, favorite_count, can_display'
     )
-    expect(calls.orderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+    expect(calls.listEqMock).toHaveBeenCalledWith('can_display', true)
+    expect(calls.listOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+    expect(calls.fromMock).toHaveBeenCalledWith('users')
+    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name')
+    expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
+    expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('target_list_id')
+    expect(calls.favoriteEqMock).toHaveBeenCalledWith('user_id', 'user-1')
     expect(result).toEqual({
       ok: true,
       data: [
@@ -83,12 +135,12 @@ describe('OshiListCatalogProvider', () => {
 
     await provider.fetchCatalog({ sortOrder: 'favorite_asc' })
 
-    expect(calls.orderMock).toHaveBeenCalledWith('favorite_count', { ascending: true })
+    expect(calls.listOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: true })
   })
 
   it('未認証時はauth_requiredとして返す', async () => {
     const { client } = buildCatalogSupabaseMock({
-      error: { status: 401, message: 'JWT expired' },
+      sessionUserId: null,
     })
     const provider = createOshiListCatalogProvider(client)
 

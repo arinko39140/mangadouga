@@ -20,14 +20,6 @@ const normalizeError = (error) => {
 
 const mapVisibility = (canDisplay) => (canDisplay ? 'public' : 'private')
 
-const mapCatalogRow = (row) => ({
-  listId: String(row.list_id),
-  name: row.name ?? '',
-  favoriteCount: row.favorite_count ?? 0,
-  isFavorited: Boolean(row.is_favorited),
-  visibility: mapVisibility(row.can_display),
-})
-
 const mapListRow = (row) => ({
   listId: String(row.list_id),
   name: row.users?.name ?? '',
@@ -80,32 +72,17 @@ export const createOshiListPageProvider = (supabaseClient) => {
       }
 
       const listRow = listData?.[0]
-      if (listRow) {
-        const favoriteState = await fetchFavoriteState(targetListId)
-        if (!favoriteState.ok) {
-          return { ok: false, error: favoriteState.error }
-        }
-        const summary = mapListRow(listRow)
-        summary.isFavorited = favoriteState.isFavorited
-        return { ok: true, data: summary }
-      }
-
-      const { data: catalogData, error: catalogError } = await supabaseClient
-        .from('oshi_list_catalog')
-        .select('list_id, name, favorite_count, can_display, is_favorited')
-        .eq('list_id', targetListId)
-        .limit(1)
-
-      if (catalogError) {
-        return { ok: false, error: normalizeError(catalogError) }
-      }
-
-      const catalogRow = catalogData?.[0]
-      if (!catalogRow) {
+      if (!listRow) {
         return { ok: false, error: 'not_found' }
       }
 
-      return { ok: true, data: mapCatalogRow(catalogRow) }
+      const favoriteState = await fetchFavoriteState(targetListId)
+      if (!favoriteState.ok) {
+        return { ok: false, error: favoriteState.error }
+      }
+      const summary = mapListRow(listRow)
+      summary.isFavorited = favoriteState.isFavorited
+      return { ok: true, data: summary }
     },
 
     async fetchListItems(targetListId) {

@@ -19,14 +19,12 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const mapFavoriteRow = (row) => {
-  const list = row?.list
+const mapFavoriteRow = (list, userName) => {
   if (!list?.list_id || !list?.user_id) return null
-  if (!list.can_display) return null
   return {
     listId: String(list.list_id),
     userId: String(list.user_id),
-    name: list.users?.name ?? '',
+    name: userName ?? '',
     favoriteCount: list.favorite_count ?? 0,
     isFavorited: true,
   }
@@ -38,19 +36,55 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
       return { ok: false, error: 'not_configured' }
     }
 
-    const { data, error } = await supabaseClient
+    const { data: favoriteData, error: favoriteError } = await supabaseClient
       .from('oshi_list_favorite')
-      .select(
-        'target_list_id, list:target_list_id (list_id, user_id, favorite_count, can_display, users (name))'
-      )
+      .select('target_list_id')
 
-    if (error) {
-      return { ok: false, error: normalizeError(error) }
+    if (favoriteError) {
+      return { ok: false, error: normalizeError(favoriteError) }
+    }
+
+    const targetIds = Array.from(
+      new Set((favoriteData ?? []).map((row) => String(row.target_list_id)).filter(Boolean))
+    )
+    if (targetIds.length === 0) {
+      return { ok: true, data: [] }
+    }
+
+    const { data: listData, error: listError } = await supabaseClient
+      .from('list')
+      .select('list_id, user_id, favorite_count, can_display')
+      .in('list_id', targetIds)
+      .eq('can_display', true)
+
+    if (listError) {
+      return { ok: false, error: normalizeError(listError) }
+    }
+
+    const userIds = Array.from(
+      new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
+    )
+    let userNameMap = new Map()
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabaseClient
+        .from('users')
+        .select('user_id, name')
+        .in('user_id', userIds)
+
+      if (usersError) {
+        return { ok: false, error: normalizeError(usersError) }
+      }
+
+      userNameMap = new Map(
+        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      )
     }
 
     const items = new Map()
-    ;(data ?? []).forEach((row) => {
-      const item = mapFavoriteRow(row)
+    ;(listData ?? []).forEach((row) => {
+      if (!row?.can_display) return
+      const mappedUserId = row.user_id != null ? String(row.user_id) : ''
+      const item = mapFavoriteRow(row, userNameMap.get(mappedUserId))
       if (!item) return
       if (!items.has(item.listId)) {
         items.set(item.listId, item)

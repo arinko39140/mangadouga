@@ -1,13 +1,45 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createOshiFavoritesProvider } from './oshiFavoritesProvider.js'
 
-const buildFavoritesSupabaseMock = ({ rows = [], error = null } = {}) => {
-  const selectMock = vi.fn().mockResolvedValue({ data: rows, error })
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+const buildFavoritesSupabaseMock = ({
+  favoriteRows = [],
+  favoriteError = null,
+  listRows = [],
+  listError = null,
+  usersRows = [],
+  usersError = null,
+} = {}) => {
+  const favoriteSelectMock = vi.fn().mockResolvedValue({ data: favoriteRows, error: favoriteError })
+  const listEqMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listInMock = vi.fn().mockReturnValue({ eq: listEqMock })
+  const listSelectMock = vi.fn().mockReturnValue({ in: listInMock })
+  const usersInMock = vi.fn().mockResolvedValue({ data: usersRows, error: usersError })
+  const usersSelectMock = vi.fn().mockReturnValue({ in: usersInMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'oshi_list_favorite') {
+      return { select: favoriteSelectMock }
+    }
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'users') {
+      return { select: usersSelectMock }
+    }
+    return { select: vi.fn() }
+  })
 
   return {
     client: { from: fromMock },
-    calls: { fromMock, selectMock },
+    calls: {
+      fromMock,
+      favoriteSelectMock,
+      listSelectMock,
+      listInMock,
+      listEqMock,
+      usersSelectMock,
+      usersInMock,
+    },
   }
 }
 
@@ -41,38 +73,24 @@ const buildToggleSupabaseMock = ({
 describe('OshiFavoritesProvider', () => {
   it('登録済み推しリストのみを重複なしで返す', async () => {
     const { client, calls } = buildFavoritesSupabaseMock({
-      rows: [
+      favoriteRows: [{ target_list_id: 1 }, { target_list_id: 1 }, { target_list_id: 2 }],
+      listRows: [
         {
-          target_list_id: 1,
-          list: {
-            list_id: 1,
-            user_id: 'user-1',
-            favorite_count: 3,
-            can_display: true,
-            users: { name: '推しリスト' },
-          },
+          list_id: 1,
+          user_id: 'user-1',
+          favorite_count: 3,
+          can_display: true,
         },
         {
-          target_list_id: 1,
-          list: {
-            list_id: 1,
-            user_id: 'user-1',
-            favorite_count: 3,
-            can_display: true,
-            users: { name: '推しリスト' },
-          },
+          list_id: 2,
+          user_id: 'user-2',
+          favorite_count: 1,
+          can_display: false,
         },
-        {
-          target_list_id: 2,
-          list: {
-            list_id: 2,
-            user_id: 'user-2',
-            favorite_count: 1,
-            can_display: false,
-            users: { name: '非公開' },
-          },
-        },
-        { target_list_id: 3, list: null },
+      ],
+      usersRows: [
+        { user_id: 'user-1', name: '推しリスト' },
+        { user_id: 'user-2', name: '非公開' },
       ],
     })
     const provider = createOshiFavoritesProvider(client)
@@ -80,9 +98,16 @@ describe('OshiFavoritesProvider', () => {
     const result = await provider.fetchFavorites()
 
     expect(calls.fromMock).toHaveBeenCalledWith('oshi_list_favorite')
-    expect(calls.selectMock).toHaveBeenCalledWith(
-      'target_list_id, list:target_list_id (list_id, user_id, favorite_count, can_display, users (name))'
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('target_list_id')
+    expect(calls.fromMock).toHaveBeenCalledWith('list')
+    expect(calls.listSelectMock).toHaveBeenCalledWith(
+      'list_id, user_id, favorite_count, can_display'
     )
+    expect(calls.listInMock).toHaveBeenCalledWith('list_id', ['1', '2'])
+    expect(calls.listEqMock).toHaveBeenCalledWith('can_display', true)
+    expect(calls.fromMock).toHaveBeenCalledWith('users')
+    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name')
+    expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
     expect(result).toEqual({
       ok: true,
       data: [
@@ -99,7 +124,7 @@ describe('OshiFavoritesProvider', () => {
 
   it('未認証時はauth_requiredとして返す', async () => {
     const { client } = buildFavoritesSupabaseMock({
-      error: { status: 401, message: 'JWT expired' },
+      favoriteError: { status: 401, message: 'JWT expired' },
     })
     const provider = createOshiFavoritesProvider(client)
 
