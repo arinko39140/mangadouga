@@ -147,6 +147,7 @@ sequenceDiagram
 - データ取得は並列で実行し、部分失敗時は該当セクションのみエラー表示する。
 - 非公開データの「内容」は`can_display=true`で取得段階から除外し、RLSでも同条件を強制する。
 - ただし公開/非公開の判定メタは`user_list_visibility`ビュー経由で取得可能にする。
+- `UserPageProvider`が`not_found`の場合はページ全体を「ユーザー不存在」エラーに統一し、他セクションは表示しない。
 
 ### Favorite Toggle Flow
 ```mermaid
@@ -217,6 +218,7 @@ sequenceDiagram
 - State model: `profile`, `links`, `listSummary`, `seriesItems`, `loading`, `errorBySection`
 - Persistence & consistency: ページ再表示で最新取得、局所的に再試行可能
 - Concurrency strategy: セクション単位で独立したロード状態を管理
+- `not_found`時は全体エラーに切り替え、他セクションの状態更新を無効化する
 
 **Implementation Notes**
 - Integration: `userId`はURLパラメータから取得し全Providerに渡す
@@ -470,6 +472,7 @@ interface UserSeriesProvider {
 - アプリ側のクエリでも`can_display=true`を必須条件にして内容の二重防御を行う
 - `users`/`list`/`user_series`/`series`は認証ユーザーの読み取りを許可し、公開データのみ参照可能にする
 - 公開/非公開の判定メタは`user_list_visibility`ビューを通して取得可能にする
+- `user_list_visibility`は「認証済みユーザーに対して公開/非公開判定メタのみ参照可」を前提とし、実データは`can_display=true`のものだけ参照可とする
 - `user_list_visibility`は`user_exists`/`list_exists`を返し、空状態とエラー状態を区別する
 
 ## Error Handling
