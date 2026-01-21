@@ -3,6 +3,16 @@
 ## Introduction
 ユーザーマイページ（他者ユーザーのページ）およびユーザーの推し作品一覧において、ユーザー情報・推しリスト・推し作品・外部リンクを閲覧し、推しリストをお気に入り登録できるようにするための要件を定義する。
 
+## Clarifications
+- ユーザーマイページのURLは `/users/:userId/` とする。
+- ユーザーの推し作品一覧のURLは `/users/:userId/oshi-series/` とする。
+- 推しリストは「1ユーザーにつき1つ」を前提とする。
+- 対象ページの閲覧はログイン必須とする（未ログイン時はログイン画面へ誘導）。
+- 外部リンクの表示は `サイト画面/他マイページ.png` の見た目を踏襲する。
+- 推し作品は「作品（シリーズ）単位」の一覧を指す。
+- ユーザーアイコンは画像アップロードで設定し、表示時は円形に切り抜く。
+- ユーザーアイコンの容量上限は2MB、推奨サイズは512×512px（正方形）とする。
+
 ## Requirements
 
 ### Requirement 1: 他者ユーザー情報の表示
@@ -14,6 +24,8 @@
 3. If 他者ユーザーにアイコンが設定されていない, the User Page UI shall アイコンの空状態を表示する
 4. While ユーザー情報が読み込み中, the User Page UI shall 読み込み状態を表示する
 5. The User Page UI shall ユーザー情報セクションの見出しを表示する
+6. The User Page UI shall ユーザーアイコンを円形に切り抜いて表示する
+7. The User Page UI shall ユーザーアイコンにPNGまたはJPEG（可能ならGIF/APNG）を使用できる
 
 ### Requirement 2: 推しリストと推し作品の表示
 **Objective:** As a 閲覧者, I want 他者ユーザーの推しリストと推し作品を確認できる, so that 推し傾向を把握できる
@@ -34,13 +46,14 @@
 3. If 外部リンクのURLが無効, the User Page UI shall そのリンクを表示しない
 4. If 外部リンクが0件, the User Page UI shall 外部リンクセクションに空状態を表示する
 5. The User Page UI shall 外部リンクをクリック可能なリンクとして表示する
+6. The User Page UI shall 外部リンクを「X / YouTube / その他」のカテゴリ表示で示す
 
 ### Requirement 4: 対象ページへの適用
 **Objective:** As a 閲覧者, I want 対象ページで同じユーザー情報と外部リンクを確認できる, so that ページ間で情報の一貫性を保てる
 
 #### Acceptance Criteria
-1. When ユーザーマイページが表示される, the User Page UI shall ユーザー情報セクションと外部リンクセクションを表示する
-2. When ユーザーの推し作品一覧ページが表示される, the User Page UI shall ユーザー情報セクションと外部リンクセクションを表示する
+1. When ユーザーマイページ（`/users/:userId/`）が表示される, the User Page UI shall ユーザー情報セクションと外部リンクセクションを表示する
+2. When ユーザーの推し作品一覧ページ（`/users/:userId/oshi-series/`）が表示される, the User Page UI shall ユーザー情報セクションと外部リンクセクションを表示する
 3. While 対象ページ以外が表示される, the User Page UI shall これらのセクションを表示しない
 4. When 対象ページ間を遷移する, the User Page UI shall 同一ユーザーの情報を表示する
 
@@ -48,8 +61,8 @@
 **Objective:** As a 閲覧者, I want 他者ユーザーの推し作品一覧を閲覧できる, so that そのユーザーの推し傾向を把握できる
 
 #### Acceptance Criteria
-1. When 他者ユーザーの推し作品一覧ページが表示される, the User Page UI shall 当該ユーザーの推し作品一覧を表示する
-2. When 推し作品一覧に項目が含まれる, the User Page UI shall 各推し作品項目を表示する
+1. When 他者ユーザーの推し作品一覧ページ（`/users/:userId/oshi-series/`）が表示される, the User Page UI shall 当該ユーザーの推し作品一覧を表示する
+2. When 推し作品一覧に項目が含まれる, the User Page UI shall 各推し作品項目（作品/シリーズ単位）を表示する
 3. If 推し作品が存在しない, the User Page UI shall 推し作品一覧の空状態を表示する
 4. While 推し作品一覧が読み込み中, the User Page UI shall 読み込み状態を表示する
 5. The User Page UI shall 推し作品一覧ページの見出しを表示する
@@ -77,7 +90,7 @@
 **Objective:** As a 閲覧者, I want みんなの推しリストからユーザーマイページへ移動できる, so that 関連情報をすぐに確認できる
 
 #### Acceptance Criteria
-1. When みんなの推しリストにユーザーネームが表示される, the User Page UI shall ユーザーマイページへのリンクを提供する
+1. When みんなの推しリストにユーザーネームが表示される, the User Page UI shall `/users/:userId/` へのリンクを提供する
 2. When 閲覧者がユーザーネームのリンクを選択する, the User Page UI shall 該当ユーザーのユーザーマイページを表示する
 3. If リンク先ユーザーが存在しない, the User Page UI shall エラー状態を表示する
 
