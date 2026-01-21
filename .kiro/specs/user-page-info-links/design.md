@@ -146,8 +146,9 @@ sequenceDiagram
 - 認証失敗時はログインページへ遷移する。
 - データ取得は並列で実行し、部分失敗時は該当セクションのみエラー表示する。
 - 非公開データの「内容」は`can_display=true`で取得段階から除外し、RLSでも同条件を強制する。
-- ただし公開/非公開の判定メタは`user_list_visibility`ビュー経由で取得可能にする。
+- 公開/非公開は`user_list.can_display`で判定し、RLSでも同条件を強制する。
 - `UserPageProvider`が`not_found`の場合はページ全体を「ユーザー不存在」エラーに統一し、他セクションは表示しない。
+- 取得失敗時の再試行ボタンはページ全体に1つ表示し、全セクションを再取得する。
 
 ### Favorite Toggle Flow
 ```mermaid
@@ -216,7 +217,7 @@ sequenceDiagram
 
 ##### State Management
 - State model: `profile`, `links`, `listSummary`, `seriesItems`, `loading`, `errorBySection`
-- Persistence & consistency: ページ再表示で最新取得、局所的に再試行可能
+- Persistence & consistency: ページ再表示で最新取得、再試行はページ全体で実行
 - Concurrency strategy: セクション単位で独立したロード状態を管理
 - `not_found`時は全体エラーに切り替え、他セクションの状態更新を無効化する
 
@@ -251,7 +252,7 @@ sequenceDiagram
 
 **Implementation Notes**
 - Integration: UserPageと同一の`UserInfoPanel`と`ExternalLinksPanel`を使用
-- Validation: 取得失敗時はエラーセクションと再試行ボタンを表示
+- Validation: 取得失敗時はページ全体の再試行ボタンを表示
 - Risks: 取得失敗時の共通UIが重複表示される
 
 #### UserInfoPanel (summary only)
@@ -380,10 +381,11 @@ interface UserOshiListProvider {
 - Status mapping: `status=none`はリスト未作成、`status=not_found`はユーザー不存在、`status=public`のみ`listId`が非null
 
 **Implementation Notes**
-- Integration: 公開状態は`user_list_visibility.can_display`から判定し、`status`として返す
-- Integration: `user_list_visibility`は`user_exists`/`list_exists`を返し、`status`判定に利用する
+- Integration: 公開状態は`user_list.can_display`から判定し、`status`として返す
+- Integration: `users`の存在確認と`user_list`の有無で`not_found`/`none`を判定する
 - Validation: 非公開時は`toggleFavorite`をUIで無効化し、Providerは`invalid_input`で拒否する
 - UI分岐: `status=private`は非公開メッセージを表示、`status=none`は空状態を表示する
+- UI分岐: `not_found`はページ全体エラーを表示し、他セクションは表示しない
 - Risks: 公開判定が欠落すると非公開情報が露出する
 
 #### UserSeriesProvider
@@ -436,6 +438,9 @@ interface UserSeriesProvider {
 - Entities: `User`, `OshiList`, `UserSeries`
 - Business rules: 非公開リストは閲覧不可、外部リンクは`http/https`のみ表示
 
+**Schema Note**
+- 本設計内の`list`は、既存スキーマで推しリスト本体を表す`user_list`を指す前提とする（命名の読み替え）。
+
 ### Logical Data Model
 
 **Structure Definition**:
@@ -457,7 +462,7 @@ interface UserSeriesProvider {
 - `users`追加列: `icon_url text`, `x_label text`, `youtube_label text`, `other_label text`
 - `user_series`インデックス: `(user_id)`で一覧取得を高速化
 - `list`インデックス: `(user_id)`で対象ユーザーのリスト特定を高速化
-- 追加ビュー案: `user_list_visibility` (user_id, list_id, can_display, user_exists, list_exists)
+- 追加ビュー案: なし（`user_list`と`users`で判定）
 
 ### Data Contracts & Integration
 
@@ -471,15 +476,14 @@ interface UserSeriesProvider {
 - RLSで`list.can_display=true`を強制し、非公開リストの「内容」は取得段階で遮断する
 - アプリ側のクエリでも`can_display=true`を必須条件にして内容の二重防御を行う
 - `users`/`list`/`user_series`/`series`は認証ユーザーの読み取りを許可し、公開データのみ参照可能にする
-- 公開/非公開の判定メタは`user_list_visibility`ビューを通して取得可能にする
-- `user_list_visibility`は「認証済みユーザーに対して公開/非公開判定メタのみ参照可」を前提とし、実データは`can_display=true`のものだけ参照可とする
-- `user_list_visibility`は`user_exists`/`list_exists`を返し、空状態とエラー状態を区別する
+- 公開/非公開は`user_list.can_display`で判定し、RLSで`can_display=true`のデータのみ参照可にする
+- 空状態とエラー状態は`users`存在チェックと`user_list`有無で区別する
 
 ## Error Handling
 
 ### Error Strategy
 - 認証失敗時は`auth_required`を返しログインページへ遷移する
-- `not_found`と`empty`を区別し、空状態とエラー状態を明確に分離する
+- `not_found`（ユーザー不存在）と`none`（リスト未作成）を区別し、空状態とエラー状態を明確に分離する
 - 取得失敗は`network`/`unknown`で分類し再試行導線を表示する
 
 ### Error Categories and Responses
@@ -530,5 +534,5 @@ flowchart TD
 ```
 - AddUserColumns: `users.icon_url`と各表示名カラムを追加
 - AddPolicies: `series`のauthenticated読み取りポリシーを追加
-- AddView: 公開状態判定用の`user_list_visibility`ビューを追加
+- AddView: なし（`user_list`と`users`で判定）
 - Verify: ユーザーページと推し作品一覧ページの表示を確認
