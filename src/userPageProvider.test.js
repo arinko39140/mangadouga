@@ -67,6 +67,53 @@ describe('UserPageProvider', () => {
     })
   })
 
+  it('http/httpsリンクのみを有効としてカテゴリを分類する', async () => {
+    const { client } = buildUserSupabaseMock({
+      userRows: [
+        {
+          user_id: 'user-2',
+          name: 'リンク分類ユーザー',
+          icon_url: null,
+          x_url: 'https://twitter.com/example',
+          x_label: '旧Twitter',
+          youtube_url: 'http://youtube.com/watch?v=abc',
+          youtube_label: 'YouTube',
+          other_url: 'https://example.org/other',
+          other_label: 'その他リンク',
+        },
+      ],
+    })
+    const provider = createUserPageProvider(client)
+
+    const result = await provider.fetchUserProfile('user-2')
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        userId: 'user-2',
+        name: 'リンク分類ユーザー',
+        iconUrl: null,
+        links: [
+          {
+            category: 'x',
+            url: 'https://twitter.com/example',
+            label: '旧Twitter',
+          },
+          {
+            category: 'youtube',
+            url: 'http://youtube.com/watch?v=abc',
+            label: 'YouTube',
+          },
+          {
+            category: 'other',
+            url: 'https://example.org/other',
+            label: 'その他リンク',
+          },
+        ],
+      },
+    })
+  })
+
   it('ユーザーIDが空の場合はinvalid_inputを返す', async () => {
     const { client, calls } = buildUserSupabaseMock()
     const provider = createUserPageProvider(client)

@@ -157,6 +157,26 @@ describe('UserOshiListProvider', () => {
     })
   })
 
+  it('お気に入り数が未設定でも公開リストとして0を返す', async () => {
+    const { client } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 20, favorite_count: null, can_display: true }],
+      favoriteRows: [],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary('user-10')
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: '20',
+        status: 'public',
+        favoriteCount: 0,
+        isFavorited: false,
+      },
+    })
+  })
+
   it('非公開リストは内容を返さずprivateとして扱う', async () => {
     const { client, calls } = buildUserOshiListSupabaseMock({
       listRows: [{ list_id: 9, favorite_count: 10, can_display: false }],

@@ -70,6 +70,36 @@ describe('UserSeriesProvider', () => {
     })
   })
 
+  it('お気に入り数や更新日時が未設定でもnullで返す', async () => {
+    const { client } = buildSeriesSupabaseMock({
+      rows: [
+        {
+          series: {
+            series_id: 'series-10',
+            title: '未設定テスト',
+            favorite_count: null,
+            update: null,
+          },
+        },
+      ],
+    })
+    const provider = createUserSeriesProvider(client)
+
+    const result = await provider.fetchSeries('user-1')
+
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        {
+          seriesId: 'series-10',
+          title: '未設定テスト',
+          favoriteCount: null,
+          updatedAt: null,
+        },
+      ],
+    })
+  })
+
   it('ユーザーIDが空の場合はinvalid_inputを返す', async () => {
     const { client, calls } = buildSeriesSupabaseMock()
     const provider = createUserSeriesProvider(client)
