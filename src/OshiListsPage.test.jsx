@@ -66,6 +66,33 @@ describe('OshiListsPage', () => {
     expect(dataProvider.fetchCatalog).not.toHaveBeenCalled()
   })
 
+  it('ユーザーネームからユーザーページへのリンクを表示する', async () => {
+    const dataProvider = {
+      fetchCatalog: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            listId: '1',
+            userId: 'user-1',
+            name: '美咲',
+            favoriteCount: 3,
+            isFavorited: false,
+            visibility: 'public',
+          },
+        ],
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListsPage(dataProvider, authGate)
+
+    const userLink = await screen.findByRole('link', { name: '美咲' })
+    expect(userLink).toHaveAttribute('href', '/users/user-1/')
+  })
+
   it('取得成功で一覧を表示する', async () => {
     const dataProvider = {
       fetchCatalog: vi.fn().mockResolvedValue({
@@ -73,6 +100,7 @@ describe('OshiListsPage', () => {
         data: [
           {
             listId: '1',
+            userId: 'user-1',
             name: '推しリスト',
             favoriteCount: 5,
             isFavorited: true,
@@ -80,6 +108,7 @@ describe('OshiListsPage', () => {
           },
           {
             listId: '2',
+            userId: 'user-2',
             name: '推しリスト2',
             favoriteCount: 2,
             isFavorited: false,

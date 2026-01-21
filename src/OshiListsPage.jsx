@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import { createOshiListCatalogProvider } from './oshiListCatalogProvider.js'
 import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEvents.js'
@@ -111,6 +111,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
         {items.map((item) => {
           const isFavorited = Boolean(item.isFavorited)
           const isUpdating = oshiUpdatingIds.includes(item.listId)
+          const canLinkToUser = Boolean(item.userId)
           return (
             <li key={item.listId} className="oshi-lists__item">
               <article
@@ -118,7 +119,13 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
               >
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
-                    <h2 className="oshi-lists__title">{item.name}</h2>
+                    <h2 className="oshi-lists__title">
+                      {canLinkToUser ? (
+                        <Link to={`/users/${item.userId}/`}>{item.name}</Link>
+                      ) : (
+                        item.name
+                      )}
+                    </h2>
                     <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
                   </div>
                   <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
