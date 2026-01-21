@@ -22,9 +22,9 @@ const normalizeError = (error) => {
 
 const mapVisibility = (canDisplay) => (canDisplay ? 'public' : 'private')
 
-const mapListRow = (row) => ({
+const mapListRow = (row, name) => ({
   listId: String(row.list_id),
-  name: row.users?.name ?? '',
+  name: name ?? '',
   favoriteCount: row.favorite_count ?? 0,
   isFavorited: false,
   visibility: mapVisibility(row.can_display),
@@ -66,7 +66,7 @@ export const createOshiListPageProvider = (supabaseClient) => {
 
       const { data: listData, error: listError } = await supabaseClient
         .from('list')
-        .select('list_id, favorite_count, can_display, users (name)')
+        .select('list_id, favorite_count, can_display, user_id')
         .eq('list_id', targetListId)
         .limit(1)
 
@@ -79,16 +79,32 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: 'not_found' }
       }
 
+      let listOwnerName = ''
+      if (listRow.user_id) {
+        const { data: userData, error: userError } = await supabaseClient
+          .from('users')
+          .select('name')
+          .eq('user_id', String(listRow.user_id))
+          .limit(1)
+
+        if (userError) {
+          return { ok: false, error: normalizeError(userError) }
+        }
+
+        listOwnerName = userData?.[0]?.name ?? ''
+      }
+
+      const summary = mapListRow(listRow, listOwnerName)
+
       const userResult = await resolveCurrentUserId(supabaseClient)
       if (!userResult.ok) {
         return { ok: false, error: userResult.error }
       }
+
       const favoriteState = await fetchFavoriteState(targetListId, userResult.userId)
       if (!favoriteState.ok) {
         return { ok: false, error: favoriteState.error }
       }
-
-      const summary = mapListRow(listRow)
       summary.isFavorited = favoriteState.isFavorited
       return { ok: true, data: summary }
     },
@@ -179,9 +195,14 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: 'not_configured' }
       }
 
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
+
       const { data, error } = await supabaseClient
         .from('list')
-        .select('can_display')
+        .select('user_id, can_display')
         .eq('list_id', targetListId)
         .limit(1)
 
@@ -192,6 +213,10 @@ export const createOshiListPageProvider = (supabaseClient) => {
       const row = data?.[0]
       if (!row) {
         return { ok: false, error: 'not_found' }
+      }
+
+      if (row.user_id !== userResult.userId) {
+        return { ok: false, error: 'forbidden' }
       }
 
       return { ok: true, data: { visibility: mapVisibility(row.can_display) } }

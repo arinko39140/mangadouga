@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import UserOshiListPanel from './UserOshiListPanel.jsx'
 
 describe('UserOshiListPanel', () => {
@@ -38,24 +39,32 @@ describe('UserOshiListPanel', () => {
 
   it('公開中の推しリストはお気に入り操作を表示する', () => {
     render(
-      <UserOshiListPanel
-        summary={{ listId: '1', status: 'public', favoriteCount: 12, isFavorited: false }}
-        onToggleFavorite={() => {}}
-      />
+      <MemoryRouter>
+        <UserOshiListPanel
+          summary={{ listId: '1', status: 'public', favoriteCount: 12, isFavorited: false }}
+          onToggleFavorite={() => {}}
+        />
+      </MemoryRouter>
     )
 
     expect(screen.getByText('お気に入り数: 12')).toBeInTheDocument()
     const button = screen.getByRole('button', { name: 'お気に入り登録' })
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('link', { name: '推しリストを見る' })).toHaveAttribute(
+      'href',
+      '/oshi-lists/1/'
+    )
   })
 
   it('未ログイン時はお気に入り操作を無効化する', () => {
     render(
-      <UserOshiListPanel
-        isAuthenticated={false}
-        summary={{ listId: '1', status: 'public', favoriteCount: 1, isFavorited: true }}
-      />
+      <MemoryRouter>
+        <UserOshiListPanel
+          isAuthenticated={false}
+          summary={{ listId: '1', status: 'public', favoriteCount: 1, isFavorited: true }}
+        />
+      </MemoryRouter>
     )
 
     const button = screen.getByRole('button', { name: '登録済み' })

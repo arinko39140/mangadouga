@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './UserOshiListPanel.css'
 
 function UserOshiListPanel({
@@ -21,6 +22,8 @@ function UserOshiListPanel({
     Boolean(summary?.listId) &&
     !isFavoriteUpdating
 
+  const listId = summary?.listId ?? null
+  const canViewList = isPublic && Boolean(listId)
   const favoriteLabel = summary?.isFavorited ? '登録済み' : 'お気に入り登録'
 
   const renderContent = () => {
@@ -66,6 +69,11 @@ function UserOshiListPanel({
         >
           {favoriteLabel}
         </button>
+        {canViewList ? (
+          <Link className="user-oshi-list__link" to={`/oshi-lists/${listId}/`}>
+            推しリストを見る
+          </Link>
+        ) : null}
         {!isAuthenticated ? (
           <p className="user-oshi-list__note">ログインするとお気に入り登録できます。</p>
         ) : null}

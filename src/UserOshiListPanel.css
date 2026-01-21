@@ -59,6 +59,21 @@
   opacity: 0.6;
 }
 
+.user-oshi-list__link {
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3c2a49;
+  text-decoration: none;
+  background: #f6f2ff;
+  border: 1px solid rgba(60, 42, 73, 0.2);
+}
+
+.user-oshi-list__link:hover {
+  background: #ece2ff;
+}
+
 .user-oshi-list__status {
   margin: 0;
   font-size: 0.95rem;
