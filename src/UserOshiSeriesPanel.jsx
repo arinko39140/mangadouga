@@ -1,0 +1,47 @@
+import './UserOshiSeriesPanel.css'
+
+function UserOshiSeriesPanel({ items = [], isLoading = false, error = null }) {
+  const renderContent = () => {
+    if (isLoading) {
+      return <p className="user-oshi-series__status">推し作品を読み込み中...</p>
+    }
+    if (error) {
+      return (
+        <p className="user-oshi-series__status user-oshi-series__status--error" role="alert">
+          推し作品の取得に失敗しました。
+        </p>
+      )
+    }
+    if (items.length === 0) {
+      return <p className="user-oshi-series__status">推し作品がありません。</p>
+    }
+
+    return (
+      <ul className="user-oshi-series__list" aria-label="推し作品一覧">
+        {items.map((item) => (
+          <li key={item.seriesId} className="user-oshi-series__item">
+            <article className="user-oshi-series__card">
+              <h3 className="user-oshi-series__title">{item.title}</h3>
+              {item.favoriteCount != null ? (
+                <p className="user-oshi-series__meta">
+                  お気に入り数: {item.favoriteCount}
+                </p>
+              ) : null}
+            </article>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  return (
+    <section className="user-oshi-series" aria-live="polite">
+      <header className="user-oshi-series__header">
+        <h2 className="user-oshi-series__title-heading">推し作品一覧</h2>
+      </header>
+      <div className="user-oshi-series__body">{renderContent()}</div>
+    </section>
+  )
+}
+
+export default UserOshiSeriesPanel

@@ -1,0 +1,68 @@
+.user-oshi-series {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 99, 117, 0.12);
+  display: grid;
+  gap: 1rem;
+}
+
+.user-oshi-series__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-oshi-series__title-heading {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c2032;
+}
+
+.user-oshi-series__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-oshi-series__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6a596b;
+}
+
+.user-oshi-series__status--error {
+  color: #8a3746;
+}
+
+.user-oshi-series__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-oshi-series__item {
+  margin: 0;
+}
+
+.user-oshi-series__card {
+  background: #fffaf6;
+  border: 1px solid rgba(140, 110, 120, 0.16);
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.user-oshi-series__title {
+  margin: 0;
+  font-size: 1rem;
+  color: #2f2035;
+}
+
+.user-oshi-series__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6a596b;
+}
