@@ -1,7 +1,7 @@
 # Design Document
 
 ## Overview
-本機能は、他者ユーザーのマイページと推し作品一覧ページで、ユーザー情報・推しリスト・推し作品・外部リンクを一貫して閲覧できる体験を提供する。閲覧はログイン必須とし、公開設定やエラー状態を明確に区別したUIを構築する。
+本機能は、他者ユーザーのマイページと推し作品一覧ページで、ユーザー情報・推しリスト・推し作品・外部リンクを一貫して閲覧できる体験を提供する。閲覧はログイン必須とし（現状の導線がログイン必須のため）、公開設定やエラー状態を明確に区別したUIを構築する。将来的に未ログイン閲覧を許可する場合は、お気に入り操作のみ無効化する方針（要件7.3）で拡張する。
 
 対象ユーザーはログイン済みの閲覧者であり、他者ユーザーの推し傾向の把握と推しリストのお気に入り登録を行う。既存のReact + SupabaseのUI/DataProvider分離を維持し、`/users/:userId/` と `/users/:userId/oshi-series/` の2ページに共通のユーザー情報と外部リンクを表示する。
 
@@ -171,6 +171,7 @@ sequenceDiagram
 - 失敗時はエラー状態を表示し、UI状態は更新しない。
 - `listId`が`null`、または`status=private`の場合はUIで操作を無効化し、Providerは`invalid_input`で拒否する。
 - `user_list (user_id, list_id)`のユニーク制約を前提に原子的に更新し、競合時も最終状態を返す。
+- `user_list`へのinsert/deleteは「本人のみ許可」のRLSポリシーを前提とする（`auth.uid() = user_id`）。
 
 ## Components and Interfaces
 
@@ -506,6 +507,7 @@ interface UserSeriesProvider {
 ## Security Considerations
 - 外部リンクは`target="_blank"` + `rel="noopener noreferrer"`を必須とする
 - `list`と`user_series`はRLSで公開/非公開を制御する
+- `user_list`はRLSで「本人のみ insert/delete 可」を必須とする
 - `users`/`list`/`user_series`/`series`の読み取りポリシーを明記し、公開データのみ閲覧可能とする
 - アイコンはSupabase Storageの公開/非公開設定に合わせてURLを管理する
 
