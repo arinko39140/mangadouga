@@ -376,8 +376,9 @@ interface UserOshiListProvider {
 - Invariants: 非公開リストは内容を表示しない
 
 **Implementation Notes**
-- Integration: 公開状態確認は`list.can_display=true`を必須条件に含め、非公開リストは取得結果に含めない
+- Integration: 公開状態は`list.can_display`から判定し、`visibility`として常に返す
 - Validation: 非公開時は`toggleFavorite`をUIで無効化し、Providerは`invalid_input`で拒否する
+- UI分岐: `visibility=private`は非公開メッセージを表示し、空状態とは区別する
 - Risks: 公開判定が欠落すると非公開情報が露出する
 
 #### UserSeriesProvider
@@ -443,6 +444,7 @@ interface UserSeriesProvider {
 - `list.user_id`は認証ユーザーIDと一致する
 - `user_series`はシリーズ単位の公開可否を保持する
 - 外部リンク表示名は該当URLと対で管理する
+- `user_list`は(`user_id`, `list_id`)で一意になるよう制約を設ける
 
 ### Physical Data Model
 
@@ -463,7 +465,7 @@ interface UserSeriesProvider {
 **Cross-Service Data Management**
 - RLSで`list.can_display=true`を強制し、非公開データは取得段階で遮断する
 - アプリ側のクエリでも`can_display=true`を必須条件にして二重防御する
-- `series`はログインユーザーも参照可能にするポリシーを追加する
+- `users`/`list`/`user_series`/`series`は認証ユーザーの読み取りを許可し、`can_display=true`を前提に公開データのみ参照可能にするポリシーを追加する
 
 ## Error Handling
 
@@ -500,6 +502,7 @@ interface UserSeriesProvider {
 ## Security Considerations
 - 外部リンクは`target="_blank"` + `rel="noopener noreferrer"`を必須とする
 - `list`と`user_series`はRLSで公開/非公開を制御する
+- `users`/`list`/`user_series`/`series`の読み取りポリシーを明記し、公開データのみ閲覧可能とする
 - アイコンはSupabase Storageの公開/非公開設定に合わせてURLを管理する
 
 ## Performance & Scalability
