@@ -22,11 +22,38 @@ function UserOshiSeriesPanel({ items = [], isLoading = false, error = null, user
         {items.map((item) => (
           <li key={item.seriesId} className="user-oshi-series__item">
             <article className="user-oshi-series__card">
-              <h3 className="user-oshi-series__title">{item.title}</h3>
+              <h3 className="user-oshi-series__title">
+                {item.seriesId ? (
+                  <Link
+                    className="user-oshi-series__title-link"
+                    to={`/series/${item.seriesId}/`}
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  item.title
+                )}
+              </h3>
               {item.favoriteCount != null ? (
                 <p className="user-oshi-series__meta">
                   お気に入り数: {item.favoriteCount}
                 </p>
+              ) : null}
+              {item.seriesId ? (
+                <div className="user-oshi-series__actions">
+                  <Link
+                    className="user-oshi-series__action user-oshi-series__action--primary"
+                    to={`/series/${item.seriesId}/`}
+                  >
+                    再生する
+                  </Link>
+                  <Link
+                    className="user-oshi-series__action"
+                    to={`/series/${item.seriesId}/`}
+                  >
+                    作品ページへ
+                  </Link>
+                </div>
               ) : null}
             </article>
           </li>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEvents.js'
 import { createOshiListPageProvider } from './oshiListPageProvider.js'
@@ -185,6 +185,33 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
             <article className="oshi-lists__card">
               <div className="oshi-lists__body">
                 <h2 className="oshi-lists__title">{item.title}</h2>
+                <div className="oshi-lists__actions">
+                  {item.seriesId ? (
+                    <>
+                      <Link
+                        className="oshi-lists__link"
+                        to={`/series/${item.seriesId}/?selectedMovieId=${item.id}`}
+                      >
+                        再生する
+                      </Link>
+                      <Link
+                        className="oshi-lists__link"
+                        to={`/series/${item.seriesId}/`}
+                      >
+                        作品ページへ
+                      </Link>
+                    </>
+                  ) : item.videoUrl ? (
+                    <a
+                      className="oshi-lists__link"
+                      href={item.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      動画を開く
+                    </a>
+                  ) : null}
+                </div>
               </div>
             </article>
           </li>
