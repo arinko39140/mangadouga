@@ -133,7 +133,7 @@ sequenceDiagram
     UserPage ->> UserOshiListProvider: fetchListSummary userId
     UserPage ->> UserSeriesProvider: fetchSeries userId
     UserPageProvider ->> Supabase: select users
-    UserOshiListProvider ->> Supabase: select list visibility
+    UserOshiListProvider ->> Supabase: select list status
     UserSeriesProvider ->> Supabase: select user_series and series
     Supabase -->> UserPageProvider: user profile
     Supabase -->> UserOshiListProvider: list summary
@@ -163,19 +163,14 @@ sequenceDiagram
     UserPage ->> UserPage: redirect login
   else auth ok
     UserPage ->> UserOshiListProvider: toggleFavorite listId
-    UserOshiListProvider ->> Supabase: select user_list
-    Supabase -->> UserOshiListProvider: exists or not
-    alt exists
-      UserOshiListProvider ->> Supabase: delete user_list
-    else not exists
-      UserOshiListProvider ->> Supabase: insert user_list
-    end
+    UserOshiListProvider ->> Supabase: upsert/delete user_list
     Supabase -->> UserOshiListProvider: result
     UserOshiListProvider -->> UserPage: isFavorited
   end
 ```
 - 失敗時はエラー状態を表示し、UI状態は更新しない。
-- `listId`が`null`、または`visibility=private`の場合はUIで操作を無効化し、Providerは`invalid_input`で拒否する。
+- `listId`が`null`、または`status=private`の場合はUIで操作を無効化し、Providerは`invalid_input`で拒否する。
+- `user_list (user_id, list_id)`のユニーク制約を前提に原子的に更新し、競合時も最終状態を返す。
 
 ## Components and Interfaces
 
@@ -262,6 +257,8 @@ sequenceDiagram
 
 #### ExternalLinksPanel (summary only)
 - X/YouTube/その他カテゴリでリンクを表示する
+- 有効な`http/https` URLのみ表示し、`label`は任意（URLが無効な場合は表示しない）
+- カテゴリ判定はドメインで行う（例: `x.com`/`twitter.com`→X、`youtube.com`/`youtu.be`→YouTube、それ以外→その他）
 - `target="_blank"`と`rel="noopener noreferrer"`を必須付与
 
 #### UserOshiListPanel (summary only)
@@ -328,6 +325,8 @@ interface UserPageProvider {
 **Implementation Notes**
 - Integration: `x_url`/`youtube_url`/`other_url`をカテゴリ別リンクに変換
 - Validation: `URL` APIで構文と`protocol`を検証
+- Normalization: `label`はURLが有効な場合のみ付与し、URLが無効なら`links`から除外する
+- Categorization: `x.com`/`twitter.com`は`x`、`youtube.com`/`youtu.be`は`youtube`、その他は`other`
 - Risks: `users`レコードが存在しない場合は`not_found`を返す
 
 #### UserOshiListProvider
@@ -350,11 +349,11 @@ interface UserPageProvider {
 
 ##### Service Interface
 ```typescript
-type Visibility = 'public' | 'private'
+type ListStatus = 'public' | 'private' | 'none' | 'not_found'
 
 type UserOshiListSummary = {
   listId: string | null
-  visibility: Visibility
+  status: ListStatus
   favoriteCount: number | null
   isFavorited: boolean
 }
@@ -373,13 +372,15 @@ interface UserOshiListProvider {
 }
 ```
 - Preconditions: `userId`/`listId`は空文字不可
-- Postconditions: `visibility=private`時は`favoriteCount=null`で返す
+- Postconditions: `status=private`時は`favoriteCount=null`で返す
 - Invariants: 非公開リストは内容を表示しない
+- Status mapping: `status=none`はリスト未作成、`status=not_found`はユーザー不存在、`status=public`のみ`listId`が非null
 
 **Implementation Notes**
-- Integration: 公開状態は`user_list_visibility.can_display`から判定し、`visibility`として常に返す
+- Integration: 公開状態は`user_list_visibility.can_display`から判定し、`status`として返す
+- Integration: `user_list_visibility`は`user_exists`/`list_exists`を返し、`status`判定に利用する
 - Validation: 非公開時は`toggleFavorite`をUIで無効化し、Providerは`invalid_input`で拒否する
-- UI分岐: `visibility=private`は非公開メッセージを表示し、空状態とは区別する
+- UI分岐: `status=private`は非公開メッセージを表示、`status=none`は空状態を表示する
 - Risks: 公開判定が欠落すると非公開情報が露出する
 
 #### UserSeriesProvider
@@ -453,7 +454,7 @@ interface UserSeriesProvider {
 - `users`追加列: `icon_url text`, `x_label text`, `youtube_label text`, `other_label text`
 - `user_series`インデックス: `(user_id)`で一覧取得を高速化
 - `list`インデックス: `(user_id)`で対象ユーザーのリスト特定を高速化
-- 追加ビュー案: `user_list_visibility` (user_id, list_id, can_display)
+- 追加ビュー案: `user_list_visibility` (user_id, list_id, can_display, user_exists, list_exists)
 
 ### Data Contracts & Integration
 
@@ -468,6 +469,7 @@ interface UserSeriesProvider {
 - アプリ側のクエリでも`can_display=true`を必須条件にして内容の二重防御を行う
 - `users`/`list`/`user_series`/`series`は認証ユーザーの読み取りを許可し、公開データのみ参照可能にする
 - 公開/非公開の判定メタは`user_list_visibility`ビューを通して取得可能にする
+- `user_list_visibility`は`user_exists`/`list_exists`を返し、空状態とエラー状態を区別する
 
 ## Error Handling
 
