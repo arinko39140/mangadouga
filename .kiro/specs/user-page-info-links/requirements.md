@@ -47,6 +47,9 @@
 4. If 外部リンクが0件, the User Page UI shall 外部リンクセクションに空状態を表示する
 5. The User Page UI shall 外部リンクをクリック可能なリンクとして表示する
 6. The User Page UI shall 外部リンクを「X / YouTube / その他」のカテゴリ表示で示す
+7. The User Page UI shall 外部リンクを新規タブで開く
+8. The User Page UI shall 外部リンクに `rel="noopener noreferrer"` を付与する
+9. The User Page UI shall `http` または `https` のURLのみを表示し、その他は無効として扱う
 
 ### Requirement 4: 対象ページへの適用
 **Objective:** As a 閲覧者, I want 対象ページで同じユーザー情報と外部リンクを確認できる, so that ページ間で情報の一貫性を保てる
@@ -100,5 +103,5 @@
 #### Acceptance Criteria
 1. When ユーザー情報または外部リンクが更新された後にページが再表示される, the User Page UI shall 最新の情報を表示する
 2. If 表示対象のユーザーが存在しない, the User Page UI shall エラー状態を表示する
-3. While データ取得に失敗している, the User Page UI shall 再試行または案内を表示する
+3. While データ取得に失敗している, the User Page UI shall 再試行ボタンと案内を表示する
 4. The User Page UI shall エラー状態と空状態を区別して表示する
