@@ -5,6 +5,8 @@ import OshiFavoritesPage from './OshiFavoritesPage.jsx'
 import OshiListPage from './OshiListPage.jsx'
 import OshiListsPage from './OshiListsPage.jsx'
 import OshiMyListPage from './OshiMyListPage.jsx'
+import UserOshiSeriesPage from './UserOshiSeriesPage.jsx'
+import UserPage from './UserPage.jsx'
 import WorkPage from './WorkPage.jsx'
 
 function AppRouter() {
@@ -16,6 +18,8 @@ function AppRouter() {
       <Route path="/oshi-lists/catalog/" element={<OshiListsPage />} />
       <Route path="/oshi-lists/:listId/" element={<OshiListPage />} />
       <Route path="/oshi-lists/favorites/" element={<OshiFavoritesPage />} />
+      <Route path="/users/:userId/" element={<UserPage />} />
+      <Route path="/users/:userId/oshi-series/" element={<UserOshiSeriesPage />} />
       <Route path="/series/:seriesId/" element={<WorkPage />} />
     </Routes>
   )

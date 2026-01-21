@@ -43,4 +43,23 @@ describe('AppRouter', () => {
     renderWithRoute('/login/')
     expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
   })
+
+  it('ルート/users/:userId/でユーザーマイページが表示される', () => {
+    renderWithRoute('/users/user-1/')
+    expect(
+      screen.getByRole('heading', { name: 'ユーザーマイページ' })
+    ).toBeInTheDocument()
+  })
+
+  it('ルート/users/:userId/oshi-series/で推し作品一覧ページが表示される', () => {
+    renderWithRoute('/users/user-1/oshi-series/')
+    expect(
+      screen.getByRole('heading', { level: 1, name: '推し作品一覧' })
+    ).toBeInTheDocument()
+  })
+
+  it('対象ページ以外ではユーザー情報セクションを表示しない', () => {
+    renderWithRoute('/login/')
+    expect(screen.queryByRole('heading', { name: 'ユーザー情報' })).toBeNull()
+  })
 })
