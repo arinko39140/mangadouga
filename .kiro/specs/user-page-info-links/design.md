@@ -145,6 +145,7 @@ sequenceDiagram
 ```
 - 認証失敗時はログインページへ遷移する。
 - データ取得は並列で実行し、部分失敗時は該当セクションのみエラー表示する。
+- 非公開データは`can_display=true`で取得段階から除外し、RLSでも同条件を強制する。
 
 ### Favorite Toggle Flow
 ```mermaid
@@ -173,6 +174,7 @@ sequenceDiagram
   end
 ```
 - 失敗時はエラー状態を表示し、UI状態は更新しない。
+- `listId`が`null`、または`visibility=private`の場合はUIで操作を無効化し、Providerは`invalid_input`で拒否する。
 
 ## Components and Interfaces
 
@@ -374,8 +376,8 @@ interface UserOshiListProvider {
 - Invariants: 非公開リストは内容を表示しない
 
 **Implementation Notes**
-- Integration: 公開状態確認は`list`の`can_display`を参照する
-- Validation: 非公開時は`toggleFavorite`をUIで無効化
+- Integration: 公開状態確認は`list.can_display=true`を必須条件に含め、非公開リストは取得結果に含めない
+- Validation: 非公開時は`toggleFavorite`をUIで無効化し、Providerは`invalid_input`で拒否する
 - Risks: 公開判定が欠落すると非公開情報が露出する
 
 #### UserSeriesProvider
@@ -417,7 +419,7 @@ interface UserSeriesProvider {
 - Invariants: 非公開のシリーズは除外する
 
 **Implementation Notes**
-- Integration: `user_series.can_display=true`を条件に含める
+- Integration: `user_series.can_display=true`を必須条件に含め、非公開シリーズは取得結果に含めない
 - Validation: `series_id`と`title`が欠損した行は除外
 - Risks: `series`テーブルのRLSが未更新だと取得が失敗する
 
@@ -459,7 +461,8 @@ interface UserSeriesProvider {
 - `user_series` + `series`取得: `series_id`, `title`, `favorite_count`, `update`
 
 **Cross-Service Data Management**
-- RLSで`list`の公開状態を制御し、非公開時は一覧に出さない
+- RLSで`list.can_display=true`を強制し、非公開データは取得段階で遮断する
+- アプリ側のクエリでも`can_display=true`を必須条件にして二重防御する
 - `series`はログインユーザーも参照可能にするポリシーを追加する
 
 ## Error Handling
