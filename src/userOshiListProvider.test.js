@@ -1,0 +1,205 @@
+import { describe, expect, it, vi } from 'vitest'
+import { createUserOshiListProvider } from './userOshiListProvider.js'
+
+const buildUserOshiListSupabaseMock = ({
+  listRows = [],
+  listError = null,
+  userRows = [],
+  userError = null,
+  favoriteRows = [],
+  favoriteError = null,
+  sessionUserId = 'viewer-1',
+  sessionError = null,
+} = {}) => {
+  const listLimitMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
+  const listEqMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
+
+  const userListLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: favoriteRows, error: favoriteError })
+  const userListEqMock = vi.fn()
+  userListEqMock.mockReturnValue({ eq: userListEqMock, limit: userListLimitMock })
+  const userListSelectMock = vi.fn().mockReturnValue({ eq: userListEqMock })
+
+  const usersLimitMock = vi.fn().mockResolvedValue({ data: userRows, error: userError })
+  const usersEqMock = vi.fn().mockReturnValue({ limit: usersLimitMock })
+  const usersSelectMock = vi.fn().mockReturnValue({ eq: usersEqMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'user_list') {
+      return { select: userListSelectMock }
+    }
+    if (table === 'users') {
+      return { select: usersSelectMock }
+    }
+    return { select: vi.fn() }
+  })
+
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
+
+  return {
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listEqMock,
+      listOrderMock,
+      listLimitMock,
+      userListSelectMock,
+      userListEqMock,
+      userListLimitMock,
+      usersSelectMock,
+      usersEqMock,
+      usersLimitMock,
+      getSessionMock,
+    },
+  }
+}
+
+describe('UserOshiListProvider', () => {
+  it('公開リストの概要とお気に入り状態を返す', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 12, favorite_count: 4, can_display: true }],
+      favoriteRows: [{ list_id: 12 }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary('user-1')
+
+    expect(calls.listSelectMock).toHaveBeenCalledWith(
+      'list_id, favorite_count, can_display'
+    )
+    expect(calls.listEqMock).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(calls.listOrderMock).toHaveBeenCalledWith('list_id', { ascending: true })
+    expect(calls.listLimitMock).toHaveBeenCalledWith(1)
+    expect(calls.getSessionMock).toHaveBeenCalled()
+    expect(calls.userListSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.userListEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'viewer-1')
+    expect(calls.userListEqMock).toHaveBeenNthCalledWith(2, 'list_id', '12')
+    expect(calls.userListLimitMock).toHaveBeenCalledWith(1)
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: '12',
+        status: 'public',
+        favoriteCount: 4,
+        isFavorited: true,
+      },
+    })
+  })
+
+  it('非公開リストは内容を返さずprivateとして扱う', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 9, favorite_count: 10, can_display: false }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary('user-2')
+
+    expect(calls.userListSelectMock).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: null,
+        status: 'private',
+        favoriteCount: null,
+        isFavorited: false,
+      },
+    })
+  })
+
+  it('リスト未作成の場合はnoneとして返す', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [],
+      userRows: [{ user_id: 'user-3' }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary('user-3')
+
+    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id')
+    expect(calls.usersEqMock).toHaveBeenCalledWith('user_id', 'user-3')
+    expect(calls.usersLimitMock).toHaveBeenCalledWith(1)
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: null,
+        status: 'none',
+        favoriteCount: null,
+        isFavorited: false,
+      },
+    })
+  })
+
+  it('ユーザーが存在しない場合はnot_foundとして返す', async () => {
+    const { client } = buildUserOshiListSupabaseMock({
+      listRows: [],
+      userRows: [],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.fetchListSummary('user-404')).resolves.toEqual({
+      ok: true,
+      data: {
+        listId: null,
+        status: 'not_found',
+        favoriteCount: null,
+        isFavorited: false,
+      },
+    })
+  })
+
+  it('ユーザーIDが空ならinvalid_inputとして返す', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock()
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.fetchListSummary('  ')).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+    expect(calls.fromMock).not.toHaveBeenCalled()
+  })
+
+  it('Supabase未設定の場合はnot_configuredとして返す', async () => {
+    const provider = createUserOshiListProvider(null)
+
+    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
+      ok: false,
+      error: 'not_configured',
+    })
+  })
+
+  it('通信失敗時はnetworkとして返す', async () => {
+    const { client } = buildUserOshiListSupabaseMock({
+      listError: new Error('Failed to fetch'),
+    })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
+      ok: false,
+      error: 'network',
+    })
+  })
+
+  it('未ログイン時はauth_requiredとして返す', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 12, favorite_count: 4, can_display: true }],
+      sessionUserId: null,
+    })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
+      ok: false,
+      error: 'auth_required',
+    })
+    expect(calls.userListSelectMock).not.toHaveBeenCalled()
+  })
+})

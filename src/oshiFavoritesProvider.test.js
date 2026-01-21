@@ -11,10 +11,11 @@ const buildFavoritesSupabaseMock = ({
   sessionUserId = 'user-1',
   sessionError = null,
 } = {}) => {
-  const favoriteSelectMock = vi.fn().mockResolvedValue({
+  const favoriteEqMock = vi.fn().mockResolvedValue({
     data: favoriteRows,
     error: favoriteError,
   })
+  const favoriteSelectMock = vi.fn().mockReturnValue({ eq: favoriteEqMock })
   const listEqMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
   const listInMock = vi.fn().mockReturnValue({ eq: listEqMock })
   const listSelectMock = vi.fn().mockReturnValue({ in: listInMock })
@@ -44,6 +45,7 @@ const buildFavoritesSupabaseMock = ({
     calls: {
       fromMock,
       favoriteSelectMock,
+      favoriteEqMock,
       listSelectMock,
       listInMock,
       listEqMock,
@@ -59,17 +61,19 @@ const buildToggleSupabaseMock = ({
   selectError = null,
   insertError = null,
   deleteError = null,
-}) => {
+} = {}) => {
   const limitMock = vi.fn().mockResolvedValue({
     data: existing ? [{ list_id: 1 }] : [],
     error: selectError,
   })
-  const eqMock = vi
-    .fn()
-    .mockReturnValue({ eq: eqMock, limit: limitMock })
+  const eqMock = vi.fn()
+  eqMock.mockReturnValue({ eq: eqMock, limit: limitMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: insertError })
-  const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: deleteError })
+  const deleteEqMock = vi.fn()
+  deleteEqMock
+    .mockReturnValueOnce({ eq: deleteEqMock })
+    .mockResolvedValueOnce({ data: null, error: deleteError })
   const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
   const fromMock = vi.fn().mockReturnValue({
     select: selectMock,
@@ -107,16 +111,9 @@ describe('OshiFavoritesProvider', () => {
           favorite_count: 3,
           can_display: true,
         },
-        {
-          list_id: 2,
-          user_id: 'user-2',
-          favorite_count: 1,
-          can_display: false,
-        },
       ],
       usersRows: [
         { user_id: 'user-1', name: '推しリスト' },
-        { user_id: 'user-2', name: '非公開' },
       ],
     })
     const provider = createOshiFavoritesProvider(client)

@@ -137,6 +137,7 @@ describe('TopPage layout', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '月' }))
 
+    vi.useRealTimers()
     await screen.findByText('人気一位')
     const list = screen.getByRole('list', { name: '曜日別一覧のアイテム' })
     const items = list.querySelectorAll('li')
@@ -147,8 +148,6 @@ describe('TopPage layout', () => {
       'href',
       '/series/series-1/'
     )
-
-    vi.useRealTimers()
   })
 
   it('過去1週間より前のアイテムは曜日別一覧に表示しない', async () => {
@@ -192,10 +191,9 @@ describe('TopPage layout', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '月' }))
 
+    vi.useRealTimers()
     await screen.findByText('最近の作品')
     expect(screen.queryByText('古い作品')).not.toBeInTheDocument()
-
-    vi.useRealTimers()
   })
 
   it('読み込み中はローディング状態を表示する', () => {

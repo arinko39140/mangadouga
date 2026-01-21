@@ -67,12 +67,14 @@ const buildToggleSupabaseMock = ({
     data: existing ? [{ list_id: 1 }] : [],
     error: selectError,
   })
-  const eqMock = vi
-    .fn()
-    .mockReturnValue({ eq: eqMock, limit: limitMock })
+  const eqMock = vi.fn()
+  eqMock.mockReturnValue({ eq: eqMock, limit: limitMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: insertError })
-  const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: deleteError })
+  const deleteEqMock = vi.fn()
+  deleteEqMock
+    .mockReturnValueOnce({ eq: deleteEqMock })
+    .mockResolvedValueOnce({ data: null, error: deleteError })
   const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
   const fromMock = vi.fn().mockReturnValue({
     select: selectMock,
