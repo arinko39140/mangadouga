@@ -130,17 +130,21 @@ sequenceDiagram
     UserPage ->> UserPage: redirect login
   else auth ok
     UserPage ->> UserPageProvider: fetchUserProfile userId
-    UserPage ->> UserOshiListProvider: fetchListSummary userId
-    UserPage ->> UserSeriesProvider: fetchSeries userId
     UserPageProvider ->> Supabase: select users
-    UserOshiListProvider ->> Supabase: select list status
-    UserSeriesProvider ->> Supabase: select user_series and series
     Supabase -->> UserPageProvider: user profile
-    Supabase -->> UserOshiListProvider: list summary
-    Supabase -->> UserSeriesProvider: series items
     UserPageProvider -->> UserPage: profile
-    UserOshiListProvider -->> UserPage: list summary
-    UserSeriesProvider -->> UserPage: series list
+    alt profile not_found
+      UserPage ->> UserPage: show user-not-found error
+    else profile ok
+      UserPage ->> UserOshiListProvider: fetchListSummary userId
+      UserPage ->> UserSeriesProvider: fetchSeries userId
+      UserOshiListProvider ->> Supabase: select list status
+      UserSeriesProvider ->> Supabase: select user_series and series
+      Supabase -->> UserOshiListProvider: list summary
+      Supabase -->> UserSeriesProvider: series items
+      UserOshiListProvider -->> UserPage: list summary
+      UserSeriesProvider -->> UserPage: series list
+    end
   end
 ```
 - 認証失敗時はログインページへ遷移する。
@@ -148,6 +152,7 @@ sequenceDiagram
 - 非公開データの「内容」は`can_display=true`で取得段階から除外し、RLSでも同条件を強制する。
 - 公開/非公開は`list.can_display`で判定し、RLSでも同条件を強制する。
 - `UserPageProvider`が`not_found`の場合はページ全体を「ユーザー不存在」エラーに統一し、他セクションは表示しない。
+- ユーザー不存在判定は`UserPageProvider`をゲートにし、`not_found`時は他Providerの取得・表示を抑止する。
 - 取得失敗時の再試行ボタンはページ全体に1つ表示し、全セクションを再取得する。
 
 ### Favorite Toggle Flow
