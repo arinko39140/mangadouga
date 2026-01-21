@@ -101,4 +101,71 @@ export const createUserOshiListProvider = (supabaseClient) => ({
       },
     }
   },
+
+  async toggleFavorite(listId) {
+    if (typeof listId !== 'string' || listId.trim() === '') {
+      return { ok: false, error: 'invalid_input' }
+    }
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const trimmedListId = listId.trim()
+    const userResult = await resolveCurrentUserId(supabaseClient)
+    if (!userResult.ok) {
+      return { ok: false, error: userResult.error }
+    }
+
+    const { data: listData, error: listError } = await supabaseClient
+      .from('list')
+      .select('list_id, can_display')
+      .eq('list_id', trimmedListId)
+      .limit(1)
+
+    if (listError) {
+      return { ok: false, error: normalizeError(listError) }
+    }
+
+    const listRow = listData?.[0]
+    if (!listRow || !listRow.can_display) {
+      return { ok: false, error: 'invalid_input' }
+    }
+
+    const { data, error } = await supabaseClient
+      .from('user_list')
+      .select('list_id')
+      .eq('user_id', userResult.userId)
+      .eq('list_id', trimmedListId)
+      .limit(1)
+
+    if (error) {
+      return { ok: false, error: normalizeError(error) }
+    }
+
+    const exists = (data ?? []).length > 0
+
+    if (exists) {
+      const { error: deleteError } = await supabaseClient
+        .from('user_list')
+        .delete()
+        .eq('user_id', userResult.userId)
+        .eq('list_id', trimmedListId)
+
+      if (deleteError) {
+        return { ok: false, error: normalizeError(deleteError) }
+      }
+
+      return { ok: true, data: { isFavorited: false } }
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from('user_list')
+      .insert({ user_id: userResult.userId, list_id: trimmedListId })
+
+    if (insertError) {
+      return { ok: false, error: normalizeError(insertError) }
+    }
+
+    return { ok: true, data: { isFavorited: true } }
+  },
 })

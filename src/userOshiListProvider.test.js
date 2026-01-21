@@ -64,6 +64,67 @@ const buildUserOshiListSupabaseMock = ({
   }
 }
 
+const buildToggleSupabaseMock = ({
+  listRows = [{ list_id: 1, can_display: true }],
+  listError = null,
+  favoriteRows = [],
+  favoriteError = null,
+  insertError = null,
+  deleteError = null,
+  sessionUserId = 'viewer-1',
+  sessionError = null,
+} = {}) => {
+  const listLimitMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listEqMock = vi.fn().mockReturnValue({ limit: listLimitMock })
+  const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
+
+  const favoriteLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: favoriteRows, error: favoriteError })
+  const favoriteEqMock = vi.fn()
+  favoriteEqMock.mockReturnValue({ eq: favoriteEqMock, limit: favoriteLimitMock })
+  const favoriteSelectMock = vi.fn().mockReturnValue({ eq: favoriteEqMock })
+
+  const insertMock = vi.fn().mockResolvedValue({ data: null, error: insertError })
+  const deleteEqMock = vi.fn()
+  deleteEqMock
+    .mockReturnValueOnce({ eq: deleteEqMock })
+    .mockResolvedValueOnce({ data: null, error: deleteError })
+  const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'user_list') {
+      return { select: favoriteSelectMock, insert: insertMock, delete: deleteMock }
+    }
+    return { select: vi.fn() }
+  })
+
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
+
+  return {
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    calls: {
+      fromMock,
+      listSelectMock,
+      listEqMock,
+      listLimitMock,
+      favoriteSelectMock,
+      favoriteEqMock,
+      favoriteLimitMock,
+      insertMock,
+      deleteMock,
+      deleteEqMock,
+      getSessionMock,
+    },
+  }
+}
+
 describe('UserOshiListProvider', () => {
   it('公開リストの概要とお気に入り状態を返す', async () => {
     const { client, calls } = buildUserOshiListSupabaseMock({
@@ -201,5 +262,88 @@ describe('UserOshiListProvider', () => {
       error: 'auth_required',
     })
     expect(calls.userListSelectMock).not.toHaveBeenCalled()
+  })
+
+  it('お気に入り未登録なら追加してtrueを返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      favoriteRows: [],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.toggleFavorite('1')
+
+    expect(calls.getSessionMock).toHaveBeenCalled()
+    expect(calls.listSelectMock).toHaveBeenCalledWith('list_id, can_display')
+    expect(calls.listEqMock).toHaveBeenCalledWith('list_id', '1')
+    expect(calls.listLimitMock).toHaveBeenCalledWith(1)
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.favoriteEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'viewer-1')
+    expect(calls.favoriteEqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
+    expect(calls.favoriteLimitMock).toHaveBeenCalledWith(1)
+    expect(calls.insertMock).toHaveBeenCalledWith({
+      user_id: 'viewer-1',
+      list_id: '1',
+    })
+    expect(result).toEqual({ ok: true, data: { isFavorited: true } })
+  })
+
+  it('お気に入り登録済みなら解除してfalseを返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      favoriteRows: [{ list_id: 1 }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.toggleFavorite('1')
+
+    expect(calls.deleteMock).toHaveBeenCalled()
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'viewer-1')
+    expect(calls.deleteEqMock).toHaveBeenNthCalledWith(2, 'list_id', '1')
+    expect(result).toEqual({ ok: true, data: { isFavorited: false } })
+  })
+
+  it('非公開リストはinvalid_inputとして返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      listRows: [{ list_id: 1, can_display: false }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.toggleFavorite('1')).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+    expect(calls.favoriteSelectMock).not.toHaveBeenCalled()
+  })
+
+  it('ユーザーID未ログイン時はauth_requiredとして返す', async () => {
+    const { client } = buildToggleSupabaseMock({ sessionUserId: null })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.toggleFavorite('1')).resolves.toEqual({
+      ok: false,
+      error: 'auth_required',
+    })
+  })
+
+  it('無効なリストIDはinvalid_inputとして返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock()
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.toggleFavorite('  ')).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+    expect(calls.fromMock).not.toHaveBeenCalled()
+  })
+
+  it('通信失敗時はnetworkとして返す', async () => {
+    const { client } = buildToggleSupabaseMock({
+      insertError: new Error('Failed to fetch'),
+    })
+    const provider = createUserOshiListProvider(client)
+
+    await expect(provider.toggleFavorite('1')).resolves.toEqual({
+      ok: false,
+      error: 'network',
+    })
   })
 })
