@@ -244,6 +244,7 @@ function UserPage({
             items={seriesItems}
             isLoading={seriesLoading}
             error={seriesError}
+            userId={userId}
           />
         </div>
       )}

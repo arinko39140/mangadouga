@@ -161,6 +161,7 @@ function UserOshiSeriesPage({
             items={seriesItems}
             isLoading={seriesLoading}
             error={seriesError}
+            userId={userId}
           />
         </div>
       )}

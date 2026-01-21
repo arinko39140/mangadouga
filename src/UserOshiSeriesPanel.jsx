@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom'
 import './UserOshiSeriesPanel.css'
 
-function UserOshiSeriesPanel({ items = [], isLoading = false, error = null }) {
+function UserOshiSeriesPanel({ items = [], isLoading = false, error = null, userId = null }) {
   const renderContent = () => {
     if (isLoading) {
       return <p className="user-oshi-series__status">推し作品を読み込み中...</p>
@@ -38,6 +39,11 @@ function UserOshiSeriesPanel({ items = [], isLoading = false, error = null }) {
     <section className="user-oshi-series" aria-live="polite">
       <header className="user-oshi-series__header">
         <h2 className="user-oshi-series__title-heading">推し作品一覧</h2>
+        {userId ? (
+          <Link className="user-oshi-series__link" to={`/users/${userId}/oshi-series/`}>
+            もっと見る
+          </Link>
+        ) : null}
       </header>
       <div className="user-oshi-series__body">{renderContent()}</div>
     </section>
