@@ -1,0 +1,76 @@
+.user-oshi-list {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 99, 117, 0.12);
+  display: grid;
+  gap: 1rem;
+}
+
+.user-oshi-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-oshi-list__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c2032;
+}
+
+.user-oshi-list__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-oshi-list__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.user-oshi-list__count {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2f2035;
+}
+
+.user-oshi-list__favorite-button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3e9ff;
+  color: #4d3b57;
+  cursor: pointer;
+}
+
+.user-oshi-list__favorite-button.is-active {
+  background: #2f2035;
+  color: #fff;
+}
+
+.user-oshi-list__favorite-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.user-oshi-list__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6a596b;
+}
+
+.user-oshi-list__status--error {
+  color: #8a3746;
+}
+
+.user-oshi-list__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #7b6a7d;
+}
