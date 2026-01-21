@@ -1,0 +1,61 @@
+.user-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.user-page__header {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.user-page__title {
+  margin: 0;
+  color: #2a1e2f;
+}
+
+.user-page__subtitle {
+  margin: 0;
+  color: #6a596b;
+  font-size: 0.95rem;
+}
+
+.user-page__sections {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.user-page__status {
+  margin: 0;
+  color: #6a596b;
+}
+
+.user-page__status--error {
+  color: #8d2c24;
+  background: rgba(255, 222, 217, 0.6);
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba(141, 44, 36, 0.2);
+}
+
+.user-page__retry {
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  background: #2f2035;
+  color: #fff7f5;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+  font-family: inherit;
+}
+
+.user-page__retry:hover {
+  background: #241b2b;
+}
+
+.user-page__retry:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
