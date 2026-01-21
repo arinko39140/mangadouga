@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import UserPage from './UserPage.jsx'
+import { createUserPageProvider } from './userPageProvider.js'
 
 const renderUserPage = ({
   profileProvider,
@@ -36,6 +37,22 @@ const createDeferred = () => {
     reject = rejectPromise
   })
   return { promise, resolve, reject }
+}
+
+const buildUserSupabaseMock = ({ userRows = [], userError = null } = {}) => {
+  const limitMock = vi.fn().mockResolvedValue({ data: userRows, error: userError })
+  const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
+  const fromMock = vi.fn((table) => {
+    if (table === 'users') {
+      return { select: selectMock }
+    }
+    return { select: vi.fn() }
+  })
+
+  return {
+    client: { from: fromMock },
+  }
 }
 
 describe('UserPage', () => {
@@ -144,6 +161,123 @@ describe('UserPage', () => {
     expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
     expect(listProvider.fetchListSummary).toHaveBeenCalledWith('user-1')
     expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
+  })
+
+  it('ユーザー情報取得後に外部リンクと推し作品の取得を開始する', async () => {
+    const listDeferred = createDeferred()
+    const seriesDeferred = createDeferred()
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          userId: 'user-1',
+          name: '凛',
+          iconUrl: null,
+          links: [{ category: 'x', url: 'https://x.com/rin', label: 'Xリンク' }],
+        },
+      }),
+    }
+    const listProvider = { fetchListSummary: vi.fn().mockReturnValue(listDeferred.promise) }
+    const seriesProvider = { fetchSeries: vi.fn().mockReturnValue(seriesDeferred.promise) }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+
+    await waitFor(() => {
+      expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
+    })
+    expect(listProvider.fetchListSummary).toHaveBeenCalledWith('user-1')
+    expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
+    expect(screen.getByRole('link', { name: 'Xリンク' })).toHaveAttribute(
+      'href',
+      'https://x.com/rin'
+    )
+
+    listDeferred.resolve({
+      ok: true,
+      data: { listId: 'list-3', status: 'public', favoriteCount: 0, isFavorited: false },
+    })
+    seriesDeferred.resolve({
+      ok: true,
+      data: [{ seriesId: 's-1', title: '銀河の旅', favoriteCount: 3, updatedAt: null }],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('銀河の旅')).toBeInTheDocument()
+    })
+  })
+
+  it('非公開リストではお気に入り操作が無効になる', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '遥', iconUrl: null, links: [] },
+      }),
+    }
+    const listProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { listId: null, status: 'private', favoriteCount: null, isFavorited: false },
+      }),
+      toggleFavorite: vi.fn(),
+    }
+    const seriesProvider = {
+      fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+
+    await waitFor(() => {
+      expect(screen.getByText('この推しリストは非公開です。')).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('無効な外部リンクはユーザーページに表示されない', async () => {
+    const { client } = buildUserSupabaseMock({
+      userRows: [
+        {
+          user_id: 'user-1',
+          name: '莉子',
+          icon_url: null,
+          x_url: 'https://x.com/riko',
+          x_label: '有効リンク',
+          youtube_url: 'ftp://example.com/invalid',
+          youtube_label: '無効リンク',
+          other_url: '',
+          other_label: '',
+        },
+      ],
+    })
+    const profileProvider = createUserPageProvider(client)
+    const listProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { listId: null, status: 'none', favoriteCount: null, isFavorited: false },
+      }),
+    }
+    const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: '有効リンク' })).toHaveAttribute(
+        'href',
+        'https://x.com/riko'
+      )
+    })
+    expect(screen.queryByRole('link', { name: '無効リンク' })).not.toBeInTheDocument()
   })
 
   it('再試行で全セクションを再取得する', async () => {
