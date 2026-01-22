@@ -155,6 +155,7 @@ sequenceDiagram
 | UserOshiSeriesPanel | UI | 推し作品サマリー表示 | 2.2, 2.4, 3.2, 5.1, 5.2 | UserSeriesProvider (P0) | State |
 | UserOshiFavoritesPanel | UI | お気に入り推しリスト概要と導線 | 2.3, 3.3, 6.1 | OshiFavoritesProvider (P0) | State |
 | UserOshiSeriesPage | UI | 推し作品一覧と管理操作 | 8.1-8.6, 9.1-9.4 | UserSeriesProvider (P0), ProfileVisibilityProvider (P0), AuthGate (P0) | State |
+| OshiFavoritesPage | UI | お気に入り推しリスト専用ページ | 6.2 | OshiFavoritesProvider (P0), AuthGate (P0) | State |
 | OshiFavoritesProvider | Data | お気に入り推しリスト取得 | 2.3, 6.2 | Supabase (P0) | Service |
 | ProfileVisibilityProvider | Data | セクション可視性の取得 | 4.1-4.4 | Supabase (P0) | Service |
 | UserSeriesProvider | Data | 推し作品サマリー/一覧/管理 | 2.2, 2.4, 8.1-9.4 | Supabase (P0) | Service |
@@ -306,6 +307,33 @@ type FavoriteListItem = {
 - Integration: 専用ページは既存ルートを使用
 - Validation: ログイン状態が無効な場合は導線を非表示し、取得処理も呼ばない
 - Risks: お気に入りが0件の際のメッセージ文言調整
+
+#### OshiFavoritesPage
+
+| Field | Detail |
+|-------|--------|
+| Intent | お気に入り推しリストの専用ページとして一覧を表示する |
+| Requirements | 6.2 |
+
+**Responsibilities & Constraints**
+- 未ログイン時は`AuthGate`でブロックし、ログイン導線へ誘導する
+- 本人の推しリストのみ取得・表示する（他ユーザーの閲覧は禁止）
+
+**Dependencies**
+- Inbound: AppRouter — ルート遷移 (P0)
+- Outbound: AuthGate — 認証必須 (P0)
+- Outbound: OshiFavoritesProvider — 一覧取得 (P0)
+
+**Contracts**: State [x]
+
+##### State Management
+- State model: `items`, `isLoading`, `error`
+- Persistence & consistency: UIローカルのみ
+- Concurrency strategy: 読み込み中/空状態の排他制御
+
+**Implementation Notes**
+- Integration: 既存ルート`/oshi-lists/favorites/`を使用
+- Validation: 未認証時は一覧取得を行わない
 
 #### UserOshiSeriesPage
 
@@ -638,12 +666,34 @@ create policy "profile_visibility_insert_owner"
 -- list: 本人 or 公開のみ
 create policy "list_select_owner_or_public"
   on list for select
-  using (auth.uid() = user_id or can_display = true);
+  using (
+    auth.uid() = user_id
+    or (
+      can_display = true
+      and exists (
+        select 1
+        from profile_visibility pv
+        where pv.user_id = user_id
+          and pv.oshi_list_visibility = 'public'
+      )
+    )
+  );
 
 -- user_series: 本人 or 公開のみ
 create policy "user_series_select_owner_or_public"
   on user_series for select
-  using (auth.uid() = user_id or can_display = true);
+  using (
+    auth.uid() = user_id
+    or (
+      can_display = true
+      and exists (
+        select 1
+        from profile_visibility pv
+        where pv.user_id = user_id
+          and pv.oshi_series_visibility = 'public'
+      )
+    )
+  );
 ```
 
 ### Performance & Scalability
