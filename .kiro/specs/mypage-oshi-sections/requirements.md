@@ -54,3 +54,29 @@
 
 #### Acceptance Criteria
 1. Where お気に入り推しリストの専用ページが提供される場合, the マイページUI shall 各項目から専用ページへ遷移できる導線を表示する
+
+### Requirement 7: 推しリストセクションの項目遷移
+**Objective:** As a 閲覧者, I want 推しリストの各項目から専用ページへ遷移できる, so that 推しの詳細を閲覧できる
+
+#### Acceptance Criteria
+1. When 推しリストセクションの項目が表示される, the マイページUI shall 各項目から推しリストページへ遷移できる導線を表示する
+
+### Requirement 8: 推し作品ページの一覧表示内容
+**Objective:** As a ログインユーザー, I want 推し作品ページで登録済み作品を一覧表示できる, so that 自分の推し作品を把握できる
+
+#### Acceptance Criteria
+1. When 推し作品ページが表示される, the 推し作品ページUI shall Supabaseのseriesテーブル情報を用いて登録済み作品の一覧を表示する
+2. When 一覧項目が表示される, the 推し作品ページUI shall seriesテーブルの全カラム情報を表示する
+3. When 一覧項目が表示される, the 推し作品ページUI shall サムネイルを表示する
+4. When 一覧項目が表示される, the 推し作品ページUI shall 作品名を表示する
+5. When 一覧項目が表示される, the 推し作品ページUI shall 作品ページへ遷移できる導線を表示する
+6. Where 表示形式の切り替え機能が提供される場合, the 推し作品ページUI shall リスト形式とグリッド形式の表示を切り替えられる
+
+### Requirement 9: 推し作品ページの管理操作
+**Objective:** As a ログインユーザー, I want 推し作品ページで登録・解除・並べ替えができる, so that 推し作品を管理できる
+
+#### Acceptance Criteria
+1. When お気に入り登録操作を行う, the 推し作品ページUI shall 推し作品として登録される
+2. When お気に入り解除操作を行う, the 推し作品ページUI shall 推し作品の登録を解除する
+3. When 並べ替え操作を行う, the 推し作品ページUI shall お気に入り数順で一覧を並べ替える
+4. When 並べ替えの昇順/降順を選択する, the 推し作品ページUI shall 選択された順序で一覧を並べ替える
