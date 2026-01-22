@@ -8,7 +8,7 @@
 - 公開/非公開設定に応じて他ユーザー閲覧時の表示可否と非公開表示を制御する
 
 ### Non-Goals
-- 新規のバックエンドAPIやデータスキーマの追加
+- 新規のバックエンドAPI追加
 - 推しリスト/推し作品のUIデザイン刷新
 - 推し作品サムネイル生成の自動化（既存データを利用）
 
@@ -30,10 +30,10 @@
 | 3.2 | 推し作品空状態 | UserOshiSeriesPanel | UI State | - |
 | 3.3 | お気に入り空状態 | UserOshiFavoritesPanel | UI State | - |
 | 3.4 | 空状態文言 | 各パネル | UI State | - |
-| 4.1 | 公開/非公開に従う | UserOshiSections, Providers | Service, UI State | UserPage Load |
-| 4.2 | 非公開は見出しのみ表示 | UserOshiSections | UI State | UserPage Load |
-| 4.3 | 公開は表示 | UserOshiSections | UI State | UserPage Load |
-| 4.4 | 本人閲覧は変更なし | UserOshiSections, AuthGate | Service, UI State | UserPage Load |
+| 4.1 | 公開/非公開に従う | UserOshiSections, ProfileVisibilityProvider, Providers | Service, UI State | UserPage Load |
+| 4.2 | 非公開は見出しのみ表示 | UserOshiSections, ProfileVisibilityProvider | UI State | UserPage Load |
+| 4.3 | 公開は表示 | UserOshiSections, ProfileVisibilityProvider | UI State | UserPage Load |
+| 4.4 | 本人閲覧は変更なし | UserOshiSections, AuthGate, ProfileVisibilityProvider | Service, UI State | UserPage Load |
 | 4.5 | 他セクションへ影響なし | UserOshiSections | UI State | - |
 | 4.6 | お気に入り推しリストは他ユーザー閲覧時は非表示 | UserOshiSections, UserOshiFavoritesPanel | UI State | UserPage Load |
 | 5.1 | 推し作品導線表示 | UserOshiSeriesPanel | UI State | - |
@@ -42,7 +42,7 @@
 | 6.2 | お気に入り一覧グリッド | OshiFavoritesPage | UI State | - |
 | 6.3 | 他ユーザーには導線非表示 | UserOshiFavoritesPanel | UI State | - |
 | 7.1 | 推しリスト項目導線 | UserOshiListPanel | UI State | - |
-| 8.1 | user_series+seriesで一覧表示 | UserOshiSeriesPage, UserSeriesProvider | Service, UI State | Series Page Load |
+| 8.1 | user_series+seriesで一覧表示 | UserOshiSeriesPage, UserSeriesProvider, ProfileVisibilityProvider | Service, UI State | Series Page Load |
 | 8.2 | series主要情報表示 | UserOshiSeriesPage, UserOshiSeriesPanel | UI State | Series Page Load |
 | 8.3 | movie代表サムネイル表示 | UserOshiSeriesPage, UserSeriesProvider | Service, UI State | Series Page Load |
 | 8.4 | 作品名表示 | UserOshiSeriesPanel | UI State | - |
@@ -66,12 +66,14 @@
 ```mermaid
 graph TB
   UserPage[UserPage] --> OshiSections[UserOshiSections]
+  UserPage --> ProfileVisibilityProvider[ProfileVisibilityProvider]
   OshiSections --> OshiListPanel[UserOshiListPanel]
   OshiSections --> OshiSeriesPanel[UserOshiSeriesPanel]
   OshiSections --> OshiFavoritesPanel[UserOshiFavoritesPanel]
   OshiListPanel --> UserOshiListProvider[UserOshiListProvider]
   OshiSeriesPanel --> UserSeriesProvider[UserSeriesProvider]
   OshiFavoritesPanel --> OshiFavoritesProvider[OshiFavoritesProvider]
+  ProfileVisibilityProvider --> Supabase[Supabase]
   UserSeriesProvider --> Supabase[Supabase]
   UserOshiListProvider --> Supabase
   OshiFavoritesProvider --> Supabase
@@ -82,7 +84,7 @@ graph TB
 - Selected pattern: UIコンポーネント + Provider分離（既存パターン継続）
 - Domain/feature boundaries: UIは表示/状態管理、ProviderはSupabaseアクセスとデータ正規化
 - Existing patterns preserved: `createXProvider`による依存注入、`authGate`による認証判定
-- New components rationale: `UserOshiSections`で順序/表示制御を集約、`UserOshiFavoritesPanel`でサマリー追加
+- New components rationale: `UserOshiSections`で順序/表示制御を集約、`UserOshiFavoritesPanel`でサマリー追加、`ProfileVisibilityProvider`で可視性判定を集約
 - Steering compliance: React + Supabase構成、UIとデータ層の責務分離を維持
 
 ### Technology Stack & Alignment
@@ -91,7 +93,7 @@ graph TB
 |-------|------------------|-----------------|-------|
 | Frontend | React 18.3.1 | マイページとセクションUI | 既存構成を継続 |
 | Routing | react-router-dom 6.30.1 | `/users/:userId/`と専用ページ導線 | 既存構成を継続 |
-| Data / Storage | Supabase (PostgreSQL) | list/user_list/user_series/series/movie | 既存スキーマを利用 |
+| Data / Storage | Supabase (PostgreSQL) | profile_visibility/list/user_list/user_series/series/movie | 既存スキーマを利用 |
 | Client SDK | @supabase/supabase-js 2.90.1 | Providerからのデータ取得 | 新規依存なし |
 
 ## System Flows
@@ -100,6 +102,7 @@ graph TB
 sequenceDiagram
   participant UserPage
   participant AuthGate
+  participant ProfileVisibilityProvider
   participant UserOshiListProvider
   participant UserSeriesProvider
   participant OshiFavoritesProvider
@@ -107,6 +110,8 @@ sequenceDiagram
 
   UserPage->>AuthGate: getStatus
   AuthGate-->>UserPage: ok or redirect
+  UserPage->>ProfileVisibilityProvider: fetchVisibility
+  ProfileVisibilityProvider->>Supabase: select profile_visibility
   UserPage->>UserOshiListProvider: fetchListSummary
   UserPage->>UserSeriesProvider: fetchSeriesSummary
   UserPage->>OshiFavoritesProvider: fetchFavoritesSummary (本人閲覧時のみ)
@@ -122,19 +127,32 @@ sequenceDiagram
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 - 非公開表示（見出し＋「非公開」文言）の対象は推しリスト/推し作品のみとする。
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする。
-- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`を**唯一のソース（DBの真値）**として扱う。
-- 推し作品の公開/非公開はマイページの操作ボタンから一括更新し、対象ユーザーの`user_series`全件を同一値に同期する。
+- 公開/非公開はセクション単位とし、`profile_visibility`を**唯一のソース（DBの真値）**として扱う。
+- `list`/`user_series`は公開データのみ取得し、非公開判定は`profile_visibility`で行う。
+
+### Visibility Decision Flow (UI)
+**目的**: 非公開と空状態を区別し、RLSと矛盾しない表示制御を行う。
+
+**他ユーザー閲覧時**:
+1. `profile_visibility`を先に取得し、`private`なら「見出し＋非公開文言」を表示してデータ取得は行わない。
+2. `public`なら`list`/`user_series`の取得を実行する。
+3. 取得結果が0件の場合は「空状態」文言を表示する。
+
+**本人閲覧時**:
+1. `profile_visibility`に関わらず内容を表示する（空なら空状態）。
+2. お気に入り推しリストは本人のみ取得・表示する。
 
 ## Components & Interface Contracts
 
 | Component | Domain/Layer | Intent | Req Coverage | Key Dependencies (P0/P1) | Contracts |
 |-----------|--------------|--------|--------------|--------------------------|-----------|
-| UserOshiSections | UI | 推し3セクションの順序と表示制御 | 1.1, 1.3, 4.1-4.5 | AuthGate (P0) | State |
+| UserOshiSections | UI | 推し3セクションの順序と表示制御 | 1.1, 1.3, 4.1-4.5 | AuthGate (P0), ProfileVisibilityProvider (P0) | State |
 | UserOshiListPanel | UI | 推しリスト概要と導線表示 | 2.1, 3.1, 7.1 | UserOshiListProvider (P0) | State |
 | UserOshiSeriesPanel | UI | 推し作品サマリー表示 | 2.2, 2.4, 3.2, 5.1, 5.2 | UserSeriesProvider (P0) | State |
 | UserOshiFavoritesPanel | UI | お気に入り推しリスト概要と導線 | 2.3, 3.3, 6.1 | OshiFavoritesProvider (P0) | State |
-| UserOshiSeriesPage | UI | 推し作品一覧と管理操作 | 8.1-8.6, 9.1-9.4 | UserSeriesProvider (P0), AuthGate (P0) | State |
+| UserOshiSeriesPage | UI | 推し作品一覧と管理操作 | 8.1-8.6, 9.1-9.4 | UserSeriesProvider (P0), ProfileVisibilityProvider (P0), AuthGate (P0) | State |
 | OshiFavoritesProvider | Data | お気に入り推しリスト取得 | 2.3, 6.2 | Supabase (P0) | Service |
+| ProfileVisibilityProvider | Data | セクション可視性の取得 | 4.1-4.4 | Supabase (P0) | Service |
 | UserSeriesProvider | Data | 推し作品サマリー/一覧/管理 | 2.2, 2.4, 8.1-9.4 | Supabase (P0) | Service |
 | UserOshiListProvider | Data | 推しリストサマリー | 2.1, 3.1, 4.1-4.4 | Supabase (P0) | Service |
 
@@ -178,10 +196,11 @@ type FavoriteListItem = {
 - 他ユーザー閲覧時に非公開セクションは見出しのみ表示し、内容は非公開と表示（対象は推しリスト/推し作品のみ）
 - 本人閲覧時は公開/非公開の設定による表示変更を行わない
 - お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばずセクションも表示しない
-- 公開/非公開の判定はセクション単位で行い、推しリストは`list.can_display`、推し作品は`user_series.can_display`を参照する
+- 公開/非公開の判定はセクション単位で行い、`profile_visibility`を参照する
 
 **Dependencies**
 - Inbound: UserPage — セクションデータ提供 (P0)
+- Outbound: ProfileVisibilityProvider — 可視性取得 (P0)
 - Outbound: UserOshiListPanel — サマリー表示 (P0)
 - Outbound: UserOshiSeriesPanel — サマリー表示 (P0)
 - Outbound: UserOshiFavoritesPanel — サマリー表示 (P0)
@@ -196,8 +215,8 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合は見出しを表示して「非公開」文言を表示する
 - Validation: `viewerContext.userId`と`targetUserId`の一致チェック
-- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、これらを真値とする（ブラウザ永続は補助扱い）。
-- Visibility Sync: 推し作品の公開/非公開はマイページの操作ボタンから一括同期し、`user_series`全件を同一値に更新する。混在検知時は`private`扱いとし、同期操作を案内する。
+- Visibility Source: セクション可視性は`profile_visibility`を真値として採用し、UIはこれに従う（ブラウザ永続は補助扱い）。
+- Visibility Sync: 可視性の更新は`profile_visibility`を更新する（`user_series`の一括同期は不要）。
 - Risks: 非公開文言の表現が強すぎると、本人の意図を他者に示す可能性があるため文面調整が必要
 
 #### UserOshiListPanel
@@ -294,10 +313,11 @@ type FavoriteListItem = {
 - 代表サムネイルを`movie`から取得して表示
 - 並べ替えはお気に入り数の昇順/降順を切り替える
 - 他ユーザー閲覧時に非公開の場合は非公開表示を行う
-- 非公開判定はセクション単位（`user_series.can_display`）で行い、非公開時は一覧取得を行わず非公開表示に切り替える
+- 非公開判定はセクション単位（`profile_visibility.oshi_series_visibility`）で行い、非公開時は一覧取得を行わず非公開表示に切り替える
 
 **Dependencies**
 - Inbound: AppRouter — ルート遷移 (P0)
+- Outbound: ProfileVisibilityProvider — 可視性取得 (P0)
 - Outbound: UserSeriesProvider — データ取得/操作 (P0)
 - External: Supabase — データアクセス (P0)
 
@@ -333,11 +353,49 @@ interface UserSeriesProvider {
 
 **Implementation Notes**
 - Integration: サムネイルは`movie.update`が最新のレコードの`thumbnail_url`を代表として採用し、欠損時はプレースホルダ表示
-- Integration: 可視性は`user_series.can_display`を唯一のソースとして参照し、マイページの公開/非公開操作で対象ユーザーの全レコードを一括同期する
+- Integration: 可視性は`profile_visibility`を唯一のソースとして参照する
 - Validation: 認証済みユーザーのみ管理操作を許可
 - Risks: `movie`取得が多段クエリとなるためバッチ化が必須
 
 ### Data Access Layer
+
+#### ProfileVisibilityProvider
+
+| Field | Detail |
+|-------|--------|
+| Intent | セクション可視性の真値を取得する |
+| Requirements | 4.1-4.4 |
+
+**Responsibilities & Constraints**
+- `profile_visibility`のみ取得し、内容データは返さない
+- 他ユーザー閲覧時の非公開/公開判定に利用する
+
+**Dependencies**
+- External: Supabase — `profile_visibility` (P0)
+
+**Contracts**: Service [x]
+
+##### Service Interface
+```typescript
+type ProfileVisibility = {
+  oshiList: 'public' | 'private';
+  oshiSeries: 'public' | 'private';
+};
+
+interface ProfileVisibilityProvider {
+  fetchVisibility(input: {
+    targetUserId: string;
+  }): Promise<Result<ProfileVisibility, ProfileVisibilityError>>;
+}
+```
+- Preconditions: `targetUserId`は空でない
+- Postconditions: 未設定の場合は`private`扱いで返す
+- Invariants: 可視性以外の情報を含めない
+
+**Implementation Notes**
+- Integration: `profile_visibility`が未作成の場合は既定値`private`として扱う
+- Validation: `targetUserId`未指定時は`invalid_input`
+- Risks: 可視性未作成時の初期化タイミングに依存
 
 #### UserOshiListProvider
 
@@ -347,8 +405,8 @@ interface UserSeriesProvider {
 | Requirements | 2.1, 3.1, 4.1-4.4 |
 
 **Responsibilities & Constraints**
-- `list.can_display`とユーザー存在確認を反映
-- 公開時のみ`listId`を返す
+- ユーザー存在確認を反映
+- 公開時のみ`listId`を返す（RLSで制御）
 
 **Dependencies**
 - External: Supabase — `list`, `user_list`, `users` (P0)
@@ -366,10 +424,10 @@ interface UserOshiListProvider {
 ```
 - Preconditions: `targetUserId`は空でない
 - Postconditions: `status`が`public`の場合のみ`listId`を返す
-- Invariants: `viewerUserId !== targetUserId`の場合は`can_display`を厳守
+- Invariants: `viewerUserId !== targetUserId`の場合は公開データのみ扱う
 
 **Implementation Notes**
-- Integration: 本人閲覧時は`can_display`に関わらず概要を返す
+- Integration: 本人閲覧時は可視性に関わらず概要を返す
 - Validation: `targetUserId`未指定時は`invalid_input`
 - Risks: ユーザー未存在時の`not_found`扱いをUI側で統一
 
@@ -385,7 +443,7 @@ interface UserOshiListProvider {
 - サマリーは新着順最大3件
 - 一覧はお気に入り数でソート可能
 - 代表サムネイルは`movie`から解決
-- `user_series.can_display`をセクション可視性として返却し、更新時の一括同期で混在を防止する（混在検知時は`private`扱い）
+- `user_series.can_display`は作品単位の可視性として扱う（セクション判定は別Provider）
 
 **Dependencies**
 - External: Supabase — `user_series`, `series`, `movie` (P0)
@@ -411,11 +469,10 @@ interface UserSeriesItem {
 
 interface UserSeriesSummary {
   items: UserSeriesItem[];
-  visibility: 'public' | 'private' | 'owner';
 }
 ```
 - Preconditions: `targetUserId`は空でない
-- Postconditions: `viewerUserId !== targetUserId`の場合は`can_display=true`のみ
+- Postconditions: `viewerUserId !== targetUserId`の場合は公開データのみ返す（RLSで担保）
 - Invariants: `items`は`seriesId`が重複しない
 
 **Implementation Notes**
@@ -461,12 +518,13 @@ interface OshiFavoritesProvider {
 - Aggregate: `UserOshiProfile`（user + oshi list/series/favoritesの表示単位）
 - Entities: `List`, `Series`, `Movie`
 - Value Objects: `Visibility`（public/private/owner）
-- Invariants: 他ユーザー閲覧時は`can_display=true`のみ表示
+- Invariants: 他ユーザー閲覧時は公開データのみ表示
 
 ### Logical Data Model
 
 **Structure Definition**:
 - `users(user_id, name, icon_url, ...)`
+- `profile_visibility(user_id, oshi_list_visibility, oshi_series_visibility, updated_at)`
 - `list(list_id, user_id, favorite_count, can_display)`
 - `user_list(user_id, list_id, created_at)`
 - `user_series(user_id, series_id, can_display, created_at)`
@@ -476,8 +534,28 @@ interface OshiFavoritesProvider {
 **Consistency & Integrity**:
 - `user_series.series_id`は`series.series_id`に対応
 - `movie.series_id`が推し作品の代表サムネイル取得に利用される
-- `can_display`は他ユーザー閲覧時の公開判定に使用
-- 推し作品の可視性は`user_series.can_display`をセクション単位として扱い、更新時の一括同期でユーザー内の値を統一する（混在検知時は`private`扱い）
+- セクションの可視性は`profile_visibility`を真値として扱う（他ユーザー閲覧時の公開/非公開判定に使用）
+- `user_series.can_display`は作品単位の可視性（将来の個別非公開など）に限定し、セクション単位の判断には使用しない
+
+### Visibility Settings Model
+
+**Intent**: 可視性の「判定用データのみ」を安全に共有し、内容の取得はRLSで遮断する。
+
+**Table Definition (SQL例)**:
+```sql
+create table if not exists profile_visibility (
+  user_id uuid primary key references users(user_id) on delete cascade,
+  oshi_list_visibility text not null default 'private',
+  oshi_series_visibility text not null default 'private',
+  updated_at timestamptz not null default now(),
+  check (oshi_list_visibility in ('public','private')),
+  check (oshi_series_visibility in ('public','private'))
+);
+```
+
+**RLS方針**:
+- `profile_visibility`は「可視性フラグのみ」を全員が閲覧可。
+- `list`/`user_series`は本人または`can_display=true`のみ閲覧可。
 
 ### Data Contracts & Integration
 
@@ -506,6 +584,7 @@ interface OshiFavoritesProvider {
 
 ### Unit Tests
 - `UserOshiSections`の表示条件（本人/他者、公開/非公開、非公開表示）
+- `profile_visibility`が`private`の時に非公開文言のみ表示される
 - `UserSeriesProvider`のサマリー件数制限とソート順
 - `OshiFavoritesProvider.fetchFavoritesSummary`の件数制御
 
@@ -513,6 +592,7 @@ interface OshiFavoritesProvider {
 - `UserPage`で3セクションが順序通りに表示される
 - 非公開セクションが他ユーザー閲覧時に見出しのみ表示される
 - 推し作品セクションから`/users/:userId/oshi-series/`に遷移できる
+- `profile_visibility`が`public`でデータ0件の場合は空状態文言になる
 
 ### E2E/UI Tests
 - マイページで推しセクションが表示され、空状態文言が正しく表示される
@@ -522,11 +602,43 @@ interface OshiFavoritesProvider {
 ## Optional Sections
 
 ### Security Considerations
-- RLSポリシーで`can_display`と本人判定を担保する（可視性の真値はDBに置く）
+- RLSポリシーで本人判定と公開範囲を担保する（可視性の真値は`profile_visibility`）
 - `viewerUserId`が`null`の場合は公開データのみ表示
 - 他ユーザー閲覧時の非公開セクションは見出しのみ表示し、内容は非公開文言とする（対象は推しリスト/推し作品のみ）
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする
 - お気に入り推しリスト専用ページは`AuthGate`で本人のみ許可し、URL直アクセスでもブロックする
+
+**RLSポリシー例（SQL）**:
+```sql
+alter table profile_visibility enable row level security;
+alter table list enable row level security;
+alter table user_series enable row level security;
+
+-- 可視性フラグは全員閲覧可（内容は含まない）
+create policy "profile_visibility_select_all"
+  on profile_visibility for select
+  using (true);
+
+-- 本人は可視性を更新可能
+create policy "profile_visibility_update_owner"
+  on profile_visibility for update
+  using (auth.uid() = user_id);
+
+-- 本人は可視性を作成可能（初期値）
+create policy "profile_visibility_insert_owner"
+  on profile_visibility for insert
+  with check (auth.uid() = user_id);
+
+-- list: 本人 or 公開のみ
+create policy "list_select_owner_or_public"
+  on list for select
+  using (auth.uid() = user_id or can_display = true);
+
+-- user_series: 本人 or 公開のみ
+create policy "user_series_select_owner_or_public"
+  on user_series for select
+  using (auth.uid() = user_id or can_display = true);
+```
 
 ### Performance & Scalability
 - サマリーは最大3件に制限しクエリ負荷を抑える
@@ -534,5 +646,5 @@ interface OshiFavoritesProvider {
 - `user_series(user_id, created_at)`のインデックス追加を検討
 
 ### Migration Strategy
-- 本機能で必須のスキーマ変更はない
+- セクション可視性の真値を`profile_visibility`に置く場合はテーブル追加が必要
 - 追加インデックスが必要な場合は段階的に適用し、ロールバック可能なSQLを用意する
