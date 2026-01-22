@@ -137,6 +137,7 @@ sequenceDiagram
 1. `profile_visibility`を先に取得し、`private`なら「見出し＋非公開文言」を表示してデータ取得は行わない。
 2. `public`なら`list`/`user_series`の取得を実行する。
 3. 取得結果が0件の場合は「空状態」文言を表示する。
+4. **可視性取得に失敗した場合は「非公開扱い（見出し＋非公開文言）」として扱い、内容取得は行わない（安全側のフェイルセーフ）。**
 
 **本人閲覧時**:
 1. `profile_visibility`に関わらず内容を表示する（空なら空状態）。
@@ -652,3 +653,7 @@ create policy "user_series_select_owner_or_public"
 - 追加インデックスが必要な場合は段階的に適用し、ロールバック可能なSQLを用意する
  - `profile_visibility`は実装前にSupabaseのマイグレーションとして作成・適用する（タスクの先頭で対応）
 - `profile_visibility`のレコードはユーザー登録直後にDBトリガーで自動作成する（クライアント依存を避け、初期状態の非公開化を防ぐ）
+ - **既存ユーザー向けバックフィル**:  
+   - 推しリスト: 当該ユーザーの`list.can_display = true`が1件でも存在すれば`oshi_list_visibility = 'public'`、それ以外は`'private'`  
+   - 推し作品: 当該ユーザーの`user_series.can_display = true`が1件でも存在すれば`oshi_series_visibility = 'public'`、それ以外は`'private'`  
+   - 該当データが0件の場合は`'private'`を初期値とする
