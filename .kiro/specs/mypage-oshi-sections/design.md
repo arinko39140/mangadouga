@@ -107,16 +107,17 @@ sequenceDiagram
   AuthGate-->>UserPage: ok or redirect
   UserPage->>UserOshiListProvider: fetchListSummary
   UserPage->>UserSeriesProvider: fetchSeriesSummary
-  UserPage->>OshiFavoritesProvider: fetchFavoritesSummary
+  UserPage->>OshiFavoritesProvider: fetchFavoritesSummary (本人閲覧時のみ)
   UserOshiListProvider->>Supabase: select list and user_list
   UserSeriesProvider->>Supabase: select user_series and series
-  OshiFavoritesProvider->>Supabase: select user_list and list
+  OshiFavoritesProvider->>Supabase: select user_list and list (本人閲覧時のみ)
   Supabase-->>UserPage: summaries
 ```
 
 **Key Decisions**:
 - 認証状態に応じて表示制御を行い、非公開セクションは他ユーザー閲覧時に描画しない。
 - 推し作品サマリーは最大3件をProviderで制御し、UIは並び順を保持する。
+- お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばない。
 
 ## Components & Interface Contracts
 
@@ -170,6 +171,7 @@ type FavoriteListItem = {
 - 推しリスト→推し作品→お気に入り推しリストの順序固定
 - 他ユーザー閲覧時に非公開セクションを非表示
 - 本人閲覧時は公開/非公開の設定による表示変更を行わない
+- お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばない
 
 **Dependencies**
 - Inbound: UserPage — セクションデータ提供 (P0)
@@ -198,7 +200,7 @@ type FavoriteListItem = {
 
 **Responsibilities & Constraints**
 - 空状態・エラーの文言を表示
-- 公開時のみ推しリスト導線を表示
+- 本人閲覧時は常に推しリスト導線を表示し、他ユーザー閲覧時は公開時のみ表示
 
 **Dependencies**
 - Inbound: UserOshiSections — サマリー/状態 (P0)
@@ -214,7 +216,7 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: 既存UIの見出しは「推しリスト」を維持
 - Validation: サマリーの`status`に応じた分岐
-- Risks: 非公開時はセクション自体が非表示となるため、ここでは公開時の表示のみを担う
+- Risks: 非公開時はセクション自体が非表示となるため、他ユーザー閲覧の分岐が適切に伝播しているか要確認
 
 #### UserOshiSeriesPanel
 
@@ -253,7 +255,7 @@ type FavoriteListItem = {
 **Responsibilities & Constraints**
 - 最大3件程度のサマリーを表示（件数は任意）
 - 専用ページ`/oshi-lists/favorites/`への導線を表示
-- 他ユーザー閲覧時は表示しない（本人限定）
+- 他ユーザー閲覧時は表示しない（本人限定、公開設定なし）
 
 **Dependencies**
 - Inbound: UserOshiSections — サマリー/状態 (P0)
@@ -268,7 +270,7 @@ type FavoriteListItem = {
 
 **Implementation Notes**
 - Integration: 専用ページは既存ルートを使用
-- Validation: ログイン状態が無効な場合は導線を非表示
+- Validation: ログイン状態が無効な場合は導線を非表示し、取得処理も呼ばない
 - Risks: お気に入りが0件の際のメッセージ文言調整
 
 #### UserOshiSeriesPage
@@ -427,11 +429,11 @@ interface UserSeriesSummary {
 ##### Service Interface
 ```typescript
 interface OshiFavoritesProvider {
-  fetchFavoritesSummary(input: { limit: number }): Promise<Result<FavoriteListItem[], FavoriteListError>>;
+  fetchFavoritesSummary(input: { viewerUserId: string; limit: number }): Promise<Result<FavoriteListItem[], FavoriteListError>>;
   fetchFavorites(): Promise<Result<FavoriteListItem[], FavoriteListError>>;
 }
 ```
-- Preconditions: `limit`は1以上
+- Preconditions: `viewerUserId`は空でない、`limit`は1以上
 - Postconditions: `fetchFavoritesSummary`は件数を超過しない
 - Invariants: ログインユーザー以外のデータは返さない
 
