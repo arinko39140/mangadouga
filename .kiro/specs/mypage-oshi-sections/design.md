@@ -35,6 +35,7 @@
 | 4.3 | 公開は表示 | UserOshiSections | UI State | UserPage Load |
 | 4.4 | 本人閲覧は変更なし | UserOshiSections, AuthGate | Service, UI State | UserPage Load |
 | 4.5 | 他セクションへ影響なし | UserOshiSections | UI State | - |
+| 4.6 | お気に入り推しリストは他ユーザー閲覧時は非表示 | UserOshiSections, UserOshiFavoritesPanel | UI State | UserPage Load |
 | 5.1 | 推し作品導線表示 | UserOshiSeriesPanel | UI State | - |
 | 5.2 | /users/{userId}/oshi-series/導線 | UserOshiSeriesPanel | UI State | - |
 | 6.1 | お気に入り専用ページ導線 | UserOshiFavoritesPanel | UI State | - |
@@ -118,7 +119,7 @@ sequenceDiagram
 **Key Decisions**:
 - 認証状態に応じて表示制御を行い、非公開セクションは他ユーザー閲覧時に見出しのみ表示する。
 - 推し作品サマリーは最大3件をProviderで制御し、UIは並び順を保持する。
-- お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばない。
+- お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 
 ## Components & Interface Contracts
 
@@ -172,7 +173,7 @@ type FavoriteListItem = {
 - 推しリスト→推し作品→お気に入り推しリストの順序固定
 - 他ユーザー閲覧時に非公開セクションは見出しのみ表示し、内容は非公開と表示
 - 本人閲覧時は公開/非公開の設定による表示変更を行わない
-- お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばない
+- お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばずセクションも表示しない
 
 **Dependencies**
 - Inbound: UserPage — セクションデータ提供 (P0)
@@ -322,7 +323,7 @@ interface UserSeriesProvider {
 - Concurrency strategy: 操作中は対象ボタンを無効化
 
 **Implementation Notes**
-- Integration: サムネイルは`movie.thumbnail_url`優先、欠損時はプレースホルダ表示
+- Integration: サムネイルは`movie.update`が最新のレコードの`thumbnail_url`を代表として採用し、欠損時はプレースホルダ表示
 - Validation: 認証済みユーザーのみ管理操作を許可
 - Risks: `movie`取得が多段クエリとなるためバッチ化が必須
 
@@ -407,7 +408,7 @@ interface UserSeriesSummary {
 - Invariants: `items`は`seriesId`が重複しない
 
 **Implementation Notes**
-- Integration: サムネイル取得は`series_id`単位でバッチ化
+- Integration: サムネイル取得は`series_id`単位でバッチ化し、代表は`movie.update`の最新レコードを採用
 - Validation: `limit`は1以上で固定
 - Risks: 一覧件数が増えた際のパフォーマンス劣化
 
