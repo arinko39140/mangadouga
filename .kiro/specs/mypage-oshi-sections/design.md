@@ -1,11 +1,11 @@
 ## Overview
 本機能は、ユーザーマイページ内の推し関連セクション（推しリスト・推し作品・お気に入り推しリスト）を整理表示し、閲覧者が目的の一覧へ迷わず遷移できる状態を実現する。マイページの情報密度が高まる中で、各セクションの独立性と順序の一貫性を担保することが主な価値である。
-対象ユーザーは閲覧者およびログインユーザーであり、閲覧者は概要から専用ページへ移動し、ログインユーザーは推し作品の管理操作やお気に入り推しリストの閲覧を行う。本設計は既存のReact + Provider分離パターンに沿って拡張し、公開/非公開の表示制御をアプリ側とSupabaseの両面で整合させる。
+対象ユーザーは閲覧者およびログインユーザーであり、閲覧者は公開範囲の概要から専用ページへ移動し、ログインユーザーは推し作品の管理操作やお気に入り推しリストの閲覧（本人限定）を行う。本設計は既存のReact + Provider分離パターンに沿って拡張し、公開/非公開の表示制御をアプリ側とSupabaseの両面で整合させる。
 
 ### Goals
 - マイページに3セクションを一貫した順序で表示し、各セクションを独立領域として識別可能にする
 - セクション概要（推しリスト/推し作品/お気に入り推しリスト）を表示し、専用ページへ遷移できる導線を提供する
-- 公開/非公開設定に応じて他ユーザー閲覧時の表示可否を制御する
+- 公開/非公開設定に応じて他ユーザー閲覧時の表示可否と非公開表示を制御する
 
 ### Non-Goals
 - 新規のバックエンドAPIやデータスキーマの追加
@@ -31,7 +31,7 @@
 | 3.3 | お気に入り空状態 | UserOshiFavoritesPanel | UI State | - |
 | 3.4 | 空状態文言 | 各パネル | UI State | - |
 | 4.1 | 公開/非公開に従う | UserOshiSections, Providers | Service, UI State | UserPage Load |
-| 4.2 | 非公開は非表示 | UserOshiSections | UI State | UserPage Load |
+| 4.2 | 非公開は見出しのみ表示 | UserOshiSections | UI State | UserPage Load |
 | 4.3 | 公開は表示 | UserOshiSections | UI State | UserPage Load |
 | 4.4 | 本人閲覧は変更なし | UserOshiSections, AuthGate | Service, UI State | UserPage Load |
 | 4.5 | 他セクションへ影響なし | UserOshiSections | UI State | - |
@@ -39,6 +39,7 @@
 | 5.2 | /users/{userId}/oshi-series/導線 | UserOshiSeriesPanel | UI State | - |
 | 6.1 | お気に入り専用ページ導線 | UserOshiFavoritesPanel | UI State | - |
 | 6.2 | お気に入り一覧グリッド | OshiFavoritesPage | UI State | - |
+| 6.3 | 他ユーザーには導線非表示 | UserOshiFavoritesPanel | UI State | - |
 | 7.1 | 推しリスト項目導線 | UserOshiListPanel | UI State | - |
 | 8.1 | user_series+seriesで一覧表示 | UserOshiSeriesPage, UserSeriesProvider | Service, UI State | Series Page Load |
 | 8.2 | series主要情報表示 | UserOshiSeriesPage, UserOshiSeriesPanel | UI State | Series Page Load |
@@ -115,7 +116,7 @@ sequenceDiagram
 ```
 
 **Key Decisions**:
-- 認証状態に応じて表示制御を行い、非公開セクションは他ユーザー閲覧時に描画しない。
+- 認証状態に応じて表示制御を行い、非公開セクションは他ユーザー閲覧時に見出しのみ表示する。
 - 推し作品サマリーは最大3件をProviderで制御し、UIは並び順を保持する。
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばない。
 
@@ -169,7 +170,7 @@ type FavoriteListItem = {
 
 **Responsibilities & Constraints**
 - 推しリスト→推し作品→お気に入り推しリストの順序固定
-- 他ユーザー閲覧時に非公開セクションを非表示
+- 他ユーザー閲覧時に非公開セクションは見出しのみ表示し、内容は非公開と表示
 - 本人閲覧時は公開/非公開の設定による表示変更を行わない
 - お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばない
 
@@ -187,9 +188,9 @@ type FavoriteListItem = {
 - Concurrency strategy: `UserPage`のロード完了後に一括反映
 
 **Implementation Notes**
-- Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合はセクション非表示
+- Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合は見出しを表示して「非公開」文言を表示する
 - Validation: `viewerContext.userId`と`targetUserId`の一致チェック
-- Risks: 非表示時に空状態文言が表示されないため、UX観点のレビューが必要
+- Risks: 非公開文言の表現が強すぎると、本人の意図を他者に示す可能性があるため文面調整が必要
 
 #### UserOshiListPanel
 
@@ -200,7 +201,7 @@ type FavoriteListItem = {
 
 **Responsibilities & Constraints**
 - 空状態・エラーの文言を表示
-- 本人閲覧時は常に推しリスト導線を表示し、他ユーザー閲覧時は公開時のみ表示
+- 本人閲覧時は常に推しリスト導線を表示し、他ユーザー閲覧時は公開時のみ内容と導線を表示（非公開時は見出しのみ表示）
 
 **Dependencies**
 - Inbound: UserOshiSections — サマリー/状態 (P0)
@@ -216,7 +217,7 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: 既存UIの見出しは「推しリスト」を維持
 - Validation: サマリーの`status`に応じた分岐
-- Risks: 非公開時はセクション自体が非表示となるため、他ユーザー閲覧の分岐が適切に伝播しているか要確認
+- Risks: 非公開時の文言と導線非表示が他ユーザー閲覧に正しく伝播しているか要確認
 
 #### UserOshiSeriesPanel
 
@@ -250,7 +251,7 @@ type FavoriteListItem = {
 | Field | Detail |
 |-------|--------|
 | Intent | お気に入り推しリストの概要と専用ページ導線を表示する |
-| Requirements | 2.3, 3.3, 6.1 |
+| Requirements | 2.3, 3.3, 6.1, 6.3 |
 
 **Responsibilities & Constraints**
 - 最大3件程度のサマリーを表示（件数は任意）
@@ -491,13 +492,13 @@ interface OshiFavoritesProvider {
 ## Testing Strategy
 
 ### Unit Tests
-- `UserOshiSections`の表示条件（本人/他者、公開/非公開）
+- `UserOshiSections`の表示条件（本人/他者、公開/非公開、非公開表示）
 - `UserSeriesProvider`のサマリー件数制限とソート順
 - `OshiFavoritesProvider.fetchFavoritesSummary`の件数制御
 
 ### Integration Tests
 - `UserPage`で3セクションが順序通りに表示される
-- 非公開セクションが他ユーザー閲覧時に非表示になる
+- 非公開セクションが他ユーザー閲覧時に見出しのみ表示される
 - 推し作品セクションから`/users/:userId/oshi-series/`に遷移できる
 
 ### E2E/UI Tests
@@ -510,7 +511,7 @@ interface OshiFavoritesProvider {
 ### Security Considerations
 - RLSポリシーで`can_display`と本人判定を担保する
 - `viewerUserId`が`null`の場合は公開データのみ表示
-- 他ユーザー閲覧時の非公開セクションはUI側で描画しない
+- 他ユーザー閲覧時の非公開セクションは見出しのみ表示し、内容は非公開文言とする
 
 ### Performance & Scalability
 - サマリーは最大3件に制限しクエリ負荷を抑える
