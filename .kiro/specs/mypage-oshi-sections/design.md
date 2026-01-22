@@ -182,6 +182,8 @@ type FavoriteListItem = {
 };
 ```
 
+**Implementation Note**: 本機能ではTypeScriptを導入せず、上記の型はJSDocで表現する（`tech.md`の方針に準拠）。
+
 ### UI Layer
 
 #### UserOshiSections
@@ -648,3 +650,4 @@ create policy "user_series_select_owner_or_public"
 ### Migration Strategy
 - セクション可視性の真値を`profile_visibility`に置く場合はテーブル追加が必要
 - 追加インデックスが必要な場合は段階的に適用し、ロールバック可能なSQLを用意する
+ - `profile_visibility`は実装前にSupabaseのマイグレーションとして作成・適用する（タスクの先頭で対応）
