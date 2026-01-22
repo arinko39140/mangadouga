@@ -107,7 +107,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
       return <p>公開されている推しリストがありません。</p>
     }
     return (
-      <ul className="oshi-lists__items oshi-lists__items--list" aria-label="推しリスト一覧">
+      <ul className="oshi-lists__items oshi-lists__items--grid" aria-label="推しリスト一覧">
         {items.map((item) => {
           const isFavorited = Boolean(item.isFavorited)
           const isUpdating = oshiUpdatingIds.includes(item.listId)
