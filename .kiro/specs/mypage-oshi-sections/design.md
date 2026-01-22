@@ -122,6 +122,7 @@ sequenceDiagram
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 - 非公開表示（見出し＋「非公開」文言）の対象は推しリスト/推し作品のみとする。
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする。
+- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性のソースとする（値はユーザー内で統一される前提）。
 
 ## Components & Interface Contracts
 
@@ -176,6 +177,7 @@ type FavoriteListItem = {
 - 他ユーザー閲覧時に非公開セクションは見出しのみ表示し、内容は非公開と表示（対象は推しリスト/推し作品のみ）
 - 本人閲覧時は公開/非公開の設定による表示変更を行わない
 - お気に入り推しリストは本人限定で表示し、他ユーザー閲覧時は取得処理を呼ばずセクションも表示しない
+- 公開/非公開の判定はセクション単位で行い、推しリストは`list.can_display`、推し作品は`user_series.can_display`を参照する
 
 **Dependencies**
 - Inbound: UserPage — セクションデータ提供 (P0)
@@ -193,6 +195,7 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合は見出しを表示して「非公開」文言を表示する
 - Validation: `viewerContext.userId`と`targetUserId`の一致チェック
+- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、値の混在がある場合は`private`扱いとする
 - Risks: 非公開文言の表現が強すぎると、本人の意図を他者に示す可能性があるため文面調整が必要
 
 #### UserOshiListPanel
@@ -289,6 +292,7 @@ type FavoriteListItem = {
 - 代表サムネイルを`movie`から取得して表示
 - 並べ替えはお気に入り数の昇順/降順を切り替える
 - 他ユーザー閲覧時に非公開の場合は非公開表示を行う
+- 非公開判定はセクション単位（`user_series.can_display`）で行い、非公開時は一覧取得を行わず非公開表示に切り替える
 
 **Dependencies**
 - Inbound: AppRouter — ルート遷移 (P0)
@@ -327,6 +331,7 @@ interface UserSeriesProvider {
 
 **Implementation Notes**
 - Integration: サムネイルは`movie.update`が最新のレコードの`thumbnail_url`を代表として採用し、欠損時はプレースホルダ表示
+- Integration: 可視性は`user_series.can_display`を参照し、取得時に全件同一でない場合は`private`に丸める
 - Validation: 認証済みユーザーのみ管理操作を許可
 - Risks: `movie`取得が多段クエリとなるためバッチ化が必須
 
@@ -378,6 +383,7 @@ interface UserOshiListProvider {
 - サマリーは新着順最大3件
 - 一覧はお気に入り数でソート可能
 - 代表サムネイルは`movie`から解決
+- `user_series.can_display`をセクション可視性として返却し、混在時は`private`に丸める
 
 **Dependencies**
 - External: Supabase — `user_series`, `series`, `movie` (P0)
@@ -469,6 +475,7 @@ interface OshiFavoritesProvider {
 - `user_series.series_id`は`series.series_id`に対応
 - `movie.series_id`が推し作品の代表サムネイル取得に利用される
 - `can_display`は他ユーザー閲覧時の公開判定に使用
+- 推し作品の可視性は`user_series.can_display`をセクション単位として扱い、ユーザー内で値が統一されていることを前提とする（混在時は`private`扱い）
 
 ### Data Contracts & Integration
 
@@ -517,6 +524,7 @@ interface OshiFavoritesProvider {
 - `viewerUserId`が`null`の場合は公開データのみ表示
 - 他ユーザー閲覧時の非公開セクションは見出しのみ表示し、内容は非公開文言とする（対象は推しリスト/推し作品のみ）
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする
+- お気に入り推しリスト専用ページは`AuthGate`で本人のみ許可し、URL直アクセスでもブロックする
 
 ### Performance & Scalability
 - サマリーは最大3件に制限しクエリ負荷を抑える
