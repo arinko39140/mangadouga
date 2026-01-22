@@ -122,7 +122,7 @@ sequenceDiagram
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 - 非公開表示（見出し＋「非公開」文言）の対象は推しリスト/推し作品のみとする。
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする。
-- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性のソースとする（値はユーザー内で統一される前提）。
+- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性のソースとする（推し作品は更新時に全件同期して値を統一する）。
 
 ## Components & Interface Contracts
 
@@ -195,7 +195,7 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合は見出しを表示して「非公開」文言を表示する
 - Validation: `viewerContext.userId`と`targetUserId`の一致チェック
-- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、値の混在がある場合は`private`扱いとする
+- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、混在は更新時の全件同期で防止する（検知時は`private`扱い＋同期を促す）
 - Risks: 非公開文言の表現が強すぎると、本人の意図を他者に示す可能性があるため文面調整が必要
 
 #### UserOshiListPanel
@@ -331,7 +331,7 @@ interface UserSeriesProvider {
 
 **Implementation Notes**
 - Integration: サムネイルは`movie.update`が最新のレコードの`thumbnail_url`を代表として採用し、欠損時はプレースホルダ表示
-- Integration: 可視性は`user_series.can_display`を参照し、取得時に全件同一でない場合は`private`に丸める
+- Integration: 可視性は`user_series.can_display`を参照し、更新時に対象ユーザーの全レコードを一括同期して統一する。取得時に混在を検知した場合は`private`扱いとし、同期処理を促す
 - Validation: 認証済みユーザーのみ管理操作を許可
 - Risks: `movie`取得が多段クエリとなるためバッチ化が必須
 
@@ -383,7 +383,7 @@ interface UserOshiListProvider {
 - サマリーは新着順最大3件
 - 一覧はお気に入り数でソート可能
 - 代表サムネイルは`movie`から解決
-- `user_series.can_display`をセクション可視性として返却し、混在時は`private`に丸める
+- `user_series.can_display`をセクション可視性として返却し、更新時の一括同期で混在を防止する（混在検知時は`private`扱い）
 
 **Dependencies**
 - External: Supabase — `user_series`, `series`, `movie` (P0)
@@ -475,7 +475,7 @@ interface OshiFavoritesProvider {
 - `user_series.series_id`は`series.series_id`に対応
 - `movie.series_id`が推し作品の代表サムネイル取得に利用される
 - `can_display`は他ユーザー閲覧時の公開判定に使用
-- 推し作品の可視性は`user_series.can_display`をセクション単位として扱い、ユーザー内で値が統一されていることを前提とする（混在時は`private`扱い）
+- 推し作品の可視性は`user_series.can_display`をセクション単位として扱い、更新時の一括同期でユーザー内の値を統一する（混在検知時は`private`扱い）
 
 ### Data Contracts & Integration
 
