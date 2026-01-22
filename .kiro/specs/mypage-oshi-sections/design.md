@@ -122,7 +122,8 @@ sequenceDiagram
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 - 非公開表示（見出し＋「非公開」文言）の対象は推しリスト/推し作品のみとする。
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする。
-- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性のソースとする（推し作品は更新時に全件同期して値を統一する）。
+- 公開/非公開はセクション単位とし、推しリストは`list.can_display`、推し作品は`user_series.can_display`を**唯一のソース（DBの真値）**として扱う。
+- 推し作品の公開/非公開はマイページの操作ボタンから一括更新し、対象ユーザーの`user_series`全件を同一値に同期する。
 
 ## Components & Interface Contracts
 
@@ -195,7 +196,8 @@ type FavoriteListItem = {
 **Implementation Notes**
 - Integration: `viewerContext`で本人/他者を判定し、`visibility`が`private`の場合は見出しを表示して「非公開」文言を表示する
 - Validation: `viewerContext.userId`と`targetUserId`の一致チェック
-- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、混在は更新時の全件同期で防止する（検知時は`private`扱い＋同期を促す）
+- Visibility Source: 推しリストは`list.can_display`、推し作品は`user_series.can_display`をセクション可視性として採用し、これらを真値とする（ブラウザ永続は補助扱い）。
+- Visibility Sync: 推し作品の公開/非公開はマイページの操作ボタンから一括同期し、`user_series`全件を同一値に更新する。混在検知時は`private`扱いとし、同期操作を案内する。
 - Risks: 非公開文言の表現が強すぎると、本人の意図を他者に示す可能性があるため文面調整が必要
 
 #### UserOshiListPanel
@@ -331,7 +333,7 @@ interface UserSeriesProvider {
 
 **Implementation Notes**
 - Integration: サムネイルは`movie.update`が最新のレコードの`thumbnail_url`を代表として採用し、欠損時はプレースホルダ表示
-- Integration: 可視性は`user_series.can_display`を参照し、更新時に対象ユーザーの全レコードを一括同期して統一する。取得時に混在を検知した場合は`private`扱いとし、同期処理を促す
+- Integration: 可視性は`user_series.can_display`を唯一のソースとして参照し、マイページの公開/非公開操作で対象ユーザーの全レコードを一括同期する
 - Validation: 認証済みユーザーのみ管理操作を許可
 - Risks: `movie`取得が多段クエリとなるためバッチ化が必須
 
@@ -520,7 +522,7 @@ interface OshiFavoritesProvider {
 ## Optional Sections
 
 ### Security Considerations
-- RLSポリシーで`can_display`と本人判定を担保する
+- RLSポリシーで`can_display`と本人判定を担保する（可視性の真値はDBに置く）
 - `viewerUserId`が`null`の場合は公開データのみ表示
 - 他ユーザー閲覧時の非公開セクションは見出しのみ表示し、内容は非公開文言とする（対象は推しリスト/推し作品のみ）
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする
