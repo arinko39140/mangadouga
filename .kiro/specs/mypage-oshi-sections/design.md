@@ -651,3 +651,4 @@ create policy "user_series_select_owner_or_public"
 - セクション可視性の真値を`profile_visibility`に置く場合はテーブル追加が必要
 - 追加インデックスが必要な場合は段階的に適用し、ロールバック可能なSQLを用意する
  - `profile_visibility`は実装前にSupabaseのマイグレーションとして作成・適用する（タスクの先頭で対応）
+- `profile_visibility`のレコードはユーザー登録直後にDBトリガーで自動作成する（クライアント依存を避け、初期状態の非公開化を防ぐ）
