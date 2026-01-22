@@ -1,6 +1,6 @@
 ## Overview
-本機能は、ユーザーマイページ内の推し関連セクション（推しリスト・推し作品・お気に入り推しリスト）を整理表示し、閲覧者が目的の一覧へ迷わず遷移できる状態を実現する。マイページの情報密度が高まる中で、各セクションの独立性と順序の一貫性を担保することが主な価値である。
-対象ユーザーは閲覧者およびログインユーザーであり、閲覧者は公開範囲の概要から専用ページへ移動し、ログインユーザーは推し作品の管理操作やお気に入り推しリストの閲覧（本人限定）を行う。本設計は既存のReact + Provider分離パターンに沿って拡張し、公開/非公開の表示制御をアプリ側とSupabaseの両面で整合させる。
+本機能は、ユーザーマイページ内の推し関連セクション（推しリスト・推し作品・お気に入り推しリスト）を整理表示し、ログイン閲覧者が目的の一覧へ迷わず遷移できる状態を実現する。マイページの情報密度が高まる中で、各セクションの独立性と順序の一貫性を担保することが主な価値である。
+対象ユーザーはログイン済みの閲覧者およびログインユーザーであり、閲覧者は公開範囲の概要から専用ページへ移動し、ログインユーザーは推し作品の管理操作やお気に入り推しリストの閲覧（本人限定）を行う。本設計は既存のReact + Provider分離パターンに沿って拡張し、公開/非公開の表示制御をアプリ側とSupabaseの両面で整合させる。
 
 ### Goals
 - マイページに3セクションを一貫した順序で表示し、各セクションを独立領域として識別可能にする
@@ -16,6 +16,8 @@
 
 | Requirement | Summary | Components | Interfaces | Flows |
 |-------------|---------|------------|------------|-------|
+| 0.1 | 認証必須（ユーザーページ） | UserPage, AuthGate | UI State | UserPage Load |
+| 0.2 | 認証必須（推し作品ページ） | UserOshiSeriesPage, AuthGate | UI State | Series Page Load |
 | 1.1 | 3セクション表示 | UserPage, UserOshiSections, UserOshiListPanel, UserOshiSeriesPanel, UserOshiFavoritesPanel | UI State | UserPage Load |
 | 1.2 | 見出し表示 | UserOshiListPanel, UserOshiSeriesPanel, UserOshiFavoritesPanel | UI State | - |
 | 1.3 | 一貫した順序 | UserOshiSections | UI State | - |
@@ -108,8 +110,8 @@ sequenceDiagram
   participant OshiFavoritesProvider
   participant Supabase
 
-  UserPage->>AuthGate: getStatus
-  AuthGate-->>UserPage: ok or redirect
+  UserPage->>AuthGate: requireLogin
+  AuthGate-->>UserPage: ok or redirect to login
   UserPage->>ProfileVisibilityProvider: fetchVisibility
   ProfileVisibilityProvider->>Supabase: select profile_visibility
   UserPage->>UserOshiListProvider: fetchListSummary
@@ -122,24 +124,25 @@ sequenceDiagram
 ```
 
 **Key Decisions**:
-- 認証状態に応じて表示制御を行い、非公開セクションは他ユーザー閲覧時に見出しのみ表示する。
+- マイページ/推し作品ページは未ログイン閲覧を許可しない（AuthGateでログイン導線へ誘導）。
+- 認証済みの他ユーザー閲覧時は公開/非公開に応じて表示制御を行い、非公開セクションは見出しのみ表示する。
 - 推し作品サマリーは最大3件をProviderで制御し、UIは並び順を保持する。
 - お気に入り推しリストは本人限定であり、他ユーザー閲覧時は取得処理自体を呼ばず、セクションもレンダリングしない。
 - 非公開表示（見出し＋「非公開」文言）の対象は推しリスト/推し作品のみとする。
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする。
-- 公開/非公開はセクション単位とし、`profile_visibility`を**唯一のソース（DBの真値）**として扱う。
+- 公開/非公開はセクション単位とし、`profile_visibility`を**唯一のソース（DBの真値）**として扱う（ブラウザ保存は参照しない）。
 - `list`/`user_series`は公開データのみ取得し、非公開判定は`profile_visibility`で行う。
 
 ### Visibility Decision Flow (UI)
 **目的**: 非公開と空状態を区別し、RLSと矛盾しない表示制御を行う。
 
-**他ユーザー閲覧時**:
+**他ユーザー閲覧時（ログイン済み）**:
 1. `profile_visibility`を先に取得し、`private`なら「見出し＋非公開文言」を表示してデータ取得は行わない。
 2. `public`なら`list`/`user_series`の取得を実行する。
 3. 取得結果が0件の場合は「空状態」文言を表示する。
 4. **可視性取得に失敗した場合は「非公開扱い（見出し＋非公開文言）」として扱い、内容取得は行わない（安全側のフェイルセーフ）。**
 
-**本人閲覧時**:
+**本人閲覧時（ログイン済み）**:
 1. `profile_visibility`に関わらず内容を表示する（空なら空状態）。
 2. お気に入り推しリストは本人のみ取得・表示する。
 
@@ -606,7 +609,7 @@ create table if not exists profile_visibility (
 
 ### Security Considerations
 - RLSポリシーで本人判定と公開範囲を担保する（可視性の真値は`profile_visibility`）
-- `viewerUserId`が`null`の場合は公開データのみ表示
+- 未ログイン時は`AuthGate`でログイン導線へ誘導し、ページ内容は表示しない
 - 他ユーザー閲覧時の非公開セクションは見出しのみ表示し、内容は非公開文言とする（対象は推しリスト/推し作品のみ）
 - 推し作品ページは他ユーザー閲覧時に非公開なら非公開表示とする
 - お気に入り推しリスト専用ページは`AuthGate`で本人のみ許可し、URL直アクセスでもブロックする
@@ -647,6 +650,36 @@ create policy "user_series_select_owner_or_public"
 - サマリーは最大3件に制限しクエリ負荷を抑える
 - 代表サムネイル取得は`series_id`単位でバッチ化
 - `user_series(user_id, created_at)`のインデックス追加を検討
+- `movie(series_id, update desc)`の複合インデックスを追加し、最新1件取得を最適化
+
+### Thumbnail Query Strategy
+**目的**: `movie`から各`series_id`の最新サムネイルを1件で取得し、N+1を回避する。
+
+**SQL例（PostgreSQL）**:
+```sql
+select distinct on (series_id)
+  series_id,
+  thumbnail_url,
+  "update"
+from movie
+where series_id = any (:series_ids)
+order by series_id, "update" desc;
+```
+
+**代替案（Window関数）**:
+```sql
+select series_id, thumbnail_url, "update"
+from (
+  select
+    series_id,
+    thumbnail_url,
+    "update",
+    row_number() over (partition by series_id order by "update" desc) as rn
+  from movie
+  where series_id = any (:series_ids)
+) t
+where rn = 1;
+```
 
 ### Migration Strategy
 - セクション可視性の真値を`profile_visibility`に置く場合はテーブル追加が必要

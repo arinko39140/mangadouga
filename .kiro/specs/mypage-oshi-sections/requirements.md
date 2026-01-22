@@ -1,12 +1,20 @@
 # Requirements Document
 
 ## Introduction
-本仕様はマイページ内の「推しリスト」「推し作品」「お気に入り推しリスト」各セクションの表示要件を定義し、閲覧者が目的の一覧へ迷わず到達できることを目的とする。
+本仕様はマイページ内の「推しリスト」「推し作品」「お気に入り推しリスト」各セクションの表示要件を定義し、ログイン閲覧者が目的の一覧へ迷わず到達できることを目的とする。
 
 ## Requirements
 
+### Requirement 0: 認証必須の閲覧制御
+**Objective:** As a ログインユーザー, I want 未ログイン時にマイページを閲覧できない, so that 公開範囲の制御と利用者識別を維持できる
+
+#### Acceptance Criteria
+1. When 未ログインユーザーがユーザーページ（/users/{userId}/）にアクセスする, the マイページUI shall ログイン導線またはログインページへ誘導する
+2. When 未ログインユーザーが推し作品ページ（/users/{userId}/oshi-series/）にアクセスする, the 推し作品ページUI shall ログイン導線またはログインページへ誘導する
+3. When 未ログインユーザーが推し関連セクションを閲覧しようとする, the マイページUI shall コンテンツを表示せず認証を要求する
+
 ### Requirement 1: セクション構成の表示
-**Objective:** As a 閲覧者, I want マイページに推し関連のセクションが整理された状態で表示される, so that 目的の一覧へ素早くアクセスできる
+**Objective:** As a ログイン閲覧者, I want マイページに推し関連のセクションが整理された状態で表示される, so that 目的の一覧へ素早くアクセスできる
 
 #### Acceptance Criteria
 1. When マイページが表示される, the マイページUI shall 本人閲覧時は推しリスト・推し作品・お気に入り推しリストの3セクションを表示し、他ユーザー閲覧時は推しリスト・推し作品の2セクションのみ表示する
@@ -15,7 +23,7 @@
 4. While マイページが表示されている, the マイページUI shall 各セクションが独立した領域として識別できる状態を維持する
 
 ### Requirement 2: セクション内容の概要表示
-**Objective:** As a 閲覧者, I want 各セクションの内容が概要として表示される, so that 内容の概要を把握できる
+**Objective:** As a ログイン閲覧者, I want 各セクションの内容が概要として表示される, so that 内容の概要を把握できる
 
 #### Acceptance Criteria
 1. When 推しリストセクションが表示される, the マイページUI shall 推しリストの概要を表示する
@@ -26,7 +34,7 @@
 6. The マイページUI shall 項目数の表示を必須としない
 
 ### Requirement 3: 空状態の表示
-**Objective:** As a 閲覧者, I want 項目がない場合でも状態が分かる, so that 期待と実態の差分を理解できる
+**Objective:** As a ログイン閲覧者, I want 項目がない場合でも状態が分かる, so that 期待と実態の差分を理解できる
 
 #### Acceptance Criteria
 1. If 推しリストが0件である, the マイページUI shall 空状態メッセージを表示する
@@ -44,9 +52,11 @@
 4. The マイページUI shall 本人閲覧時には公開/非公開の設定によって表示内容を変更しない
 5. While 非公開セクションが非公開表示である, the マイページUI shall 他のセクションの表示に影響を与えない
 6. When 他ユーザーが当該ユーザーのマイページを閲覧する, the マイページUI shall お気に入り推しリストセクションを表示しない
+7. The マイページUI shall 公開/非公開の判定において `profile_visibility` を唯一の真値として扱う
+8. The マイページUI shall ブラウザ保存の公開設定を参照しない
 
 ### Requirement 5: 推し作品セクションの項目遷移
-**Objective:** As a 閲覧者, I want 推し作品の詳細一覧へ遷移できる, so that 追加した作品を確認できる
+**Objective:** As a ログイン閲覧者, I want 推し作品の詳細一覧へ遷移できる, so that 追加した作品を確認できる
 
 #### Acceptance Criteria
 1. When 推し作品セクションが表示される, the マイページUI shall 推し作品ページへの導線を表示する
@@ -61,7 +71,7 @@
 3. When 他ユーザーが当該ユーザーのマイページを閲覧する, the マイページUI shall お気に入り推しリストの導線を表示しない
 
 ### Requirement 7: 推しリストセクションの項目遷移
-**Objective:** As a 閲覧者, I want 推しリストの各項目から専用ページへ遷移できる, so that 推しの詳細を閲覧できる
+**Objective:** As a ログイン閲覧者, I want 推しリストの各項目から専用ページへ遷移できる, so that 推しの詳細を閲覧できる
 
 #### Acceptance Criteria
 1. When 推しリストセクションの項目が表示される, the マイページUI shall 各項目から推しリストページへ遷移できる導線を表示する
