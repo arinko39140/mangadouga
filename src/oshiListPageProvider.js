@@ -30,16 +30,71 @@ const mapListRow = (row, name) => ({
   visibility: mapVisibility(row.can_display),
 })
 
-const mapMovieRow = (movie) => ({
+const mapMovieRow = (movie, isOshi = false) => ({
   id: movie.movie_id,
   title: movie.movie_title,
   thumbnailUrl: movie.thumbnail_url ?? null,
   publishedAt: movie.update ?? null,
   videoUrl: movie.url ?? null,
   seriesId: movie.series_id ?? null,
+  isOshi,
 })
 
 export const createOshiListPageProvider = (supabaseClient) => {
+  const fetchUserListId = async (userId) => {
+    const { data, error } = await supabaseClient
+      .from('list')
+      .select('list_id')
+      .eq('user_id', userId)
+      .order('list_id', { ascending: true })
+      .limit(1)
+
+    if (error) {
+      return { ok: false, error: normalizeError(error) }
+    }
+
+    return { ok: true, listId: data?.[0]?.list_id ?? null }
+  }
+
+  const toggleListMovie = async ({ listId, movieId }) => {
+    const { data, error } = await supabaseClient
+      .from('list_movie')
+      .select('list_id, movie_id')
+      .eq('list_id', listId)
+      .eq('movie_id', movieId)
+      .limit(1)
+
+    if (error) {
+      return { ok: false, error: normalizeError(error) }
+    }
+
+    const exists = (data ?? []).length > 0
+
+    if (exists) {
+      const { error: deleteError } = await supabaseClient
+        .from('list_movie')
+        .delete()
+        .eq('list_id', listId)
+        .eq('movie_id', movieId)
+
+      if (deleteError) {
+        return { ok: false, error: normalizeError(deleteError) }
+      }
+
+      return { ok: true, data: { isOshi: false } }
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from('list_movie')
+      .insert({ list_id: listId, movie_id: movieId })
+
+    if (insertError) {
+      return { ok: false, error: normalizeError(insertError) }
+    }
+
+    return { ok: true, data: { isOshi: true } }
+  }
+
   const fetchFavoriteState = async (targetListId, userId) => {
     const { data, error } = await supabaseClient
       .from('user_list')
@@ -131,9 +186,61 @@ export const createOshiListPageProvider = (supabaseClient) => {
       const items = (data ?? [])
         .map((row) => row.movie)
         .filter((movie) => movie?.movie_id && movie?.movie_title)
-        .map(mapMovieRow)
+      if (items.length === 0) {
+        return { ok: true, data: [] }
+      }
 
-      return { ok: true, data: items }
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: true, data: items.map((item) => mapMovieRow(item, false)) }
+      }
+
+      const listResult = await fetchUserListId(userResult.userId)
+      if (!listResult.ok) {
+        return { ok: true, data: items.map((item) => mapMovieRow(item, false)) }
+      }
+
+      const userListId = listResult.listId ?? null
+      if (!userListId) {
+        return { ok: true, data: items.map((item) => mapMovieRow(item, false)) }
+      }
+
+      const movieIds = items.map((item) => item.movie_id)
+      const { data: oshiRows, error: oshiError } = await supabaseClient
+        .from('list_movie')
+        .select('movie_id')
+        .eq('list_id', userListId)
+        .in('movie_id', movieIds)
+
+      if (oshiError) {
+        return { ok: true, data: items.map((item) => mapMovieRow(item, false)) }
+      }
+
+      const oshiSet = new Set((oshiRows ?? []).map((row) => row.movie_id))
+      const enrichedItems = items.map((item) => mapMovieRow(item, oshiSet.has(item.movie_id)))
+
+      return { ok: true, data: enrichedItems }
+    },
+
+    async toggleMovieOshi(movieId) {
+      if (typeof movieId !== 'string' || movieId.trim() === '') {
+        return { ok: false, error: 'invalid_input' }
+      }
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
+
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
+
+      const listResult = await fetchUserListId(userResult.userId)
+      if (!listResult.ok || !listResult.listId) {
+        return { ok: false, error: listResult.error ?? 'not_found' }
+      }
+
+      return toggleListMovie({ listId: listResult.listId, movieId })
     },
 
     async toggleFavorite(targetListId) {

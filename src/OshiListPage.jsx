@@ -7,6 +7,51 @@ import { supabase } from './supabaseClient.js'
 import './OshiListsPage.css'
 
 const defaultDataProvider = createOshiListPageProvider(supabase)
+const VIEW_MODES = [
+  { id: 'list', label: 'リスト' },
+  { id: 'grid', label: 'グリッド' },
+]
+
+const getYouTubeVideoId = (videoUrl) => {
+  if (!videoUrl) return null
+
+  let parsed
+  try {
+    parsed = new URL(videoUrl)
+  } catch {
+    return null
+  }
+
+  const hostname = parsed.hostname.replace(/^www\./, '')
+  const pathname = parsed.pathname
+
+  if (hostname === 'youtu.be') {
+    const id = pathname.split('/').filter(Boolean)[0]
+    return id || null
+  }
+
+  if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+    if (pathname === '/watch') {
+      return parsed.searchParams.get('v')
+    }
+
+    if (pathname.startsWith('/embed/')) {
+      return pathname.split('/').filter(Boolean)[1] ?? null
+    }
+
+    if (pathname.startsWith('/shorts/')) {
+      return pathname.split('/').filter(Boolean)[1] ?? null
+    }
+  }
+
+  return null
+}
+
+const resolveThumbnailUrl = (item) => {
+  if (item.thumbnailUrl) return item.thumbnailUrl
+  const videoId = getYouTubeVideoId(item.videoUrl)
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+}
 
 function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
   const { listId } = useParams()
@@ -17,6 +62,9 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
   const [items, setItems] = useState([])
   const [oshiError, setOshiError] = useState(null)
   const [oshiUpdating, setOshiUpdating] = useState(false)
+  const [oshiMovieError, setOshiMovieError] = useState(null)
+  const [oshiMovieUpdatingIds, setOshiMovieUpdatingIds] = useState([])
+  const [viewMode, setViewMode] = useState('grid')
   const [canManageVisibility, setCanManageVisibility] = useState(false)
   const [visibility, setVisibility] = useState(null)
   const [visibilityUpdating, setVisibilityUpdating] = useState(false)
@@ -139,6 +187,35 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
     }
   }
 
+  const handleOshiToggle = async (movieId) => {
+    if (!dataProvider || typeof dataProvider.toggleMovieOshi !== 'function') return
+    setOshiMovieError(null)
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      authGateInstance.redirectToLogin('oshi')
+      return
+    }
+
+    setOshiMovieUpdatingIds((prev) => (prev.includes(movieId) ? prev : [...prev, movieId]))
+    try {
+      const result = await dataProvider.toggleMovieOshi(movieId)
+      if (result.ok) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === movieId ? { ...item, isOshi: result.data.isOshi } : item
+          )
+        )
+      } else if (result.error === 'auth_required') {
+        authGateInstance.redirectToLogin('oshi')
+      } else {
+        setOshiMovieError('failed')
+      }
+    } finally {
+      setOshiMovieUpdatingIds((prev) => prev.filter((id) => id !== movieId))
+    }
+  }
+
   const handleVisibilityChange = async (nextVisibility) => {
     if (!dataProvider || typeof dataProvider.updateVisibility !== 'function') return
     setVisibilityError(null)
@@ -179,43 +256,52 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
       return <p>推し作品がありません。</p>
     }
     return (
-      <ul className="oshi-lists__items oshi-lists__items--grid" aria-label="推し作品一覧">
-        {items.map((item) => (
-          <li key={item.id} className="oshi-lists__item">
-            <article className="oshi-lists__card">
-              <div className="oshi-lists__body">
-                <h2 className="oshi-lists__title">{item.title}</h2>
-                <div className="oshi-lists__actions">
-                  {item.seriesId ? (
-                    <>
-                      <Link
-                        className="oshi-lists__link"
-                        to={`/series/${item.seriesId}/?selectedMovieId=${item.id}`}
-                      >
-                        再生する
-                      </Link>
-                      <Link
-                        className="oshi-lists__link"
-                        to={`/series/${item.seriesId}/`}
-                      >
+      <ul
+        className={`oshi-lists__items oshi-lists__items--${viewMode}`}
+        aria-label="推し作品一覧"
+      >
+        {items.map((item) => {
+          const thumbnailUrl = resolveThumbnailUrl(item)
+          const isUpdating = oshiMovieUpdatingIds.includes(item.id)
+          return (
+            <li key={item.id} className="oshi-lists__item">
+              <article className="oshi-lists__card">
+                <div className="oshi-lists__thumb">
+                  {thumbnailUrl ? (
+                    <img src={thumbnailUrl} alt={`${item.title}のサムネイル`} />
+                  ) : (
+                    <span className="oshi-lists__thumb-placeholder">サムネイル準備中</span>
+                  )}
+                </div>
+                <div className="oshi-lists__body">
+                  <div className="oshi-lists__title-row">
+                    <h2 className="oshi-lists__title">{item.title}</h2>
+                    <button
+                      type="button"
+                      className={
+                        item.isOshi
+                          ? 'oshi-lists__oshi-button is-registered'
+                          : 'oshi-lists__oshi-button'
+                      }
+                      aria-pressed={item.isOshi}
+                      disabled={isUpdating}
+                      onClick={() => handleOshiToggle(item.id)}
+                    >
+                      {item.isOshi ? '済' : '推'}
+                    </button>
+                  </div>
+                  <div className="oshi-lists__actions">
+                    {item.seriesId ? (
+                      <Link className="oshi-lists__link" to={`/series/${item.seriesId}/`}>
                         作品ページへ
                       </Link>
-                    </>
-                  ) : item.videoUrl ? (
-                    <a
-                      className="oshi-lists__link"
-                      href={item.videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      動画を開く
-                    </a>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </article>
-          </li>
-        ))}
+              </article>
+            </li>
+          )
+        })}
       </ul>
     )
   }
@@ -284,6 +370,29 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
           </p>
         ) : null}
       </header>
+      {oshiMovieError ? (
+        <p className="oshi-lists__status oshi-lists__status--error">
+          推し登録に失敗しました。
+        </p>
+      ) : null}
+      <div className="oshi-lists__controls" role="group" aria-label="表示形式">
+        <span className="oshi-lists__label">表示形式:</span>
+        <div className="oshi-lists__toggle-group">
+          {VIEW_MODES.map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              className={
+                viewMode === mode.id ? 'oshi-lists__toggle is-active' : 'oshi-lists__toggle'
+              }
+              aria-pressed={viewMode === mode.id}
+              onClick={() => setViewMode(mode.id)}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {renderContent()}
     </main>
   )
