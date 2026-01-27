@@ -1,0 +1,82 @@
+.user-oshi-favorites {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 99, 117, 0.12);
+  display: grid;
+  gap: 1rem;
+}
+
+.user-oshi-favorites__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.user-oshi-favorites__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c2032;
+}
+
+.user-oshi-favorites__link {
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3c2a49;
+  text-decoration: none;
+  background: #f6f2ff;
+  border: 1px solid rgba(60, 42, 73, 0.2);
+}
+
+.user-oshi-favorites__link:hover {
+  background: #ece2ff;
+}
+
+.user-oshi-favorites__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-oshi-favorites__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-oshi-favorites__card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(60, 42, 73, 0.12);
+  background: #fff;
+}
+
+.user-oshi-favorites__name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2f2035;
+}
+
+.user-oshi-favorites__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6a596b;
+}
+
+.user-oshi-favorites__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6a596b;
+}
+
+.user-oshi-favorites__status--error {
+  color: #8a3746;
+}
