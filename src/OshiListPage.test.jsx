@@ -100,6 +100,42 @@ describe('OshiListPage', () => {
     expect(screen.getByText('推し作品')).toBeInTheDocument()
   })
 
+  it('表示形式の切り替えでリスト/グリッドを切り替える', async () => {
+    const dataProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          name: '推しリストA',
+          favoriteCount: 1,
+          isFavorited: false,
+          visibility: 'public',
+        },
+      }),
+      fetchListItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-1',
+            title: '推し作品',
+          },
+        ],
+      }),
+      fetchVisibility: vi.fn().mockResolvedValue({ ok: false, error: 'forbidden' }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListPage(dataProvider, authGate)
+
+    const list = await screen.findByRole('list', { name: '推し作品一覧' })
+    expect(list.className).toContain('oshi-lists__items--grid')
+
+    fireEvent.click(screen.getByRole('button', { name: 'リスト' }))
+    expect(list.className).toContain('oshi-lists__items--list')
+  })
+
   it('お気に入りトグルで状態と登録数を更新する', async () => {
     const dataProvider = {
       fetchListSummary: vi.fn().mockResolvedValue({

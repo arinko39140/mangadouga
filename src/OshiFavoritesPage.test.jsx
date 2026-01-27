@@ -94,6 +94,31 @@ describe('OshiFavoritesPage', () => {
     expect(screen.getByRole('button', { name: '解除' })).toBeInTheDocument()
   })
 
+  it('一覧はグリッド形式で表示される', async () => {
+    const dataProvider = {
+      fetchFavorites: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            listId: '1',
+            name: '推しリスト',
+            favoriteCount: 3,
+            isFavorited: true,
+          },
+        ],
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiFavoritesPage(dataProvider, authGate)
+
+    const list = await screen.findByRole('list', { name: 'お気に入り推しリスト' })
+    expect(list.className).toContain('oshi-lists__items--grid')
+  })
+
   it('お気に入り解除で一覧から削除する', async () => {
     const dataProvider = {
       fetchFavorites: vi
