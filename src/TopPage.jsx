@@ -63,13 +63,13 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
 
     setIsLoading(true)
     setError(null)
+    const thresholdMs = buildWeekThresholdMs()
 
     dataProvider
       .fetchWeekdayLists()
       .then((result) => {
         if (!isMounted) return
         if (result.ok) {
-          const thresholdMs = buildWeekThresholdMs()
           const filteredLists = result.data.map((list) => ({
             ...list,
             items: list.items.filter((item) => isWithinWeekRange(item, thresholdMs)),

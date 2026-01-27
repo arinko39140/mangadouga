@@ -76,6 +76,9 @@ describe('WeekdayDataProvider', () => {
   })
 
   it('曜日キーに該当しないデータは一覧に含めない', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
     const rows = [
       {
         movie_id: 'm1',
@@ -106,6 +109,8 @@ describe('WeekdayDataProvider', () => {
     const monday = result.data.find((list) => list.weekday === 'mon')
     expect(monday.items).toHaveLength(1)
     expect(monday.items[0].title).toBe('月曜のレター')
+
+    vi.useRealTimers()
   })
 
   it('過去1週間より前のデータは一覧に含めない', async () => {
