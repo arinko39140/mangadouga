@@ -53,9 +53,9 @@ function UserOshiListPanel({
 
     return (
       <div className="user-oshi-list__summary">
-        <p className="user-oshi-list__count">
-          お気に入り数: {summary?.favoriteCount ?? 0}
-        </p>
+        {summary?.favoriteCount != null ? (
+          <p className="user-oshi-list__count">お気に入り数: {summary.favoriteCount}</p>
+        ) : null}
         <button
           type="button"
           className={

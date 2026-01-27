@@ -71,4 +71,16 @@ describe('UserOshiListPanel', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-pressed', 'true')
   })
+
+  it('お気に入り数が不明な場合は件数を表示しない', () => {
+    render(
+      <MemoryRouter>
+        <UserOshiListPanel
+          summary={{ listId: '1', status: 'public', favoriteCount: null, isFavorited: false }}
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByText(/お気に入り数/)).not.toBeInTheDocument()
+  })
 })
