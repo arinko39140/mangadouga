@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom'
 import './UserOshiSeriesPanel.css'
 
-function UserOshiSeriesPanel({ items = [], isLoading = false, error = null, userId = null }) {
+function UserOshiSeriesPanel({
+  items = [],
+  isLoading = false,
+  error = null,
+  userId = null,
+  visibility = 'public',
+}) {
+  const isPrivate = visibility === 'private'
   const renderContent = () => {
     if (isLoading) {
       return <p className="user-oshi-series__status">推し作品を読み込み中...</p>
@@ -12,6 +19,9 @@ function UserOshiSeriesPanel({ items = [], isLoading = false, error = null, user
           推し作品の取得に失敗しました。
         </p>
       )
+    }
+    if (isPrivate) {
+      return <p className="user-oshi-series__status">この推し作品は非公開です。</p>
     }
     if (items.length === 0) {
       return <p className="user-oshi-series__status">推し作品がありません。</p>
@@ -66,7 +76,7 @@ function UserOshiSeriesPanel({ items = [], isLoading = false, error = null, user
     <section className="user-oshi-series" aria-live="polite">
       <header className="user-oshi-series__header">
         <h2 className="user-oshi-series__title-heading">推し作品一覧</h2>
-        {userId ? (
+        {userId && !isPrivate ? (
           <Link className="user-oshi-series__link" to={`/users/${userId}/oshi-series/`}>
             もっと見る
           </Link>

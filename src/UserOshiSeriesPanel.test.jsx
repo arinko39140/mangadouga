@@ -34,6 +34,22 @@ describe('UserOshiSeriesPanel', () => {
     expect(screen.getByText('推し作品がありません。')).toBeInTheDocument()
   })
 
+  it('非公開時は内容を表示せず非公開メッセージを表示する', () => {
+    render(
+      <MemoryRouter>
+        <UserOshiSeriesPanel
+          visibility="private"
+          userId="user-1"
+          items={[{ seriesId: 's1', title: '星の物語', favoriteCount: 10 }]}
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('この推し作品は非公開です。')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: '推し作品一覧' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'もっと見る' })).not.toBeInTheDocument()
+  })
+
   it('推し作品の一覧を表示する', () => {
     render(
       <MemoryRouter>
