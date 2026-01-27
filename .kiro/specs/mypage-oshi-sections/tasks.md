@@ -7,7 +7,7 @@
   - 新規ユーザー作成時に可視性レコードが自動作成されるようにする
   - _Requirements: 4.7, 4.8_
 
-- [ ] 1.2 ProfileVisibilityProviderで可視性取得とフェイルセーフを実装する
+- [x] 1.2 ProfileVisibilityProviderで可視性取得とフェイルセーフを実装する
   - 可視性取得はprofile_visibilityのみを参照し、他のデータソースを使わない
   - 可視性未設定や取得失敗時は安全側としてprivate扱いで返す
   - 取得結果をセクション単位のpublic/private判定に使える形で提供する
