@@ -100,4 +100,44 @@ export const createUserPageProvider = (supabaseClient) => ({
       },
     }
   },
+
+  async updateUserProfile(input) {
+    const payload = typeof input === 'object' && input !== null ? input : null
+    const userId = payload?.userId != null ? String(payload.userId) : ''
+    if (!userId.trim()) {
+      return { ok: false, error: 'invalid_input' }
+    }
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const normalizeValue = (value, { allowEmpty = false } = {}) => {
+      if (typeof value !== 'string') return allowEmpty ? '' : null
+      const trimmed = value.trim()
+      if (!trimmed && !allowEmpty) return null
+      return allowEmpty ? trimmed : trimmed
+    }
+
+    const updatePayload = {
+      name: normalizeValue(payload?.name, { allowEmpty: true }) ?? '',
+      icon_url: normalizeValue(payload?.iconUrl),
+      x_url: normalizeValue(payload?.xUrl),
+      x_label: normalizeValue(payload?.xLabel),
+      youtube_url: normalizeValue(payload?.youtubeUrl),
+      youtube_label: normalizeValue(payload?.youtubeLabel),
+      other_url: normalizeValue(payload?.otherUrl),
+      other_label: normalizeValue(payload?.otherLabel),
+    }
+
+    const { error } = await supabaseClient
+      .from('users')
+      .update(updatePayload)
+      .eq('user_id', userId.trim())
+
+    if (error) {
+      return { ok: false, error: normalizeError(error) }
+    }
+
+    return { ok: true, data: null }
+  },
 })

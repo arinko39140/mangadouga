@@ -1,3 +1,5 @@
+import { resolveCurrentUserId } from './supabaseSession.js'
+
 const isNetworkError = (error) => {
   if (!error) return false
   const message = String(error.message ?? '')
@@ -8,6 +10,8 @@ const normalizeError = (error) => {
   if (error?.code === '23505') return 'conflict'
   return isNetworkError(error) ? 'network' : 'unknown'
 }
+
+const shouldIgnoreConflict = (error) => error?.code === '23505'
 
 const sortEpisodes = (episodes, sortOrder) => {
   const sorted = [...episodes]
@@ -201,13 +205,48 @@ export const createWorkPageDataProvider = (supabaseClient) => {
         return { ok: false, error: 'not_configured' }
       }
 
-      return toggleRecord({
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
+
+      const userId = userResult.userId
+
+      const toggleResult = await toggleRecord({
         client: supabaseClient,
         table: 'series_favorite',
         idField: 'series_id',
         idValue: seriesId,
         resultKey: 'isFavorited',
       })
+
+      if (!toggleResult.ok) {
+        return toggleResult
+      }
+
+      if (toggleResult.data.isFavorited) {
+        const { error: insertError } = await supabaseClient
+          .from('user_series')
+          .insert({ user_id: userId, series_id: seriesId })
+
+        if (insertError && !shouldIgnoreConflict(insertError)) {
+          return { ok: false, error: normalizeError(insertError) }
+        }
+
+        return toggleResult
+      }
+
+      const { error: deleteError } = await supabaseClient
+        .from('user_series')
+        .delete()
+        .eq('user_id', userId)
+        .eq('series_id', seriesId)
+
+      if (deleteError) {
+        return { ok: false, error: normalizeError(deleteError) }
+      }
+
+      return toggleResult
     },
 
     async toggleMovieOshi(movieId) {

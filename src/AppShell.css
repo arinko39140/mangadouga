@@ -25,6 +25,31 @@
   justify-content: flex-end;
 }
 
+.app-shell__auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.app-shell__auth-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(44, 32, 50, 0.15);
+  background: #f5f1f7;
+}
+
+.app-shell__auth-avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.8);
+}
+
 .app-shell__auth-user {
   font-weight: 600;
   color: rgba(44, 32, 50, 0.75);

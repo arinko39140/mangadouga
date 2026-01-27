@@ -75,7 +75,7 @@ describe('UserPage', () => {
     renderUserPage({
       profileProvider: { fetchUserProfile: vi.fn().mockReturnValue(profileDeferred.promise) },
       listProvider: { fetchListSummary: vi.fn().mockReturnValue(listDeferred.promise) },
-      seriesProvider: { fetchSeries: vi.fn().mockReturnValue(seriesDeferred.promise) },
+      seriesProvider: { fetchSeriesSummary: vi.fn().mockReturnValue(seriesDeferred.promise) },
       favoritesProvider: {
         fetchFavoritesSummary: vi.fn().mockReturnValue(Promise.resolve({ ok: true, data: [] })),
       },
@@ -96,7 +96,7 @@ describe('UserPage', () => {
   it('未認証ならログインへ誘導し取得は開始しない', async () => {
     const profileProvider = { fetchUserProfile: vi.fn() }
     const listProvider = { fetchListSummary: vi.fn() }
-    const seriesProvider = { fetchSeries: vi.fn() }
+    const seriesProvider = { fetchSeriesSummary: vi.fn() }
     const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
@@ -110,7 +110,7 @@ describe('UserPage', () => {
     })
     expect(profileProvider.fetchUserProfile).not.toHaveBeenCalled()
     expect(listProvider.fetchListSummary).not.toHaveBeenCalled()
-    expect(seriesProvider.fetchSeries).not.toHaveBeenCalled()
+    expect(seriesProvider.fetchSeriesSummary).not.toHaveBeenCalled()
     expect(favoritesProvider.fetchFavoritesSummary).not.toHaveBeenCalled()
   })
 
@@ -119,7 +119,7 @@ describe('UserPage', () => {
       fetchUserProfile: vi.fn().mockResolvedValue({ ok: false, error: 'not_found' }),
     }
     const listProvider = { fetchListSummary: vi.fn() }
-    const seriesProvider = { fetchSeries: vi.fn() }
+    const seriesProvider = { fetchSeriesSummary: vi.fn() }
     const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -132,7 +132,7 @@ describe('UserPage', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('ユーザーが見つかりません。')
     })
     expect(listProvider.fetchListSummary).not.toHaveBeenCalled()
-    expect(seriesProvider.fetchSeries).not.toHaveBeenCalled()
+    expect(seriesProvider.fetchSeriesSummary).not.toHaveBeenCalled()
     expect(favoritesProvider.fetchFavoritesSummary).not.toHaveBeenCalled()
   })
 
@@ -158,9 +158,11 @@ describe('UserPage', () => {
       toggleFavorite: vi.fn(),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({
+      fetchSeriesSummary: vi.fn().mockResolvedValue({
         ok: true,
-        data: [{ seriesId: 's1', title: '星の物語', favoriteCount: 5, updatedAt: null }],
+        data: {
+          items: [{ seriesId: 's1', title: '星の物語', favoriteCount: 5, updatedAt: null }],
+        },
       }),
     }
     const favoritesProvider = {
@@ -191,7 +193,11 @@ describe('UserPage', () => {
       targetUserId: 'user-1',
       viewerUserId: 'user-1',
     })
-    expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
+    expect(seriesProvider.fetchSeriesSummary).toHaveBeenCalledWith({
+      targetUserId: 'user-1',
+      viewerUserId: 'user-1',
+      limit: 3,
+    })
     expect(favoritesProvider.fetchFavoritesSummary).toHaveBeenCalledWith({
       viewerUserId: 'user-1',
       limit: 3,
@@ -213,7 +219,7 @@ describe('UserPage', () => {
       }),
     }
     const listProvider = { fetchListSummary: vi.fn().mockReturnValue(listDeferred.promise) }
-    const seriesProvider = { fetchSeries: vi.fn().mockReturnValue(seriesDeferred.promise) }
+    const seriesProvider = { fetchSeriesSummary: vi.fn().mockReturnValue(seriesDeferred.promise) }
     const favoritesProvider = {
       fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
@@ -231,7 +237,11 @@ describe('UserPage', () => {
       targetUserId: 'user-1',
       viewerUserId: 'user-1',
     })
-    expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
+    expect(seriesProvider.fetchSeriesSummary).toHaveBeenCalledWith({
+      targetUserId: 'user-1',
+      viewerUserId: 'user-1',
+      limit: 3,
+    })
     expect(screen.getByRole('link', { name: 'Xリンク' })).toHaveAttribute(
       'href',
       'https://x.com/rin'
@@ -243,7 +253,7 @@ describe('UserPage', () => {
     })
     seriesDeferred.resolve({
       ok: true,
-      data: [{ seriesId: 's-1', title: '銀河の旅', favoriteCount: 3, updatedAt: null }],
+      data: { items: [{ seriesId: 's-1', title: '銀河の旅', favoriteCount: 3, updatedAt: null }] },
     })
 
     await waitFor(() => {
@@ -264,7 +274,9 @@ describe('UserPage', () => {
         data: { listId: 'list-2', status: 'public', favoriteCount: 0, isFavorited: false },
       }),
     }
-    const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const seriesProvider = {
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
+    }
     const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -305,7 +317,7 @@ describe('UserPage', () => {
       toggleFavorite: vi.fn(),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
     }
     const favoritesProvider = {
       fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
@@ -346,7 +358,9 @@ describe('UserPage', () => {
         data: { listId: null, status: 'none', favoriteCount: null, isFavorited: false },
       }),
     }
-    const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const seriesProvider = {
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
+    }
     const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
@@ -381,7 +395,7 @@ describe('UserPage', () => {
         }),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
     }
     const favoritesProvider = {
       fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
@@ -404,7 +418,7 @@ describe('UserPage', () => {
     })
     expect(profileProvider.fetchUserProfile).toHaveBeenCalledTimes(2)
     expect(listProvider.fetchListSummary).toHaveBeenCalledTimes(2)
-    expect(seriesProvider.fetchSeries).toHaveBeenCalledTimes(2)
+    expect(seriesProvider.fetchSeriesSummary).toHaveBeenCalledTimes(2)
     expect(favoritesProvider.fetchFavoritesSummary).toHaveBeenCalledTimes(2)
   })
 })

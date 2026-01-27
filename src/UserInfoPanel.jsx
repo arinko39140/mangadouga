@@ -32,7 +32,7 @@ const isSupportedImageUrl = (url) => {
   return SUPPORTED_EXTENSIONS.includes(extension)
 }
 
-function UserInfoPanel({ profile, isLoading = false }) {
+function UserInfoPanel({ profile, isLoading = false, actions = null }) {
   const [hasImageError, setHasImageError] = useState(false)
   const name = profile?.name ?? ''
   const iconUrl = profile?.iconUrl ?? null
@@ -84,6 +84,7 @@ function UserInfoPanel({ profile, isLoading = false }) {
     <section className="user-info" aria-live="polite">
       <header className="user-info__header">
         <h2 className="user-info__title">ユーザー情報</h2>
+        {actions ? <div className="user-info__actions">{actions}</div> : null}
       </header>
       <div className="user-info__body">
         <div className="user-info__avatar">{renderAvatar()}</div>

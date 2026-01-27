@@ -51,7 +51,7 @@ describe('ユーザーページ導線のE2E/UI', () => {
     const redirectSpy = vi.fn()
     const profileProvider = { fetchUserProfile: vi.fn() }
     const listProvider = { fetchListSummary: vi.fn() }
-    const seriesProvider = { fetchSeries: vi.fn() }
+    const seriesProvider = { fetchSeriesSummary: vi.fn() }
 
     render(
       <MemoryRouter initialEntries={['/users/user-1/']}>
@@ -78,7 +78,7 @@ describe('ユーザーページ導線のE2E/UI', () => {
     expect(redirectSpy).toHaveBeenCalled()
     expect(profileProvider.fetchUserProfile).not.toHaveBeenCalled()
     expect(listProvider.fetchListSummary).not.toHaveBeenCalled()
-    expect(seriesProvider.fetchSeries).not.toHaveBeenCalled()
+    expect(seriesProvider.fetchSeriesSummary).not.toHaveBeenCalled()
   })
 
   it('みんなの推しリストからユーザーページに遷移できる', async () => {
@@ -109,7 +109,9 @@ describe('ユーザーページ導線のE2E/UI', () => {
         data: { listId: null, status: 'none', favoriteCount: null, isFavorited: false },
       }),
     }
-    const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const seriesProvider = {
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
+    }
 
     render(
       <MemoryRouter initialEntries={['/oshi-lists/catalog/']}>
@@ -206,9 +208,11 @@ describe('ユーザーページ導線のE2E/UI', () => {
       }),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({
+      fetchSeriesSummary: vi.fn().mockResolvedValue({
         ok: true,
-        data: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        data: {
+          items: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        },
       }),
     }
     const favoritesProvider = {
@@ -268,9 +272,11 @@ describe('ユーザーページ導線のE2E/UI', () => {
       }),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({
+      fetchSeriesSummary: vi.fn().mockResolvedValue({
         ok: true,
-        data: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        data: {
+          items: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        },
       }),
     }
     const favoritesProvider = {
@@ -351,9 +357,11 @@ describe('ユーザーページ導線のE2E/UI', () => {
       }),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({
+      fetchSeriesSummary: vi.fn().mockResolvedValue({
         ok: true,
-        data: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        data: {
+          items: [{ seriesId: 's1', title: '星の旅', favoriteCount: 2, updatedAt: null }],
+        },
       }),
     }
     const favoritesProvider = {

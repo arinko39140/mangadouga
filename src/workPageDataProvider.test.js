@@ -65,7 +65,10 @@ const buildToggleSupabaseMock = ({
   existing,
   selectError = null,
   mutateError = null,
-}) => {
+  userSeriesError = null,
+  sessionUserId = 'viewer-1',
+  sessionError = null,
+} = {}) => {
   const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
   const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
@@ -75,13 +78,32 @@ const buildToggleSupabaseMock = ({
   })
   const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
+  const userSeriesInsertMock = vi
+    .fn()
+    .mockResolvedValue({ data: null, error: userSeriesError })
+  const userSeriesDeleteEqMock = vi.fn()
+  userSeriesDeleteEqMock
+    .mockReturnValueOnce({ eq: userSeriesDeleteEqMock })
+    .mockResolvedValueOnce({ data: null, error: userSeriesError })
+  const userSeriesDeleteMock = vi.fn().mockReturnValue({ eq: userSeriesDeleteEqMock })
+
   const fromMock = vi.fn().mockImplementation((name) => {
-    if (name !== table) return {}
-    return { select: selectMock, delete: deleteMock, insert: insertMock }
+    if (name === table) {
+      return { select: selectMock, delete: deleteMock, insert: insertMock }
+    }
+    if (name === 'user_series') {
+      return { insert: userSeriesInsertMock, delete: userSeriesDeleteMock }
+    }
+    return {}
+  })
+
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
   })
 
   return {
-    client: { from: fromMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
     calls: {
       fromMock,
       selectMock,
@@ -90,6 +112,10 @@ const buildToggleSupabaseMock = ({
       deleteMock,
       deleteEqMock,
       insertMock,
+      userSeriesInsertMock,
+      userSeriesDeleteMock,
+      userSeriesDeleteEqMock,
+      getSessionMock,
     },
   }
 }
@@ -414,6 +440,10 @@ describe('WorkPageDataProvider', () => {
     expect(calls.selectMock).toHaveBeenCalled()
     expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
     expect(calls.insertMock).toHaveBeenCalledWith({ series_id: 'series-1' })
+    expect(calls.userSeriesInsertMock).toHaveBeenCalledWith({
+      user_id: 'viewer-1',
+      series_id: 'series-1',
+    })
     expect(result).toEqual({ ok: true, data: { isFavorited: true } })
   })
 
@@ -428,6 +458,9 @@ describe('WorkPageDataProvider', () => {
 
     expect(calls.deleteMock).toHaveBeenCalled()
     expect(calls.deleteEqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.userSeriesDeleteMock).toHaveBeenCalled()
+    expect(calls.userSeriesDeleteEqMock).toHaveBeenCalledWith('user_id', 'viewer-1')
+    expect(calls.userSeriesDeleteEqMock).toHaveBeenCalledWith('series_id', 'series-1')
     expect(result).toEqual({ ok: true, data: { isFavorited: false } })
   })
 

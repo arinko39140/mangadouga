@@ -27,6 +27,34 @@ const buildPrivateSummary = (status) => ({
   isFavorited: false,
 })
 
+const mapListItem = (row) => ({
+  movieId: row.movie_id,
+  title: row.movie_title,
+})
+
+const fetchRecentListItems = async (supabaseClient, listId, limit) => {
+  const resolvedLimit = Number.isFinite(limit) ? Math.max(0, limit) : 0
+  if (!listId || resolvedLimit <= 0) return { ok: true, data: [] }
+
+  const { data, error } = await supabaseClient
+    .from('list_movie')
+    .select('movie:movie_id (movie_id, movie_title), created_at')
+    .eq('list_id', listId)
+    .order('created_at', { ascending: false })
+    .limit(resolvedLimit)
+
+  if (error) {
+    return { ok: false, error: normalizeError(error) }
+  }
+
+  const items = (data ?? [])
+    .map((row) => row?.movie ?? null)
+    .filter((movie) => movie?.movie_id && movie?.movie_title)
+    .map(mapListItem)
+
+  return { ok: true, data: items }
+}
+
 export const createUserOshiListProvider = (supabaseClient) => ({
   async fetchListSummary(input) {
     const targetUserId =
@@ -82,6 +110,11 @@ export const createUserOshiListProvider = (supabaseClient) => ({
       return { ok: true, data: buildPrivateSummary('none') }
     }
 
+    const itemsResult = await fetchRecentListItems(supabaseClient, listId, 3)
+    if (!itemsResult.ok) {
+      return { ok: false, error: itemsResult.error }
+    }
+
     if (!viewerUserId) {
       return {
         ok: true,
@@ -90,6 +123,7 @@ export const createUserOshiListProvider = (supabaseClient) => ({
           status: 'public',
           favoriteCount: listRow.favorite_count ?? 0,
           isFavorited: false,
+          items: itemsResult.data,
         },
       }
     }
@@ -112,6 +146,7 @@ export const createUserOshiListProvider = (supabaseClient) => ({
         status: 'public',
         favoriteCount: listRow.favorite_count ?? 0,
         isFavorited: (favoriteData ?? []).length > 0,
+        items: itemsResult.data,
       },
     }
   },

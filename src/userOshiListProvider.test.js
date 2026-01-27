@@ -8,6 +8,8 @@ const buildUserOshiListSupabaseMock = ({
   userError = null,
   favoriteRows = [],
   favoriteError = null,
+  listMovieRows = [],
+  listMovieError = null,
   sessionUserId = 'viewer-1',
   sessionError = null,
 } = {}) => {
@@ -27,6 +29,13 @@ const buildUserOshiListSupabaseMock = ({
   const usersEqMock = vi.fn().mockReturnValue({ limit: usersLimitMock })
   const usersSelectMock = vi.fn().mockReturnValue({ eq: usersEqMock })
 
+  const listMovieLimitMock = vi
+    .fn()
+    .mockResolvedValue({ data: listMovieRows, error: listMovieError })
+  const listMovieOrderMock = vi.fn().mockReturnValue({ limit: listMovieLimitMock })
+  const listMovieEqMock = vi.fn().mockReturnValue({ order: listMovieOrderMock })
+  const listMovieSelectMock = vi.fn().mockReturnValue({ eq: listMovieEqMock })
+
   const fromMock = vi.fn((table) => {
     if (table === 'list') {
       return { select: listSelectMock }
@@ -36,6 +45,9 @@ const buildUserOshiListSupabaseMock = ({
     }
     if (table === 'users') {
       return { select: usersSelectMock }
+    }
+    if (table === 'list_movie') {
+      return { select: listMovieSelectMock }
     }
     return { select: vi.fn() }
   })
@@ -59,6 +71,10 @@ const buildUserOshiListSupabaseMock = ({
       usersSelectMock,
       usersEqMock,
       usersLimitMock,
+      listMovieSelectMock,
+      listMovieEqMock,
+      listMovieOrderMock,
+      listMovieLimitMock,
       getSessionMock,
     },
   }
@@ -155,6 +171,7 @@ describe('UserOshiListProvider', () => {
         status: 'public',
         favoriteCount: 4,
         isFavorited: true,
+        items: [],
       },
     })
   })
@@ -178,6 +195,7 @@ describe('UserOshiListProvider', () => {
         status: 'public',
         favoriteCount: 0,
         isFavorited: false,
+        items: [],
       },
     })
   })
@@ -201,6 +219,7 @@ describe('UserOshiListProvider', () => {
         status: 'public',
         favoriteCount: 2,
         isFavorited: false,
+        items: [],
       },
     })
   })
@@ -224,6 +243,37 @@ describe('UserOshiListProvider', () => {
         status: 'private',
         favoriteCount: null,
         isFavorited: false,
+      },
+    })
+  })
+
+  it('最近追加した推し作品をsummaryに含める', async () => {
+    const { client } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 12, favorite_count: 4, can_display: true }],
+      favoriteRows: [],
+      listMovieRows: [
+        { movie: { movie_id: 'm1', movie_title: '推し作品1' }, created_at: '2026-01-01' },
+        { movie: { movie_id: 'm2', movie_title: '推し作品2' }, created_at: '2026-01-02' },
+      ],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-1',
+      viewerUserId: 'viewer-1',
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: '12',
+        status: 'public',
+        favoriteCount: 4,
+        isFavorited: false,
+        items: [
+          { movieId: 'm1', title: '推し作品1' },
+          { movieId: 'm2', title: '推し作品2' },
+        ],
       },
     })
   })

@@ -25,6 +25,7 @@ function UserOshiListPanel({
   const listId = summary?.listId ?? null
   const canViewList = isPublic && Boolean(listId)
   const favoriteLabel = summary?.isFavorited ? '登録済み' : 'お気に入り登録'
+  const items = Array.isArray(summary?.items) ? summary.items : []
 
   const renderContent = () => {
     if (isLoading) {
@@ -53,6 +54,24 @@ function UserOshiListPanel({
 
     return (
       <div className="user-oshi-list__summary">
+        {items.length > 0 ? (
+          <div className="user-oshi-list__items">
+            <p className="user-oshi-list__items-title">最近追加した推し作品</p>
+            <ul className="user-oshi-list__items-list" aria-label="推しリストの最近追加した作品">
+              {items.map((item) => (
+                <li key={item.movieId} className="user-oshi-list__items-item">
+                  {canViewList ? (
+                    <Link className="user-oshi-list__item-link" to={`/oshi-lists/${listId}/`}>
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className="user-oshi-list__item-name">{item.title}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {summary?.favoriteCount != null ? (
           <p className="user-oshi-list__count">お気に入り数: {summary.favoriteCount}</p>
         ) : null}

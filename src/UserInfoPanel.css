@@ -13,6 +13,12 @@
   justify-content: space-between;
 }
 
+.user-info__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .user-info__title {
   margin: 0;
   font-size: 1.1rem;
