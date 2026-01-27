@@ -161,7 +161,7 @@ describe('UserOshiSeriesPage', () => {
     expect(seriesProvider.fetchSeriesList).toHaveBeenCalledWith({
       targetUserId: 'user-1',
       viewerUserId: 'viewer-1',
-      sort: null,
+      sort: { key: 'favorite_count', order: 'desc' },
     })
   })
 
@@ -291,7 +291,7 @@ describe('UserOshiSeriesPage', () => {
       expect(seriesProvider.fetchSeriesList).toHaveBeenCalledWith({
         targetUserId: 'user-1',
         viewerUserId: 'user-1',
-        sort: null,
+        sort: { key: 'favorite_count', order: 'desc' },
       })
     })
     expect(visibilityProvider.fetchVisibility).not.toHaveBeenCalled()
@@ -381,5 +381,144 @@ describe('UserOshiSeriesPage', () => {
       'href',
       '/series/s1/'
     )
+  })
+
+  it('並べ替え操作でお気に入り数順の取得を切り替える', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '美咲', iconUrl: null, links: [] },
+      }),
+    }
+    const seriesProvider = {
+      fetchSeriesList: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            seriesId: 's1',
+            title: '風の詩',
+            favoriteCount: 3,
+            updatedAt: null,
+            thumbnailUrl: null,
+          },
+        ],
+      }),
+    }
+    const visibilityProvider = {
+      fetchVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { oshiList: 'public', oshiSeries: 'public' },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserOshiSeriesPage({ profileProvider, seriesProvider, visibilityProvider, authGate })
+
+    await waitFor(() => {
+      expect(seriesProvider.fetchSeriesList).toHaveBeenCalledWith({
+        targetUserId: 'user-1',
+        viewerUserId: 'viewer-1',
+        sort: { key: 'favorite_count', order: 'desc' },
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '少ない順' }))
+
+    await waitFor(() => {
+      expect(seriesProvider.fetchSeriesList).toHaveBeenCalledWith({
+        targetUserId: 'user-1',
+        viewerUserId: 'viewer-1',
+        sort: { key: 'favorite_count', order: 'asc' },
+      })
+    })
+  })
+
+  it('本人閲覧時は解除操作で一覧から削除する', async () => {
+    resolveCurrentUserId.mockResolvedValue({ ok: true, userId: 'user-1' })
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '美咲', iconUrl: null, links: [] },
+      }),
+    }
+    const seriesProvider = {
+      fetchSeriesList: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            seriesId: 's1',
+            title: '星の道',
+            favoriteCount: 1,
+            updatedAt: null,
+            thumbnailUrl: null,
+          },
+        ],
+      }),
+      unregisterSeries: vi.fn().mockResolvedValue({ ok: true, data: null }),
+    }
+    const visibilityProvider = {
+      fetchVisibility: vi.fn(),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserOshiSeriesPage({ profileProvider, seriesProvider, visibilityProvider, authGate })
+
+    const button = await screen.findByRole('button', { name: '解除' })
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(seriesProvider.unregisterSeries).toHaveBeenCalledWith({ seriesId: 's1' })
+      expect(screen.getByText('推し作品がありません。')).toBeInTheDocument()
+    })
+  })
+
+  it('他ユーザー閲覧時は登録操作ができる', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '美咲', iconUrl: null, links: [] },
+      }),
+    }
+    const seriesProvider = {
+      fetchSeriesList: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            seriesId: 's1',
+            title: '海の記憶',
+            favoriteCount: 2,
+            updatedAt: null,
+            thumbnailUrl: null,
+          },
+        ],
+      }),
+      registerSeries: vi.fn().mockResolvedValue({ ok: true, data: null }),
+    }
+    const visibilityProvider = {
+      fetchVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { oshiList: 'public', oshiSeries: 'public' },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserOshiSeriesPage({ profileProvider, seriesProvider, visibilityProvider, authGate })
+
+    const button = await screen.findByRole('button', { name: '登録' })
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(seriesProvider.registerSeries).toHaveBeenCalledWith({ seriesId: 's1' })
+      expect(screen.getByRole('button', { name: '登録済み' })).toBeDisabled()
+    })
   })
 })

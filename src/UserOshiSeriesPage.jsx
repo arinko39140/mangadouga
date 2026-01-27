@@ -19,6 +19,10 @@ const viewModes = [
   { id: 'grid', label: 'グリッド' },
   { id: 'list', label: 'リスト' },
 ]
+const resolveSort = (sortOrder) => ({
+  key: 'favorite_count',
+  order: sortOrder === 'favorite_asc' ? 'asc' : 'desc',
+})
 
 function UserOshiSeriesPage({
   profileProvider = defaultProfileProvider,
@@ -36,8 +40,12 @@ function UserOshiSeriesPage({
   const [seriesLoading, setSeriesLoading] = useState(true)
   const [seriesVisibility, setSeriesVisibility] = useState('private')
   const [viewMode, setViewMode] = useState('grid')
+  const [sortOrder, setSortOrder] = useState('favorite_desc')
+  const [seriesActionError, setSeriesActionError] = useState(null)
+  const [seriesUpdatingIds, setSeriesUpdatingIds] = useState([])
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [reloadToken, setReloadToken] = useState(0)
+  const [viewerUserId, setViewerUserId] = useState(null)
 
   const authGateInstance = useMemo(() => {
     if (authGate) return authGate
@@ -55,6 +63,9 @@ function UserOshiSeriesPage({
       setSeriesError(null)
       setSeriesLoading(true)
       setSeriesVisibility('private')
+      setSeriesActionError(null)
+      setSeriesUpdatingIds([])
+      setViewerUserId(null)
     }
 
     const fetchAll = async () => {
@@ -80,6 +91,7 @@ function UserOshiSeriesPage({
       const viewerResult = await resolveCurrentUserId(supabase)
       if (!isMounted) return
       const viewerUserId = viewerResult.ok ? viewerResult.userId : null
+      setViewerUserId(viewerUserId)
       const isOwner = typeof viewerUserId === 'string' && viewerUserId === userId
 
       const profileResult = await profileProvider.fetchUserProfile(userId)
@@ -131,14 +143,22 @@ function UserOshiSeriesPage({
           ? await seriesProvider.fetchSeriesList({
               targetUserId: userId,
               viewerUserId,
-              sort: null,
+              sort: resolveSort(sortOrder),
             })
           : { ok: false, error: 'not_configured' }
 
       if (!isMounted) return
 
       if (seriesResult.ok) {
-        setSeriesItems(seriesResult.data)
+        const nextItems = Array.isArray(seriesResult.data) ? seriesResult.data : []
+        setSeriesItems(
+          isOwner
+            ? nextItems
+            : nextItems.map((item) => ({
+                ...item,
+                isRegistered: false,
+              }))
+        )
       } else {
         setSeriesItems([])
         setSeriesError(seriesResult.error ?? 'unknown')
@@ -162,6 +182,7 @@ function UserOshiSeriesPage({
     visibilityProvider,
     userId,
     reloadToken,
+    sortOrder,
   ])
 
   const handleRetry = () => {
@@ -199,7 +220,68 @@ function UserOshiSeriesPage({
     return <ExternalLinksPanel links={profile?.links ?? []} />
   }
 
+  const handleRegisterSeries = async (seriesId) => {
+    if (!seriesProvider || typeof seriesProvider.registerSeries !== 'function') return
+    if (!seriesId) return
+    setSeriesActionError(null)
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      setIsAuthenticated(false)
+      authGateInstance.redirectToLogin()
+      return
+    }
+    setIsAuthenticated(true)
+
+    setSeriesUpdatingIds((prev) => (prev.includes(seriesId) ? prev : [...prev, seriesId]))
+    try {
+      const result = await seriesProvider.registerSeries({ seriesId })
+      if (result.ok) {
+        setSeriesItems((prev) =>
+          prev.map((item) =>
+            item.seriesId !== seriesId ? item : { ...item, isRegistered: true }
+          )
+        )
+      } else if (result.error === 'auth_required') {
+        authGateInstance.redirectToLogin()
+      } else {
+        setSeriesActionError('failed')
+      }
+    } finally {
+      setSeriesUpdatingIds((prev) => prev.filter((id) => id !== seriesId))
+    }
+  }
+
+  const handleUnregisterSeries = async (seriesId) => {
+    if (!seriesProvider || typeof seriesProvider.unregisterSeries !== 'function') return
+    if (!seriesId) return
+    setSeriesActionError(null)
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      setIsAuthenticated(false)
+      authGateInstance.redirectToLogin()
+      return
+    }
+    setIsAuthenticated(true)
+
+    setSeriesUpdatingIds((prev) => (prev.includes(seriesId) ? prev : [...prev, seriesId]))
+    try {
+      const result = await seriesProvider.unregisterSeries({ seriesId })
+      if (result.ok) {
+        setSeriesItems((prev) => prev.filter((item) => item.seriesId !== seriesId))
+      } else if (result.error === 'auth_required') {
+        authGateInstance.redirectToLogin()
+      } else {
+        setSeriesActionError('failed')
+      }
+    } finally {
+      setSeriesUpdatingIds((prev) => prev.filter((id) => id !== seriesId))
+    }
+  }
+
   const renderSeriesList = () => {
+    const isOwner = Boolean(viewerUserId) && viewerUserId === userId
     if (seriesLoading) {
       return <p className="user-series-list__status">推し作品を読み込み中...</p>
     }
@@ -256,6 +338,26 @@ function UserOshiSeriesPage({
                     <Link className="user-series-list__link" to={`/series/${item.seriesId}/`}>
                       作品ページへ
                     </Link>
+                    <button
+                      type="button"
+                      className={
+                        isOwner || !item.isRegistered
+                          ? 'user-series-list__oshi-button'
+                          : 'user-series-list__oshi-button is-registered'
+                      }
+                      aria-pressed={isOwner ? true : Boolean(item.isRegistered)}
+                      disabled={
+                        seriesUpdatingIds.includes(item.seriesId) ||
+                        (!isOwner && item.isRegistered)
+                      }
+                      onClick={() =>
+                        isOwner
+                          ? handleUnregisterSeries(item.seriesId)
+                          : handleRegisterSeries(item.seriesId)
+                      }
+                    >
+                      {isOwner ? '解除' : item.isRegistered ? '登録済み' : '登録'}
+                    </button>
                   </div>
                 ) : null}
               </div>
@@ -304,7 +406,41 @@ function UserOshiSeriesPage({
                   ))}
                 </div>
               </div>
+              <div className="user-series-list__controls" role="group" aria-label="並び替え">
+                <span className="user-series-list__label">お気に入り数:</span>
+                <div className="user-series-list__toggle-group">
+                  <button
+                    type="button"
+                    className={
+                      sortOrder === 'favorite_desc'
+                        ? 'user-series-list__toggle is-active'
+                        : 'user-series-list__toggle'
+                    }
+                    aria-pressed={sortOrder === 'favorite_desc'}
+                    onClick={() => setSortOrder('favorite_desc')}
+                  >
+                    多い順
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      sortOrder === 'favorite_asc'
+                        ? 'user-series-list__toggle is-active'
+                        : 'user-series-list__toggle'
+                    }
+                    aria-pressed={sortOrder === 'favorite_asc'}
+                    onClick={() => setSortOrder('favorite_asc')}
+                  >
+                    少ない順
+                  </button>
+                </div>
+              </div>
             </header>
+            {seriesActionError ? (
+              <p className="user-series-list__status user-series-list__status--error">
+                推し作品の更新に失敗しました。
+              </p>
+            ) : null}
             <div className="user-series-list__body">{renderSeriesList()}</div>
           </section>
         </div>
