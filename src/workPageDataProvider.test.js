@@ -49,50 +49,79 @@ const buildEpisodesSupabaseMock = ({
   }
 }
 
-const buildSeriesSupabaseMock = (rows, error = null) => {
-  const eqMock = vi.fn().mockResolvedValue({ data: rows, error })
-  const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+const buildSeriesSupabaseMock = ({
+  seriesRows = [],
+  seriesError = null,
+  userSeriesRows = [],
+  userSeriesError = null,
+  sessionUserId = null,
+  sessionError = null,
+} = {}) => {
+  const seriesEqMock = vi.fn().mockResolvedValue({ data: seriesRows, error: seriesError })
+  const seriesSelectMock = vi.fn().mockReturnValue({ eq: seriesEqMock })
+
+  const userSeriesLimitMock = vi.fn().mockResolvedValue({
+    data: userSeriesRows,
+    error: userSeriesError,
+  })
+  const userSeriesEqSeriesMock = vi.fn().mockReturnValue({ limit: userSeriesLimitMock })
+  const userSeriesEqUserMock = vi.fn().mockReturnValue({ eq: userSeriesEqSeriesMock })
+  const userSeriesSelectMock = vi.fn().mockReturnValue({ eq: userSeriesEqUserMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'series') return { select: seriesSelectMock }
+    if (table === 'user_series') return { select: userSeriesSelectMock }
+    return {}
+  })
+
+  const client = { from: fromMock }
+
+  if (sessionUserId !== null || sessionError !== null) {
+    client.auth = {
+      getSession: vi.fn().mockResolvedValue({
+        data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+        error: sessionError,
+      }),
+    }
+  }
 
   return {
-    client: { from: fromMock },
-    calls: { fromMock, selectMock, eqMock },
+    client,
+    calls: {
+      fromMock,
+      seriesSelectMock,
+      seriesEqMock,
+      userSeriesSelectMock,
+      userSeriesEqUserMock,
+      userSeriesEqSeriesMock,
+      userSeriesLimitMock,
+      getSessionMock: client.auth?.getSession,
+    },
   }
 }
 
 const buildToggleSupabaseMock = ({
-  table,
   existing,
   selectError = null,
   mutateError = null,
-  userSeriesError = null,
   sessionUserId = 'viewer-1',
   sessionError = null,
 } = {}) => {
-  const deleteEqMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
-  const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock })
+  const deleteEqSeriesMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
+  const deleteEqUserMock = vi.fn().mockReturnValue({ eq: deleteEqSeriesMock })
+  const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqUserMock })
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: mutateError })
   const limitMock = vi.fn().mockResolvedValue({
-    data: existing ? [{ id: 'row' }] : [],
+    data: existing ? [{ series_id: 'series-1' }] : [],
     error: selectError,
   })
-  const eqMock = vi.fn().mockReturnValue({ limit: limitMock })
-  const selectMock = vi.fn().mockReturnValue({ eq: eqMock })
-  const userSeriesInsertMock = vi
-    .fn()
-    .mockResolvedValue({ data: null, error: userSeriesError })
-  const userSeriesDeleteEqMock = vi.fn()
-  userSeriesDeleteEqMock
-    .mockReturnValueOnce({ eq: userSeriesDeleteEqMock })
-    .mockResolvedValueOnce({ data: null, error: userSeriesError })
-  const userSeriesDeleteMock = vi.fn().mockReturnValue({ eq: userSeriesDeleteEqMock })
+  const eqSeriesMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const eqUserMock = vi.fn().mockReturnValue({ eq: eqSeriesMock })
+  const selectMock = vi.fn().mockReturnValue({ eq: eqUserMock })
 
   const fromMock = vi.fn().mockImplementation((name) => {
-    if (name === table) {
-      return { select: selectMock, delete: deleteMock, insert: insertMock }
-    }
     if (name === 'user_series') {
-      return { insert: userSeriesInsertMock, delete: userSeriesDeleteMock }
+      return { select: selectMock, delete: deleteMock, insert: insertMock }
     }
     return {}
   })
@@ -107,14 +136,13 @@ const buildToggleSupabaseMock = ({
     calls: {
       fromMock,
       selectMock,
-      eqMock,
+      eqUserMock,
+      eqSeriesMock,
       limitMock,
       deleteMock,
-      deleteEqMock,
+      deleteEqUserMock,
+      deleteEqSeriesMock,
       insertMock,
-      userSeriesInsertMock,
-      userSeriesDeleteMock,
-      userSeriesDeleteEqMock,
       getSessionMock,
     },
   }
@@ -180,14 +208,14 @@ describe('WorkPageDataProvider', () => {
     const rows = [
       { series_id: 'series-1', title: 'テスト作品', favorite_count: 12 },
     ]
-    const { client, calls } = buildSeriesSupabaseMock(rows)
+    const { client, calls } = buildSeriesSupabaseMock({ seriesRows: rows })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchSeriesOverview('series-1')
 
     expect(calls.fromMock).toHaveBeenCalledWith('series')
-    expect(calls.selectMock).toHaveBeenCalled()
-    expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.seriesSelectMock).toHaveBeenCalled()
+    expect(calls.seriesEqMock).toHaveBeenCalledWith('series_id', 'series-1')
     expect(result).toEqual({
       ok: true,
       data: {
@@ -199,8 +227,37 @@ describe('WorkPageDataProvider', () => {
     })
   })
 
+  it('ログイン中に推し登録済みならisFavoritedがtrueになる', async () => {
+    const rows = [
+      { series_id: 'series-1', title: 'テスト作品', favorite_count: 1 },
+    ]
+    const { client, calls } = buildSeriesSupabaseMock({
+      seriesRows: rows,
+      userSeriesRows: [{ series_id: 'series-1' }],
+      sessionUserId: 'viewer-1',
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchSeriesOverview('series-1')
+
+    expect(calls.fromMock).toHaveBeenCalledWith('series')
+    expect(calls.fromMock).toHaveBeenCalledWith('user_series')
+    expect(calls.userSeriesSelectMock).toHaveBeenCalledWith('series_id')
+    expect(calls.userSeriesEqUserMock).toHaveBeenCalledWith('user_id', 'viewer-1')
+    expect(calls.userSeriesEqSeriesMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: 'series-1',
+        title: 'テスト作品',
+        favoriteCount: 1,
+        isFavorited: true,
+      },
+    })
+  })
+
   it('作品が見つからない場合はnot_foundとして返す', async () => {
-    const { client } = buildSeriesSupabaseMock([])
+    const { client } = buildSeriesSupabaseMock({ seriesRows: [] })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.fetchSeriesOverview('series-404')
@@ -390,7 +447,10 @@ describe('WorkPageDataProvider', () => {
   })
 
   it('通信失敗時はnetworkとして返す', async () => {
-    const { client: seriesClient } = buildSeriesSupabaseMock(null, new Error('Failed to fetch'))
+    const { client: seriesClient } = buildSeriesSupabaseMock({
+      seriesRows: null,
+      seriesError: new Error('Failed to fetch'),
+    })
     const { client: episodesClient } = buildEpisodesSupabaseMock({
       movieError: new Error('NetworkError'),
     })
@@ -409,7 +469,10 @@ describe('WorkPageDataProvider', () => {
   })
 
   it('不明な失敗時はunknownとして返す', async () => {
-    const { client: seriesClient } = buildSeriesSupabaseMock(null, new Error('boom'))
+    const { client: seriesClient } = buildSeriesSupabaseMock({
+      seriesRows: null,
+      seriesError: new Error('boom'),
+    })
     const { client: episodesClient } = buildEpisodesSupabaseMock({
       movieError: new Error('boom'),
     })
@@ -429,18 +492,17 @@ describe('WorkPageDataProvider', () => {
 
   it('お気に入りが未登録の場合は登録して状態を返す', async () => {
     const { client, calls } = buildToggleSupabaseMock({
-      table: 'series_favorite',
       existing: false,
     })
     const provider = createWorkPageDataProvider(client)
 
     const result = await provider.toggleSeriesFavorite('series-1')
 
-    expect(calls.fromMock).toHaveBeenCalledWith('series_favorite')
-    expect(calls.selectMock).toHaveBeenCalled()
-    expect(calls.eqMock).toHaveBeenCalledWith('series_id', 'series-1')
-    expect(calls.insertMock).toHaveBeenCalledWith({ series_id: 'series-1' })
-    expect(calls.userSeriesInsertMock).toHaveBeenCalledWith({
+    expect(calls.fromMock).toHaveBeenCalledWith('user_series')
+    expect(calls.selectMock).toHaveBeenCalledWith('series_id')
+    expect(calls.eqUserMock).toHaveBeenCalledWith('user_id', 'viewer-1')
+    expect(calls.eqSeriesMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.insertMock).toHaveBeenCalledWith({
       user_id: 'viewer-1',
       series_id: 'series-1',
     })
@@ -449,7 +511,6 @@ describe('WorkPageDataProvider', () => {
 
   it('お気に入りが登録済みの場合は解除して状態を返す', async () => {
     const { client, calls } = buildToggleSupabaseMock({
-      table: 'series_favorite',
       existing: true,
     })
     const provider = createWorkPageDataProvider(client)
@@ -457,10 +518,8 @@ describe('WorkPageDataProvider', () => {
     const result = await provider.toggleSeriesFavorite('series-1')
 
     expect(calls.deleteMock).toHaveBeenCalled()
-    expect(calls.deleteEqMock).toHaveBeenCalledWith('series_id', 'series-1')
-    expect(calls.userSeriesDeleteMock).toHaveBeenCalled()
-    expect(calls.userSeriesDeleteEqMock).toHaveBeenCalledWith('user_id', 'viewer-1')
-    expect(calls.userSeriesDeleteEqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(calls.deleteEqUserMock).toHaveBeenCalledWith('user_id', 'viewer-1')
+    expect(calls.deleteEqSeriesMock).toHaveBeenCalledWith('series_id', 'series-1')
     expect(result).toEqual({ ok: true, data: { isFavorited: false } })
   })
 
@@ -508,7 +567,6 @@ describe('WorkPageDataProvider', () => {
 
   it('更新失敗時はエラーを正規化して返す', async () => {
     const { client: favoriteClient } = buildToggleSupabaseMock({
-      table: 'series_favorite',
       existing: false,
       mutateError: new Error('NetworkError'),
     })

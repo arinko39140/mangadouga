@@ -11,8 +11,6 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const shouldIgnoreConflict = (error) => error?.code === '23505'
-
 const sortEpisodes = (episodes, sortOrder) => {
   const sorted = [...episodes]
   sorted.sort((a, b) => {
@@ -44,11 +42,12 @@ const mapEpisodeRow = (row, isOshi) => ({
   isOshi: Boolean(isOshi),
 })
 
-const toggleRecord = async ({ client, table, idField, idValue, resultKey }) => {
+const toggleUserSeries = async ({ client, userId, seriesId }) => {
   const { data, error } = await client
-    .from(table)
-    .select(idField)
-    .eq(idField, idValue)
+    .from('user_series')
+    .select('series_id')
+    .eq('user_id', userId)
+    .eq('series_id', seriesId)
     .limit(1)
 
   if (error) {
@@ -59,23 +58,26 @@ const toggleRecord = async ({ client, table, idField, idValue, resultKey }) => {
 
   if (exists) {
     const { error: deleteError } = await client
-      .from(table)
+      .from('user_series')
       .delete()
-      .eq(idField, idValue)
+      .eq('user_id', userId)
+      .eq('series_id', seriesId)
 
     if (deleteError) {
       return { ok: false, error: normalizeError(deleteError) }
     }
 
-    return { ok: true, data: { [resultKey]: false } }
+    return { ok: true, data: { isFavorited: false } }
   }
 
-  const { error: insertError } = await client.from(table).insert({ [idField]: idValue })
+  const { error: insertError } = await client
+    .from('user_series')
+    .insert({ user_id: userId, series_id: seriesId })
   if (insertError) {
     return { ok: false, error: normalizeError(insertError) }
   }
 
-  return { ok: true, data: { [resultKey]: true } }
+  return { ok: true, data: { isFavorited: true } }
 }
 
 const toggleListMovie = async ({ client, listId, movieId }) => {
@@ -156,7 +158,34 @@ export const createWorkPageDataProvider = (supabaseClient) => {
         return { ok: false, error: 'not_found' }
       }
 
-      return { ok: true, data: mapSeriesRow(data[0]) }
+      const series = mapSeriesRow(data[0])
+      if (!supabaseClient?.auth?.getSession) {
+        return { ok: true, data: series }
+      }
+
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: true, data: series }
+      }
+
+      const { data: favoriteRows, error: favoriteError } = await supabaseClient
+        .from('user_series')
+        .select('series_id')
+        .eq('user_id', userResult.userId)
+        .eq('series_id', seriesId)
+        .limit(1)
+
+      if (favoriteError) {
+        return { ok: true, data: series }
+      }
+
+      return {
+        ok: true,
+        data: {
+          ...series,
+          isFavorited: (favoriteRows ?? []).length > 0,
+        },
+      }
     },
 
     async fetchMovies(seriesId, sortOrder) {
@@ -212,39 +241,11 @@ export const createWorkPageDataProvider = (supabaseClient) => {
 
       const userId = userResult.userId
 
-      const toggleResult = await toggleRecord({
+      const toggleResult = await toggleUserSeries({
         client: supabaseClient,
-        table: 'series_favorite',
-        idField: 'series_id',
-        idValue: seriesId,
-        resultKey: 'isFavorited',
+        userId,
+        seriesId,
       })
-
-      if (!toggleResult.ok) {
-        return toggleResult
-      }
-
-      if (toggleResult.data.isFavorited) {
-        const { error: insertError } = await supabaseClient
-          .from('user_series')
-          .insert({ user_id: userId, series_id: seriesId })
-
-        if (insertError && !shouldIgnoreConflict(insertError)) {
-          return { ok: false, error: normalizeError(insertError) }
-        }
-
-        return toggleResult
-      }
-
-      const { error: deleteError } = await supabaseClient
-        .from('user_series')
-        .delete()
-        .eq('user_id', userId)
-        .eq('series_id', seriesId)
-
-      if (deleteError) {
-        return { ok: false, error: normalizeError(deleteError) }
-      }
 
       return toggleResult
     },
