@@ -143,6 +143,12 @@ describe('ユーザーページ導線のE2E/UI', () => {
         data: [{ seriesId: 's1', title: '銀河の旅', favoriteCount: 2, updatedAt: null }],
       }),
     }
+    const visibilityProvider = {
+      fetchVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { oshiList: 'public', oshiSeries: 'public' },
+      }),
+    }
 
     render(
       <MemoryRouter initialEntries={['/users/user-1/oshi-series/']}>
@@ -153,6 +159,7 @@ describe('ユーザーページ導線のE2E/UI', () => {
               <UserOshiSeriesPage
                 profileProvider={profileProvider}
                 seriesProvider={seriesProvider}
+                visibilityProvider={visibilityProvider}
                 authGate={buildOkAuthGate()}
               />
             }

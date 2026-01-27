@@ -4,6 +4,8 @@ import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
 import UserOshiSeriesPanel from './UserOshiSeriesPanel.jsx'
+import { createProfileVisibilityProvider } from './profileVisibilityProvider.js'
+import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
 import { createUserPageProvider } from './userPageProvider.js'
 import { createUserSeriesProvider } from './userSeriesProvider.js'
@@ -11,10 +13,14 @@ import './UserOshiSeriesPage.css'
 
 const defaultProfileProvider = createUserPageProvider(supabase)
 const defaultSeriesProvider = createUserSeriesProvider(supabase)
+const defaultVisibilityProvider = createProfileVisibilityProvider(supabase)
+
+const normalizeVisibility = (value) => (value === 'public' ? 'public' : 'private')
 
 function UserOshiSeriesPage({
   profileProvider = defaultProfileProvider,
   seriesProvider = defaultSeriesProvider,
+  visibilityProvider = defaultVisibilityProvider,
   authGate,
 }) {
   const { userId } = useParams()
@@ -25,6 +31,7 @@ function UserOshiSeriesPage({
   const [seriesItems, setSeriesItems] = useState([])
   const [seriesError, setSeriesError] = useState(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
+  const [seriesVisibility, setSeriesVisibility] = useState('private')
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [reloadToken, setReloadToken] = useState(0)
 
@@ -43,6 +50,7 @@ function UserOshiSeriesPage({
       setSeriesItems([])
       setSeriesError(null)
       setSeriesLoading(true)
+      setSeriesVisibility('private')
     }
 
     const fetchAll = async () => {
@@ -65,6 +73,11 @@ function UserOshiSeriesPage({
       }
       setIsAuthenticated(true)
 
+      const viewerResult = await resolveCurrentUserId(supabase)
+      if (!isMounted) return
+      const viewerUserId = viewerResult.ok ? viewerResult.userId : null
+      const isOwner = typeof viewerUserId === 'string' && viewerUserId === userId
+
       const profileResult = await profileProvider.fetchUserProfile(userId)
       if (!isMounted) return
       if (!profileResult.ok) {
@@ -79,6 +92,35 @@ function UserOshiSeriesPage({
 
       setProfile(profileResult.data)
       setProfileLoading(false)
+
+      let resolvedSeriesVisibility = 'public'
+      if (isOwner) {
+        resolvedSeriesVisibility = 'public'
+      } else if (
+        !visibilityProvider ||
+        typeof visibilityProvider.fetchVisibility !== 'function'
+      ) {
+        resolvedSeriesVisibility = 'private'
+      } else {
+        const visibilityResult = await visibilityProvider.fetchVisibility({
+          targetUserId: userId,
+        })
+        if (!isMounted) return
+        if (visibilityResult?.ok) {
+          resolvedSeriesVisibility = normalizeVisibility(visibilityResult.data?.oshiSeries)
+        } else {
+          resolvedSeriesVisibility = 'private'
+        }
+      }
+
+      setSeriesVisibility(resolvedSeriesVisibility)
+
+      if (!isOwner && resolvedSeriesVisibility !== 'public') {
+        setSeriesItems([])
+        setSeriesError(null)
+        setSeriesLoading(false)
+        return
+      }
 
       const seriesResult =
         seriesProvider && typeof seriesProvider.fetchSeries === 'function'
@@ -105,7 +147,14 @@ function UserOshiSeriesPage({
     return () => {
       isMounted = false
     }
-  }, [authGateInstance, profileProvider, seriesProvider, userId, reloadToken])
+  }, [
+    authGateInstance,
+    profileProvider,
+    seriesProvider,
+    visibilityProvider,
+    userId,
+    reloadToken,
+  ])
 
   const handleRetry = () => {
     setReloadToken((prev) => prev + 1)
@@ -162,6 +211,7 @@ function UserOshiSeriesPage({
             isLoading={seriesLoading}
             error={seriesError}
             userId={userId}
+            visibility={seriesVisibility}
           />
         </div>
       )}
