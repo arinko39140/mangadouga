@@ -138,9 +138,17 @@ describe('ユーザーページ導線のE2E/UI', () => {
       }),
     }
     const seriesProvider = {
-      fetchSeries: vi.fn().mockResolvedValue({
+      fetchSeriesList: vi.fn().mockResolvedValue({
         ok: true,
-        data: [{ seriesId: 's1', title: '銀河の旅', favoriteCount: 2, updatedAt: null }],
+        data: [
+          {
+            seriesId: 's1',
+            title: '銀河の旅',
+            favoriteCount: 2,
+            updatedAt: null,
+            thumbnailUrl: null,
+          },
+        ],
       }),
     }
     const visibilityProvider = {

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
-import UserOshiSeriesPanel from './UserOshiSeriesPanel.jsx'
 import { createProfileVisibilityProvider } from './profileVisibilityProvider.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
@@ -16,6 +15,10 @@ const defaultSeriesProvider = createUserSeriesProvider(supabase)
 const defaultVisibilityProvider = createProfileVisibilityProvider(supabase)
 
 const normalizeVisibility = (value) => (value === 'public' ? 'public' : 'private')
+const viewModes = [
+  { id: 'grid', label: 'グリッド' },
+  { id: 'list', label: 'リスト' },
+]
 
 function UserOshiSeriesPage({
   profileProvider = defaultProfileProvider,
@@ -32,6 +35,7 @@ function UserOshiSeriesPage({
   const [seriesError, setSeriesError] = useState(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
   const [seriesVisibility, setSeriesVisibility] = useState('private')
+  const [viewMode, setViewMode] = useState('grid')
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [reloadToken, setReloadToken] = useState(0)
 
@@ -123,8 +127,12 @@ function UserOshiSeriesPage({
       }
 
       const seriesResult =
-        seriesProvider && typeof seriesProvider.fetchSeries === 'function'
-          ? await seriesProvider.fetchSeries(userId)
+        seriesProvider && typeof seriesProvider.fetchSeriesList === 'function'
+          ? await seriesProvider.fetchSeriesList({
+              targetUserId: userId,
+              viewerUserId,
+              sort: null,
+            })
           : { ok: false, error: 'not_configured' }
 
       if (!isMounted) return
@@ -191,6 +199,73 @@ function UserOshiSeriesPage({
     return <ExternalLinksPanel links={profile?.links ?? []} />
   }
 
+  const renderSeriesList = () => {
+    if (seriesLoading) {
+      return <p className="user-series-list__status">推し作品を読み込み中...</p>
+    }
+    if (seriesError) {
+      return (
+        <p className="user-series-list__status user-series-list__status--error" role="alert">
+          推し作品の取得に失敗しました。
+        </p>
+      )
+    }
+    if (seriesVisibility !== 'public') {
+      return <p className="user-series-list__status">この推し作品は非公開です。</p>
+    }
+    if (seriesItems.length === 0) {
+      return <p className="user-series-list__status">推し作品がありません。</p>
+    }
+
+    return (
+      <ul
+        className={`user-series-list__items user-series-list__items--${viewMode}`}
+        aria-label="推し作品一覧"
+      >
+        {seriesItems.map((item) => (
+          <li key={item.seriesId} className="user-series-list__item">
+            <article className="user-series-list__card">
+              <div className="user-series-list__thumb">
+                {item.thumbnailUrl ? (
+                  <img
+                    src={item.thumbnailUrl}
+                    alt={`${item.title}のサムネイル`}
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="user-series-list__thumb-placeholder">
+                    サムネイル準備中
+                  </span>
+                )}
+              </div>
+              <div className="user-series-list__body">
+                <h2 className="user-series-list__title">
+                  {item.seriesId ? (
+                    <Link to={`/series/${item.seriesId}/`}>{item.title}</Link>
+                  ) : (
+                    item.title
+                  )}
+                </h2>
+                {item.favoriteCount != null ? (
+                  <p className="user-series-list__meta">
+                    お気に入り数: {item.favoriteCount}
+                  </p>
+                ) : null}
+                {item.seriesId ? (
+                  <div className="user-series-list__actions">
+                    <Link className="user-series-list__link" to={`/series/${item.seriesId}/`}>
+                      作品ページへ
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   return (
     <main className="user-series-page">
       <header className="user-series-page__header">
@@ -206,13 +281,32 @@ function UserOshiSeriesPage({
         <div className="user-series-page__sections">
           <UserInfoPanel profile={profile} isLoading={profileLoading} />
           {renderExternalLinks()}
-          <UserOshiSeriesPanel
-            items={seriesItems}
-            isLoading={seriesLoading}
-            error={seriesError}
-            userId={userId}
-            visibility={seriesVisibility}
-          />
+          <section className="user-series-list" aria-live="polite">
+            <header className="user-series-list__header">
+              <h2 className="user-series-list__heading">推し作品一覧</h2>
+              <div className="user-series-list__controls" role="group" aria-label="表示形式">
+                <span className="user-series-list__label">表示形式:</span>
+                <div className="user-series-list__toggle-group">
+                  {viewModes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      className={
+                        viewMode === mode.id
+                          ? 'user-series-list__toggle is-active'
+                          : 'user-series-list__toggle'
+                      }
+                      onClick={() => setViewMode(mode.id)}
+                      aria-pressed={viewMode === mode.id}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </header>
+            <div className="user-series-list__body">{renderSeriesList()}</div>
+          </section>
         </div>
       )}
 
