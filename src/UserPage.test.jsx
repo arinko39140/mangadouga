@@ -2,12 +2,18 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import UserPage from './UserPage.jsx'
+import { resolveCurrentUserId } from './supabaseSession.js'
 import { createUserPageProvider } from './userPageProvider.js'
+
+vi.mock('./supabaseSession.js', () => ({
+  resolveCurrentUserId: vi.fn(),
+}))
 
 const renderUserPage = ({
   profileProvider,
   listProvider,
   seriesProvider,
+  favoritesProvider,
   authGate,
   userId = 'user-1',
 } = {}) =>
@@ -21,6 +27,7 @@ const renderUserPage = ({
               profileProvider={profileProvider}
               listProvider={listProvider}
               seriesProvider={seriesProvider}
+              favoritesProvider={favoritesProvider}
               authGate={authGate}
             />
           }
@@ -56,6 +63,10 @@ const buildUserSupabaseMock = ({ userRows = [], userError = null } = {}) => {
 }
 
 describe('UserPage', () => {
+  beforeEach(() => {
+    resolveCurrentUserId.mockResolvedValue({ ok: true, userId: 'user-1' })
+  })
+
   it('見出しと読み込み状態が表示される', () => {
     const profileDeferred = createDeferred()
     const listDeferred = createDeferred()
@@ -65,27 +76,34 @@ describe('UserPage', () => {
       profileProvider: { fetchUserProfile: vi.fn().mockReturnValue(profileDeferred.promise) },
       listProvider: { fetchListSummary: vi.fn().mockReturnValue(listDeferred.promise) },
       seriesProvider: { fetchSeries: vi.fn().mockReturnValue(seriesDeferred.promise) },
+      favoritesProvider: {
+        fetchFavoritesSummary: vi.fn().mockReturnValue(Promise.resolve({ ok: true, data: [] })),
+      },
       authGate: { getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }) },
     })
 
     expect(screen.getByRole('heading', { name: 'ユーザー情報' })).toBeInTheDocument()
     expect(screen.getByText('ユーザー情報を読み込み中...')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '推しリスト' })).toBeInTheDocument()
-    expect(screen.getByText('推しリストを読み込み中...')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '推し作品一覧' })).toBeInTheDocument()
-    expect(screen.getByText('推し作品を読み込み中...')).toBeInTheDocument()
+
+    return waitFor(() => {
+      expect(screen.getByText('推しリストを読み込み中...')).toBeInTheDocument()
+      expect(screen.getByText('推し作品を読み込み中...')).toBeInTheDocument()
+    })
   })
 
   it('未認証ならログインへ誘導し取得は開始しない', async () => {
     const profileProvider = { fetchUserProfile: vi.fn() }
     const listProvider = { fetchListSummary: vi.fn() }
     const seriesProvider = { fetchSeries: vi.fn() }
+    const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(authGate.redirectToLogin).toHaveBeenCalled()
@@ -93,6 +111,7 @@ describe('UserPage', () => {
     expect(profileProvider.fetchUserProfile).not.toHaveBeenCalled()
     expect(listProvider.fetchListSummary).not.toHaveBeenCalled()
     expect(seriesProvider.fetchSeries).not.toHaveBeenCalled()
+    expect(favoritesProvider.fetchFavoritesSummary).not.toHaveBeenCalled()
   })
 
   it('ユーザーが存在しない場合はページ全体のエラーを表示する', async () => {
@@ -101,18 +120,20 @@ describe('UserPage', () => {
     }
     const listProvider = { fetchListSummary: vi.fn() }
     const seriesProvider = { fetchSeries: vi.fn() }
+    const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('ユーザーが見つかりません。')
     })
     expect(listProvider.fetchListSummary).not.toHaveBeenCalled()
     expect(seriesProvider.fetchSeries).not.toHaveBeenCalled()
+    expect(favoritesProvider.fetchFavoritesSummary).not.toHaveBeenCalled()
   })
 
   it('取得成功でユーザー情報と推し一覧を表示する', async () => {
@@ -142,12 +163,18 @@ describe('UserPage', () => {
         data: [{ seriesId: 's1', title: '星の物語', favoriteCount: 5, updatedAt: null }],
       }),
     }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [{ listId: 'fav-1', name: '推しまとめ', favoriteCount: 3 }],
+      }),
+    }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(screen.getAllByText('美咲')).toHaveLength(2)
@@ -158,12 +185,17 @@ describe('UserPage', () => {
     )
     expect(screen.getByText('お気に入り数: 2')).toBeInTheDocument()
     expect(screen.getByText('星の物語')).toBeInTheDocument()
+    expect(screen.getByText('推しまとめ')).toBeInTheDocument()
     expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
     expect(listProvider.fetchListSummary).toHaveBeenCalledWith({
       targetUserId: 'user-1',
-      viewerUserId: null,
+      viewerUserId: 'user-1',
     })
     expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
+    expect(favoritesProvider.fetchFavoritesSummary).toHaveBeenCalledWith({
+      viewerUserId: 'user-1',
+      limit: 3,
+    })
   })
 
   it('ユーザー情報取得後に外部リンクと推し作品の取得を開始する', async () => {
@@ -182,19 +214,22 @@ describe('UserPage', () => {
     }
     const listProvider = { fetchListSummary: vi.fn().mockReturnValue(listDeferred.promise) }
     const seriesProvider = { fetchSeries: vi.fn().mockReturnValue(seriesDeferred.promise) }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
     })
     expect(listProvider.fetchListSummary).toHaveBeenCalledWith({
       targetUserId: 'user-1',
-      viewerUserId: null,
+      viewerUserId: 'user-1',
     })
     expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
     expect(screen.getByRole('link', { name: 'Xリンク' })).toHaveAttribute(
@@ -216,6 +251,45 @@ describe('UserPage', () => {
     })
   })
 
+  it('本人閲覧時のみお気に入り推しリストを取得する', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-2', name: '透', iconUrl: null, links: [] },
+      }),
+    }
+    const listProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { listId: 'list-2', status: 'public', favoriteCount: 0, isFavorited: false },
+      }),
+    }
+    const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    resolveCurrentUserId.mockResolvedValueOnce({ ok: true, userId: 'viewer-1' })
+
+    renderUserPage({
+      profileProvider,
+      listProvider,
+      seriesProvider,
+      favoritesProvider,
+      authGate,
+      userId: 'user-2',
+    })
+
+    await waitFor(() => {
+      expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-2')
+    })
+
+    expect(favoritesProvider.fetchFavoritesSummary).not.toHaveBeenCalled()
+    expect(screen.queryByRole('heading', { name: 'お気に入り推しリスト' })).not.toBeInTheDocument()
+  })
+
   it('非公開リストではお気に入り操作が無効になる', async () => {
     const profileProvider = {
       fetchUserProfile: vi.fn().mockResolvedValue({
@@ -233,12 +307,15 @@ describe('UserPage', () => {
     const seriesProvider = {
       fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(screen.getByText('この推しリストは非公開です。')).toBeInTheDocument()
@@ -270,12 +347,13 @@ describe('UserPage', () => {
       }),
     }
     const seriesProvider = { fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }) }
+    const favoritesProvider = { fetchFavoritesSummary: vi.fn() }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: '有効リンク' })).toHaveAttribute(
@@ -305,12 +383,15 @@ describe('UserPage', () => {
     const seriesProvider = {
       fetchSeries: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
 
-    renderUserPage({ profileProvider, listProvider, seriesProvider, authGate })
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
 
     await waitFor(() => {
       expect(screen.getByText('推しリストの取得に失敗しました。')).toBeInTheDocument()
@@ -324,5 +405,6 @@ describe('UserPage', () => {
     expect(profileProvider.fetchUserProfile).toHaveBeenCalledTimes(2)
     expect(listProvider.fetchListSummary).toHaveBeenCalledTimes(2)
     expect(seriesProvider.fetchSeries).toHaveBeenCalledTimes(2)
+    expect(favoritesProvider.fetchFavoritesSummary).toHaveBeenCalledTimes(2)
   })
 })

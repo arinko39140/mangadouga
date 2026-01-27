@@ -3,8 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
+import UserOshiFavoritesPanel from './UserOshiFavoritesPanel.jsx'
 import UserOshiListPanel from './UserOshiListPanel.jsx'
+import UserOshiSections from './UserOshiSections.jsx'
 import UserOshiSeriesPanel from './UserOshiSeriesPanel.jsx'
+import { createOshiFavoritesProvider } from './oshiFavoritesProvider.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
 import { createUserOshiListProvider } from './userOshiListProvider.js'
@@ -15,11 +18,13 @@ import './UserPage.css'
 const defaultProfileProvider = createUserPageProvider(supabase)
 const defaultListProvider = createUserOshiListProvider(supabase)
 const defaultSeriesProvider = createUserSeriesProvider(supabase)
+const defaultFavoritesProvider = createOshiFavoritesProvider(supabase)
 
 function UserPage({
   profileProvider = defaultProfileProvider,
   listProvider = defaultListProvider,
   seriesProvider = defaultSeriesProvider,
+  favoritesProvider = defaultFavoritesProvider,
   authGate,
 }) {
   const { userId } = useParams()
@@ -33,10 +38,14 @@ function UserPage({
   const [seriesItems, setSeriesItems] = useState([])
   const [seriesError, setSeriesError] = useState(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
+  const [favoriteItems, setFavoriteItems] = useState([])
+  const [favoriteSummaryError, setFavoriteSummaryError] = useState(null)
+  const [favoriteSummaryLoading, setFavoriteSummaryLoading] = useState(true)
   const [favoriteError, setFavoriteError] = useState(null)
   const [isFavoriteUpdating, setIsFavoriteUpdating] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [reloadToken, setReloadToken] = useState(0)
+  const [viewerUserId, setViewerUserId] = useState(null)
 
   const authGateInstance = useMemo(() => {
     if (authGate) return authGate
@@ -56,7 +65,11 @@ function UserPage({
       setSeriesItems([])
       setSeriesError(null)
       setSeriesLoading(true)
+      setFavoriteItems([])
+      setFavoriteSummaryError(null)
+      setFavoriteSummaryLoading(true)
       setFavoriteError(null)
+      setViewerUserId(null)
     }
 
     const fetchAll = async () => {
@@ -65,6 +78,7 @@ function UserPage({
         setProfileLoading(false)
         setListLoading(false)
         setSeriesLoading(false)
+        setFavoriteSummaryLoading(false)
         return
       }
 
@@ -76,6 +90,7 @@ function UserPage({
         setProfileLoading(false)
         setListLoading(false)
         setSeriesLoading(false)
+        setFavoriteSummaryLoading(false)
         authGateInstance.redirectToLogin()
         return
       }
@@ -83,7 +98,10 @@ function UserPage({
 
       const viewerResult = await resolveCurrentUserId(supabase)
       if (!isMounted) return
-      const viewerUserId = viewerResult.ok ? viewerResult.userId : null
+      const resolvedViewerUserId = viewerResult.ok ? viewerResult.userId : null
+      setViewerUserId(resolvedViewerUserId)
+      const isOwner =
+        typeof resolvedViewerUserId === 'string' && resolvedViewerUserId === userId
 
       const profileResult = await profileProvider.fetchUserProfile(userId)
       if (!isMounted) return
@@ -92,6 +110,7 @@ function UserPage({
         setProfileLoading(false)
         setListLoading(false)
         setSeriesLoading(false)
+        setFavoriteSummaryLoading(false)
         if (profileResult.error === 'auth_required') {
           authGateInstance.redirectToLogin()
         }
@@ -103,15 +122,35 @@ function UserPage({
 
       const listPromise =
         listProvider && typeof listProvider.fetchListSummary === 'function'
-          ? listProvider.fetchListSummary({ targetUserId: userId, viewerUserId })
+          ? listProvider.fetchListSummary({
+              targetUserId: userId,
+              viewerUserId: resolvedViewerUserId,
+            })
           : Promise.resolve({ ok: false, error: 'not_configured' })
       const seriesPromise =
         seriesProvider && typeof seriesProvider.fetchSeries === 'function'
           ? seriesProvider.fetchSeries(userId)
           : Promise.resolve({ ok: false, error: 'not_configured' })
+      const favoritesPromise =
+        isOwner &&
+        favoritesProvider &&
+        typeof favoritesProvider.fetchFavoritesSummary === 'function'
+          ? favoritesProvider.fetchFavoritesSummary({
+              viewerUserId: resolvedViewerUserId,
+              limit: 3,
+            })
+          : Promise.resolve({ ok: true, data: [] })
 
-      const [listResult, seriesResult] = await Promise.all([listPromise, seriesPromise])
+      const [listResult, seriesResult, favoritesResult] = await Promise.all([
+        listPromise,
+        seriesPromise,
+        favoritesPromise,
+      ])
       if (!isMounted) return
+      const resolvedFavoritesResult =
+        favoritesResult && typeof favoritesResult === 'object'
+          ? favoritesResult
+          : { ok: false, error: 'unknown' }
 
       if (listResult.ok) {
         setListSummary(listResult.data)
@@ -135,6 +174,22 @@ function UserPage({
 
       setListLoading(false)
       setSeriesLoading(false)
+      if (isOwner) {
+        if (resolvedFavoritesResult.ok) {
+          setFavoriteItems(resolvedFavoritesResult.data ?? [])
+        } else {
+          setFavoriteItems([])
+          setFavoriteSummaryError(resolvedFavoritesResult.error ?? 'unknown')
+          if (resolvedFavoritesResult.error === 'auth_required') {
+            authGateInstance.redirectToLogin()
+          }
+        }
+        setFavoriteSummaryLoading(false)
+      } else {
+        setFavoriteItems([])
+        setFavoriteSummaryError(null)
+        setFavoriteSummaryLoading(false)
+      }
     }
 
     fetchAll()
@@ -147,6 +202,7 @@ function UserPage({
     profileProvider,
     listProvider,
     seriesProvider,
+    favoritesProvider,
     userId,
     reloadToken,
   ])
@@ -217,6 +273,32 @@ function UserPage({
     return <ExternalLinksPanel links={profile?.links ?? []} />
   }
 
+  const listPanel = (
+    <UserOshiListPanel
+      summary={listSummary}
+      isLoading={listLoading}
+      error={listError}
+      isFavoriteUpdating={isFavoriteUpdating}
+      isAuthenticated={isAuthenticated}
+      onToggleFavorite={handleToggleFavorite}
+    />
+  )
+  const seriesPanel = (
+    <UserOshiSeriesPanel
+      items={seriesItems}
+      isLoading={seriesLoading}
+      error={seriesError}
+      userId={userId}
+    />
+  )
+  const favoritesPanel = (
+    <UserOshiFavoritesPanel
+      items={favoriteItems}
+      isLoading={favoriteSummaryLoading}
+      error={favoriteSummaryError}
+    />
+  )
+
   return (
     <main className="user-page">
       <header className="user-page__header">
@@ -232,25 +314,18 @@ function UserPage({
         <div className="user-page__sections">
           <UserInfoPanel profile={profile} isLoading={profileLoading} />
           {renderExternalLinks()}
-          <UserOshiListPanel
-            summary={listSummary}
-            isLoading={listLoading}
-            error={listError}
-            isFavoriteUpdating={isFavoriteUpdating}
-            isAuthenticated={isAuthenticated}
-            onToggleFavorite={handleToggleFavorite}
+          <UserOshiSections
+            viewerUserId={viewerUserId}
+            targetUserId={userId}
+            listPanel={listPanel}
+            seriesPanel={seriesPanel}
+            favoritesPanel={favoritesPanel}
           />
           {favoriteError ? (
             <p className="user-page__status user-page__status--error" role="alert">
               お気に入り操作に失敗しました。
             </p>
           ) : null}
-          <UserOshiSeriesPanel
-            items={seriesItems}
-            isLoading={seriesLoading}
-            error={seriesError}
-            userId={userId}
-          />
         </div>
       )}
 
