@@ -100,7 +100,108 @@ const buildToggleSupabaseMock = ({
   }
 }
 
+const buildSummarySupabaseMock = ({
+  favoriteRows = [],
+  favoriteError = null,
+  listRows = [],
+  listError = null,
+  usersRows = [],
+  usersError = null,
+} = {}) => {
+  const limitMock = vi.fn().mockResolvedValue({
+    data: favoriteRows,
+    error: favoriteError,
+  })
+  const orderMock = vi.fn().mockReturnValue({ limit: limitMock })
+  const favoriteEqMock = vi.fn()
+  favoriteEqMock.mockReturnValue({ order: orderMock, limit: limitMock })
+  const favoriteSelectMock = vi.fn().mockReturnValue({ eq: favoriteEqMock })
+
+  const listEqMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listInMock = vi.fn().mockReturnValue({ eq: listEqMock })
+  const listSelectMock = vi.fn().mockReturnValue({ in: listInMock })
+  const usersInMock = vi.fn().mockResolvedValue({ data: usersRows, error: usersError })
+  const usersSelectMock = vi.fn().mockReturnValue({ in: usersInMock })
+
+  const fromMock = vi.fn((table) => {
+    if (table === 'user_list') {
+      return { select: favoriteSelectMock }
+    }
+    if (table === 'list') {
+      return { select: listSelectMock }
+    }
+    if (table === 'users') {
+      return { select: usersSelectMock }
+    }
+    return { select: vi.fn() }
+  })
+
+  return {
+    client: { from: fromMock },
+    calls: {
+      fromMock,
+      favoriteSelectMock,
+      favoriteEqMock,
+      orderMock,
+      limitMock,
+      listSelectMock,
+      listInMock,
+      listEqMock,
+      usersSelectMock,
+      usersInMock,
+    },
+  }
+}
+
 describe('OshiFavoritesProvider', () => {
+  it('サマリー取得は件数上限を適用する', async () => {
+    const { client, calls } = buildSummarySupabaseMock({
+      favoriteRows: [{ list_id: 1 }, { list_id: 2 }, { list_id: 3 }, { list_id: 4 }],
+      listRows: [
+        { list_id: 1, user_id: 'user-1', favorite_count: 3, can_display: true },
+        { list_id: 2, user_id: 'user-1', favorite_count: 2, can_display: true },
+        { list_id: 3, user_id: 'user-1', favorite_count: 1, can_display: true },
+      ],
+      usersRows: [{ user_id: 'user-1', name: '推しリスト' }],
+    })
+    const provider = createOshiFavoritesProvider(client)
+
+    const result = await provider.fetchFavoritesSummary({
+      viewerUserId: 'user-1',
+      limit: 3,
+    })
+
+    expect(calls.fromMock).toHaveBeenCalledWith('user_list')
+    expect(calls.favoriteSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.favoriteEqMock).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(calls.orderMock).toHaveBeenCalledWith('created_at', { ascending: false })
+    expect(calls.limitMock).toHaveBeenCalledWith(3)
+    expect(calls.listInMock).toHaveBeenCalledWith('list_id', ['1', '2', '3'])
+    expect(result.ok).toBe(true)
+  })
+
+  it('サマリー取得でviewerUserIdが無効ならinvalid_inputを返す', async () => {
+    const provider = createOshiFavoritesProvider({ from: vi.fn() })
+
+    await expect(
+      provider.fetchFavoritesSummary({ viewerUserId: '  ', limit: 3 })
+    ).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+  })
+
+  it('サマリー取得でlimitが不正ならinvalid_inputを返す', async () => {
+    const provider = createOshiFavoritesProvider({ from: vi.fn() })
+
+    await expect(
+      provider.fetchFavoritesSummary({ viewerUserId: 'user-1', limit: 0 })
+    ).resolves.toEqual({
+      ok: false,
+      error: 'invalid_input',
+    })
+  })
+
   it('登録済み推しリストのみを重複なしで返す', async () => {
     const { client, calls } = buildFavoritesSupabaseMock({
       favoriteRows: [{ list_id: 1 }, { list_id: 1 }, { list_id: 2 }],

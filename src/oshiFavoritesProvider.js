@@ -33,6 +33,78 @@ const mapFavoriteRow = (list, userName) => {
 }
 
 export const createOshiFavoritesProvider = (supabaseClient) => ({
+  async fetchFavoritesSummary(input) {
+    const viewerUserId =
+      typeof input === 'object' && input !== null ? input.viewerUserId : null
+    const limit = typeof input === 'object' && input !== null ? Number(input.limit ?? 0) : 0
+    if (typeof viewerUserId !== 'string' || viewerUserId.trim() === '' || limit < 1) {
+      return { ok: false, error: 'invalid_input' }
+    }
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const { data: favoriteData, error: favoriteError } = await supabaseClient
+      .from('user_list')
+      .select('list_id')
+      .eq('user_id', viewerUserId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (favoriteError) {
+      return { ok: false, error: normalizeError(favoriteError) }
+    }
+
+    const targetIds = Array.from(
+      new Set((favoriteData ?? []).map((row) => String(row.list_id)).filter(Boolean))
+    ).slice(0, limit)
+    if (targetIds.length === 0) {
+      return { ok: true, data: [] }
+    }
+
+    const { data: listData, error: listError } = await supabaseClient
+      .from('list')
+      .select('list_id, user_id, favorite_count, can_display')
+      .in('list_id', targetIds)
+      .eq('can_display', true)
+
+    if (listError) {
+      return { ok: false, error: normalizeError(listError) }
+    }
+
+    const userIds = Array.from(
+      new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
+    )
+    let userNameMap = new Map()
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabaseClient
+        .from('users')
+        .select('user_id, name')
+        .in('user_id', userIds)
+
+      if (usersError) {
+        return { ok: false, error: normalizeError(usersError) }
+      }
+
+      userNameMap = new Map(
+        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      )
+    }
+
+    const items = new Map()
+    ;(listData ?? []).forEach((row) => {
+      if (!row?.can_display) return
+      const mappedUserId = row.user_id != null ? String(row.user_id) : ''
+      const item = mapFavoriteRow(row, userNameMap.get(mappedUserId))
+      if (!item) return
+      if (!items.has(item.listId)) {
+        items.set(item.listId, item)
+      }
+    })
+
+    return { ok: true, data: Array.from(items.values()) }
+  },
+
   async fetchFavorites() {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
