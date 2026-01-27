@@ -1,0 +1,24 @@
+.user-oshi-sections {
+  display: grid;
+  gap: 24px;
+}
+
+.user-oshi-sections__section {
+  border: 1px solid #e1e1e1;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.user-oshi-sections__header {
+  margin-bottom: 12px;
+}
+
+.user-oshi-sections__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.user-oshi-sections__status {
+  margin: 0;
+  color: #666;
+}
