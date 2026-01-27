@@ -133,7 +133,10 @@ describe('UserOshiListProvider', () => {
     })
     const provider = createUserOshiListProvider(client)
 
-    const result = await provider.fetchListSummary('user-1')
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-1',
+      viewerUserId: 'viewer-1',
+    })
 
     expect(calls.listSelectMock).toHaveBeenCalledWith(
       'list_id, favorite_count, can_display'
@@ -141,7 +144,6 @@ describe('UserOshiListProvider', () => {
     expect(calls.listEqMock).toHaveBeenCalledWith('user_id', 'user-1')
     expect(calls.listOrderMock).toHaveBeenCalledWith('list_id', { ascending: true })
     expect(calls.listLimitMock).toHaveBeenCalledWith(1)
-    expect(calls.getSessionMock).toHaveBeenCalled()
     expect(calls.userListSelectMock).toHaveBeenCalledWith('list_id')
     expect(calls.userListEqMock).toHaveBeenNthCalledWith(1, 'user_id', 'viewer-1')
     expect(calls.userListEqMock).toHaveBeenNthCalledWith(2, 'list_id', '12')
@@ -164,7 +166,10 @@ describe('UserOshiListProvider', () => {
     })
     const provider = createUserOshiListProvider(client)
 
-    const result = await provider.fetchListSummary('user-10')
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-10',
+      viewerUserId: 'viewer-1',
+    })
 
     expect(result).toEqual({
       ok: true,
@@ -177,13 +182,39 @@ describe('UserOshiListProvider', () => {
     })
   })
 
+  it('閲覧者が未指定ならお気に入り判定を行わない', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 7, favorite_count: 2, can_display: true }],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-7',
+      viewerUserId: null,
+    })
+
+    expect(calls.userListSelectMock).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: '7',
+        status: 'public',
+        favoriteCount: 2,
+        isFavorited: false,
+      },
+    })
+  })
+
   it('非公開リストは内容を返さずprivateとして扱う', async () => {
     const { client, calls } = buildUserOshiListSupabaseMock({
       listRows: [{ list_id: 9, favorite_count: 10, can_display: false }],
     })
     const provider = createUserOshiListProvider(client)
 
-    const result = await provider.fetchListSummary('user-2')
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-2',
+      viewerUserId: 'viewer-1',
+    })
 
     expect(calls.userListSelectMock).not.toHaveBeenCalled()
     expect(result).toEqual({
@@ -197,6 +228,30 @@ describe('UserOshiListProvider', () => {
     })
   })
 
+  it('本人閲覧時は非公開でも概要を返す', async () => {
+    const { client, calls } = buildUserOshiListSupabaseMock({
+      listRows: [{ list_id: 5, favorite_count: 1, can_display: false }],
+      favoriteRows: [],
+    })
+    const provider = createUserOshiListProvider(client)
+
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-5',
+      viewerUserId: 'user-5',
+    })
+
+    expect(calls.userListSelectMock).toHaveBeenCalledWith('list_id')
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        listId: '5',
+        status: 'public',
+        favoriteCount: 1,
+        isFavorited: false,
+      },
+    })
+  })
+
   it('リスト未作成の場合はnoneとして返す', async () => {
     const { client, calls } = buildUserOshiListSupabaseMock({
       listRows: [],
@@ -204,7 +259,10 @@ describe('UserOshiListProvider', () => {
     })
     const provider = createUserOshiListProvider(client)
 
-    const result = await provider.fetchListSummary('user-3')
+    const result = await provider.fetchListSummary({
+      targetUserId: 'user-3',
+      viewerUserId: 'viewer-1',
+    })
 
     expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id')
     expect(calls.usersEqMock).toHaveBeenCalledWith('user_id', 'user-3')
@@ -227,7 +285,12 @@ describe('UserOshiListProvider', () => {
     })
     const provider = createUserOshiListProvider(client)
 
-    await expect(provider.fetchListSummary('user-404')).resolves.toEqual({
+    await expect(
+      provider.fetchListSummary({
+        targetUserId: 'user-404',
+        viewerUserId: 'viewer-1',
+      })
+    ).resolves.toEqual({
       ok: true,
       data: {
         listId: null,
@@ -242,7 +305,9 @@ describe('UserOshiListProvider', () => {
     const { client, calls } = buildUserOshiListSupabaseMock()
     const provider = createUserOshiListProvider(client)
 
-    await expect(provider.fetchListSummary('  ')).resolves.toEqual({
+    await expect(
+      provider.fetchListSummary({ targetUserId: '  ', viewerUserId: 'viewer-1' })
+    ).resolves.toEqual({
       ok: false,
       error: 'invalid_input',
     })
@@ -252,7 +317,9 @@ describe('UserOshiListProvider', () => {
   it('Supabase未設定の場合はnot_configuredとして返す', async () => {
     const provider = createUserOshiListProvider(null)
 
-    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
+    await expect(
+      provider.fetchListSummary({ targetUserId: 'user-1', viewerUserId: 'viewer-1' })
+    ).resolves.toEqual({
       ok: false,
       error: 'not_configured',
     })
@@ -264,24 +331,12 @@ describe('UserOshiListProvider', () => {
     })
     const provider = createUserOshiListProvider(client)
 
-    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
+    await expect(
+      provider.fetchListSummary({ targetUserId: 'user-1', viewerUserId: 'viewer-1' })
+    ).resolves.toEqual({
       ok: false,
       error: 'network',
     })
-  })
-
-  it('未ログイン時はauth_requiredとして返す', async () => {
-    const { client, calls } = buildUserOshiListSupabaseMock({
-      listRows: [{ list_id: 12, favorite_count: 4, can_display: true }],
-      sessionUserId: null,
-    })
-    const provider = createUserOshiListProvider(client)
-
-    await expect(provider.fetchListSummary('user-1')).resolves.toEqual({
-      ok: false,
-      error: 'auth_required',
-    })
-    expect(calls.userListSelectMock).not.toHaveBeenCalled()
   })
 
   it('お気に入り未登録なら追加してtrueを返す', async () => {

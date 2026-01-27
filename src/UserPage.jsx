@@ -5,6 +5,7 @@ import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
 import UserOshiListPanel from './UserOshiListPanel.jsx'
 import UserOshiSeriesPanel from './UserOshiSeriesPanel.jsx'
+import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
 import { createUserOshiListProvider } from './userOshiListProvider.js'
 import { createUserPageProvider } from './userPageProvider.js'
@@ -80,6 +81,10 @@ function UserPage({
       }
       setIsAuthenticated(true)
 
+      const viewerResult = await resolveCurrentUserId(supabase)
+      if (!isMounted) return
+      const viewerUserId = viewerResult.ok ? viewerResult.userId : null
+
       const profileResult = await profileProvider.fetchUserProfile(userId)
       if (!isMounted) return
       if (!profileResult.ok) {
@@ -98,7 +103,7 @@ function UserPage({
 
       const listPromise =
         listProvider && typeof listProvider.fetchListSummary === 'function'
-          ? listProvider.fetchListSummary(userId)
+          ? listProvider.fetchListSummary({ targetUserId: userId, viewerUserId })
           : Promise.resolve({ ok: false, error: 'not_configured' })
       const seriesPromise =
         seriesProvider && typeof seriesProvider.fetchSeries === 'function'

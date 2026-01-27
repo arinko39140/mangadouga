@@ -28,18 +28,25 @@ const buildPrivateSummary = (status) => ({
 })
 
 export const createUserOshiListProvider = (supabaseClient) => ({
-  async fetchListSummary(userId) {
-    if (typeof userId !== 'string' || userId.trim() === '') {
+  async fetchListSummary(input) {
+    const targetUserId =
+      typeof input === 'object' && input !== null ? input.targetUserId : null
+    const viewerUserId =
+      typeof input === 'object' && input !== null ? input.viewerUserId ?? null : null
+    if (typeof targetUserId !== 'string' || targetUserId.trim() === '') {
       return { ok: false, error: 'invalid_input' }
     }
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
     }
 
+    const isOwner =
+      typeof viewerUserId === 'string' && viewerUserId.trim() === targetUserId
+
     const { data: listData, error: listError } = await supabaseClient
       .from('list')
       .select('list_id, favorite_count, can_display')
-      .eq('user_id', userId)
+      .eq('user_id', targetUserId)
       .order('list_id', { ascending: true })
       .limit(1)
 
@@ -52,7 +59,7 @@ export const createUserOshiListProvider = (supabaseClient) => ({
       const { data: userData, error: userError } = await supabaseClient
         .from('users')
         .select('user_id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .limit(1)
 
       if (userError) {
@@ -66,7 +73,7 @@ export const createUserOshiListProvider = (supabaseClient) => ({
       return { ok: true, data: buildPrivateSummary('none') }
     }
 
-    if (!listRow.can_display) {
+    if (!isOwner && !listRow.can_display) {
       return { ok: true, data: buildPrivateSummary('private') }
     }
 
@@ -75,15 +82,22 @@ export const createUserOshiListProvider = (supabaseClient) => ({
       return { ok: true, data: buildPrivateSummary('none') }
     }
 
-    const userResult = await resolveCurrentUserId(supabaseClient)
-    if (!userResult.ok) {
-      return { ok: false, error: userResult.error }
+    if (!viewerUserId) {
+      return {
+        ok: true,
+        data: {
+          listId,
+          status: 'public',
+          favoriteCount: listRow.favorite_count ?? 0,
+          isFavorited: false,
+        },
+      }
     }
 
     const { data: favoriteData, error: favoriteError } = await supabaseClient
       .from('user_list')
       .select('list_id')
-      .eq('user_id', userResult.userId)
+      .eq('user_id', viewerUserId)
       .eq('list_id', listId)
       .limit(1)
 

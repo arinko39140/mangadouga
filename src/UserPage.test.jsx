@@ -159,7 +159,10 @@ describe('UserPage', () => {
     expect(screen.getByText('お気に入り数: 2')).toBeInTheDocument()
     expect(screen.getByText('星の物語')).toBeInTheDocument()
     expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
-    expect(listProvider.fetchListSummary).toHaveBeenCalledWith('user-1')
+    expect(listProvider.fetchListSummary).toHaveBeenCalledWith({
+      targetUserId: 'user-1',
+      viewerUserId: null,
+    })
     expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
   })
 
@@ -189,7 +192,10 @@ describe('UserPage', () => {
     await waitFor(() => {
       expect(profileProvider.fetchUserProfile).toHaveBeenCalledWith('user-1')
     })
-    expect(listProvider.fetchListSummary).toHaveBeenCalledWith('user-1')
+    expect(listProvider.fetchListSummary).toHaveBeenCalledWith({
+      targetUserId: 'user-1',
+      viewerUserId: null,
+    })
     expect(seriesProvider.fetchSeries).toHaveBeenCalledWith('user-1')
     expect(screen.getByRole('link', { name: 'Xリンク' })).toHaveAttribute(
       'href',
