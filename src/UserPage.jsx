@@ -20,6 +20,9 @@ const defaultProfileProvider = createUserPageProvider(supabase)
 const defaultListProvider = createUserOshiListProvider(supabase)
 const defaultSeriesProvider = createUserSeriesProvider(supabase)
 const defaultFavoritesProvider = createOshiFavoritesProvider(supabase)
+const ICON_BUCKET = 'user-icons'
+const ICON_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/apng']
+const MAX_ICON_BYTES = 3 * 1024 * 1024
 
 function UserPage({
   profileProvider = defaultProfileProvider,
@@ -50,6 +53,10 @@ function UserPage({
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaveError, setProfileSaveError] = useState(null)
+  const [iconFile, setIconFile] = useState(null)
+  const [iconPreviewUrl, setIconPreviewUrl] = useState('')
+  const [iconUploadError, setIconUploadError] = useState(null)
+  const [iconUploadStatus, setIconUploadStatus] = useState('idle')
   const [profileForm, setProfileForm] = useState({
     name: '',
     iconUrl: '',
@@ -257,12 +264,19 @@ function UserPage({
   const handleProfileChange = (field) => (event) => {
     const value = event?.target?.value ?? ''
     setProfileForm((prev) => ({ ...prev, [field]: value }))
+    if (field === 'iconUrl') {
+      setIconPreviewUrl(value)
+    }
   }
 
   const handleProfileCancel = () => {
     setIsEditingProfile(false)
     setProfileSaveError(null)
+    setIconFile(null)
+    setIconUploadError(null)
+    setIconUploadStatus('idle')
     if (profile) {
+      setIconPreviewUrl(profile.iconUrl ?? '')
       setProfileForm({
         name: profile.name ?? '',
         iconUrl: profile.iconUrl ?? '',
@@ -274,6 +288,84 @@ function UserPage({
         otherLabel: profile.links?.find((link) => link.category === 'other')?.label ?? '',
       })
     }
+  }
+
+  useEffect(() => {
+    if (!iconFile) return undefined
+    const objectUrl = URL.createObjectURL(iconFile)
+    setIconPreviewUrl(objectUrl)
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [iconFile])
+
+  useEffect(() => {
+    if (!isEditingProfile) return
+    setIconUploadStatus('idle')
+    setIconUploadError(null)
+    setIconFile(null)
+    setIconPreviewUrl(profile?.iconUrl ?? '')
+  }, [isEditingProfile, profile])
+
+  const handleIconFileChange = (event) => {
+    const file = event?.target?.files?.[0] ?? null
+    setIconUploadError(null)
+    setIconUploadStatus('idle')
+    if (!file) {
+      setIconFile(null)
+      return
+    }
+    if (!ICON_MIME_TYPES.includes(file.type)) {
+      setIconUploadError('invalid_type')
+      setIconFile(null)
+      return
+    }
+    if (file.size > MAX_ICON_BYTES) {
+      setIconUploadError('too_large')
+      setIconFile(null)
+      return
+    }
+    setIconFile(file)
+  }
+
+  const handleIconUpload = async () => {
+    if (!iconFile) return
+    if (!viewerUserId) {
+      setIconUploadError('auth_required')
+      authGateInstance.redirectToLogin()
+      return
+    }
+    if (!supabase || !supabase.storage?.from) {
+      setIconUploadError('not_configured')
+      return
+    }
+
+    setIconUploadError(null)
+    setIconUploadStatus('uploading')
+    const extension = iconFile.name.split('.').pop()?.toLowerCase() || 'png'
+    const filePath = `${viewerUserId}/icon-${Date.now()}.${extension}`
+    const { error: uploadError } = await supabase.storage
+      .from(ICON_BUCKET)
+      .upload(filePath, iconFile, { upsert: true, contentType: iconFile.type })
+
+    if (uploadError) {
+      setIconUploadStatus('idle')
+      setIconUploadError('upload_failed')
+      return
+    }
+
+    const { data } = supabase.storage.from(ICON_BUCKET).getPublicUrl(filePath)
+    const publicUrl = data?.publicUrl ?? ''
+    if (!publicUrl) {
+      setIconUploadStatus('idle')
+      setIconUploadError('public_url_failed')
+      return
+    }
+
+    setProfileForm((prev) => ({ ...prev, iconUrl: publicUrl }))
+    setIconPreviewUrl(publicUrl)
+    setIconFile(null)
+    setIconUploadStatus('done')
   }
 
   const handleProfileSave = async (event) => {
@@ -447,6 +539,59 @@ function UserPage({
                     placeholder="ユーザー名"
                   />
                 </label>
+                <div className="user-profile-edit__upload">
+                  <label>
+                    アイコン画像
+                    <input
+                      type="file"
+                      accept={ICON_MIME_TYPES.join(',')}
+                      onChange={handleIconFileChange}
+                    />
+                  </label>
+                  <div className="user-profile-edit__upload-actions">
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={handleIconUpload}
+                      disabled={!iconFile || iconUploadStatus === 'uploading'}
+                    >
+                      {iconUploadStatus === 'uploading' ? 'アップロード中...' : 'アップロード'}
+                    </button>
+                  </div>
+                  {iconPreviewUrl ? (
+                    <div className="user-profile-edit__upload-preview" aria-live="polite">
+                      <img src={iconPreviewUrl} alt="選択中のアイコンプレビュー" />
+                      <div>
+                        <p className="user-profile-edit__upload-label">プレビュー</p>
+                        <p className="user-profile-edit__upload-hint">
+                          アップロード後に「保存する」を押してください。
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="user-profile-edit__upload-hint">
+                      PNG/JPEG/GIF/APNG、3MBまで対応します。
+                    </p>
+                  )}
+                  {iconUploadStatus === 'done' ? (
+                    <p className="user-profile-edit__upload-hint">
+                      アップロード済みです。保存を続けてください。
+                    </p>
+                  ) : null}
+                  {iconUploadError ? (
+                    <p className="user-profile-edit__status" role="alert">
+                      {iconUploadError === 'invalid_type'
+                        ? '対応していない画像形式です。'
+                        : iconUploadError === 'too_large'
+                          ? '画像サイズが大きすぎます。'
+                          : iconUploadError === 'auth_required'
+                            ? 'ログインが必要です。'
+                            : iconUploadError === 'not_configured'
+                              ? 'Supabase設定が未完了のためアップロードできません。'
+                              : 'アップロードに失敗しました。'}
+                    </p>
+                  ) : null}
+                </div>
                 <label>
                   アイコンURL
                   <input

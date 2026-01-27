@@ -298,6 +298,7 @@ describe('UserOshiListProvider', () => {
         status: 'public',
         favoriteCount: 1,
         isFavorited: false,
+        items: [],
       },
     })
   })

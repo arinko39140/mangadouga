@@ -93,3 +93,44 @@
   padding: 0.6rem 0.9rem;
   border: 1px solid rgba(141, 44, 36, 0.2);
 }
+
+.user-profile-edit__upload {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.user-profile-edit__upload-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.user-profile-edit__upload-preview {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border-radius: 16px;
+  background: #f4eef9;
+  border: 1px dashed rgba(127, 92, 143, 0.35);
+}
+
+.user-profile-edit__upload-preview img {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid rgba(120, 99, 117, 0.2);
+}
+
+.user-profile-edit__upload-label {
+  margin: 0;
+  font-weight: 600;
+  color: #2c2032;
+}
+
+.user-profile-edit__upload-hint {
+  margin: 0;
+  color: #6a596b;
+  font-size: 0.85rem;
+}

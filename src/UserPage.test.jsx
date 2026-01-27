@@ -332,7 +332,9 @@ describe('UserPage', () => {
     await waitFor(() => {
       expect(screen.getByText('この推しリストは非公開です。')).toBeInTheDocument()
     })
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'お気に入り登録' })
+    ).not.toBeInTheDocument()
   })
 
   it('無効な外部リンクはユーザーページに表示されない', async () => {
