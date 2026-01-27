@@ -6,6 +6,7 @@ import UserInfoPanel from './UserInfoPanel.jsx'
 import { createProfileVisibilityProvider } from './profileVisibilityProvider.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
+import { publishUserSeriesUpdated, subscribeUserSeriesUpdated } from './userSeriesEvents.js'
 import { createUserPageProvider } from './userPageProvider.js'
 import { createUserSeriesProvider } from './userSeriesProvider.js'
 import './UserOshiSeriesPage.css'
@@ -189,6 +190,13 @@ function UserOshiSeriesPage({
     setReloadToken((prev) => prev + 1)
   }
 
+  useEffect(() => {
+    const unsubscribe = subscribeUserSeriesUpdated(() => {
+      setReloadToken((prev) => prev + 1)
+    })
+    return () => unsubscribe()
+  }, [])
+
   const isNotFound = profileError === 'not_found'
   const hasPageError = Boolean(profileError)
   const shouldShowRetry = (!isNotFound && Boolean(profileError)) || Boolean(seriesError)
@@ -242,6 +250,7 @@ function UserOshiSeriesPage({
             item.seriesId !== seriesId ? item : { ...item, isRegistered: true }
           )
         )
+        publishUserSeriesUpdated()
       } else if (result.error === 'auth_required') {
         authGateInstance.redirectToLogin()
       } else {
@@ -270,6 +279,7 @@ function UserOshiSeriesPage({
       const result = await seriesProvider.unregisterSeries({ seriesId })
       if (result.ok) {
         setSeriesItems((prev) => prev.filter((item) => item.seriesId !== seriesId))
+        publishUserSeriesUpdated()
       } else if (result.error === 'auth_required') {
         authGateInstance.redirectToLogin()
       } else {

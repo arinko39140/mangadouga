@@ -20,6 +20,12 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
+const isMissingColumnError = (error, columnName) => {
+  if (!error || !columnName) return false
+  const message = String(error.message ?? '')
+  return message.includes(columnName) && message.includes('does not exist')
+}
+
 const hasRequiredSeriesFields = (series) => Boolean(series?.series_id && series?.title)
 
 const mapSeriesRow = (series) => ({
@@ -130,9 +136,21 @@ export const createUserSeriesProvider = (supabaseClient) => ({
       query = query.eq('can_display', true)
     }
 
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(limit)
+    let { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
+
+    if (error && isMissingColumnError(error, 'created_at')) {
+      const fallbackQuery = supabaseClient
+        .from('user_series')
+        .select('series:series_id (series_id, title, favorite_count, update)')
+        .eq('user_id', targetUserId)
+        .limit(limit)
+      if (!isOwner) {
+        fallbackQuery.eq('can_display', true)
+      }
+      const fallbackResult = await fallbackQuery
+      data = fallbackResult.data
+      error = fallbackResult.error
+    }
 
     if (error) {
       return { ok: false, error: normalizeError(error) }

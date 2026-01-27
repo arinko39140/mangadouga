@@ -14,6 +14,7 @@ import { createUserOshiListProvider } from './userOshiListProvider.js'
 import { createUserPageProvider } from './userPageProvider.js'
 import { createUserSeriesProvider } from './userSeriesProvider.js'
 import { publishUserProfileUpdated } from './userProfileEvents.js'
+import { subscribeUserSeriesUpdated } from './userSeriesEvents.js'
 import './UserPage.css'
 
 const defaultProfileProvider = createUserPageProvider(supabase)
@@ -258,6 +259,13 @@ function UserPage({
   const handleRetry = () => {
     setReloadToken((prev) => prev + 1)
   }
+
+  useEffect(() => {
+    const unsubscribe = subscribeUserSeriesUpdated(() => {
+      setReloadToken((prev) => prev + 1)
+    })
+    return () => unsubscribe()
+  }, [])
 
   const isOwner = Boolean(viewerUserId) && viewerUserId === userId
 

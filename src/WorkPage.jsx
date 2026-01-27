@@ -8,6 +8,7 @@ import SeriesHeader from './SeriesHeader.jsx'
 import SortControl from './SortControl.jsx'
 import { createMockWorkPageDataProvider } from './mockWorkPageDataProvider.js'
 import { publishOshiListUpdated } from './oshiListEvents.js'
+import { publishUserSeriesUpdated } from './userSeriesEvents.js'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 import './WorkPage.css'
@@ -72,6 +73,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         setSeries((prev) =>
           prev ? { ...prev, isFavorited: result.data.isFavorited } : prev
         )
+        publishUserSeriesUpdated()
       }
     } finally {
       setFavoriteUpdating(false)
