@@ -82,4 +82,29 @@ describe('UserOshiSections', () => {
     expect(screen.queryByText('FAVORITES_CONTENT')).not.toBeInTheDocument()
     expect(visibilityProvider.fetchVisibility).toHaveBeenCalledWith({ targetUserId: 'target-1' })
   })
+
+  it('非公開セクションがあっても他セクションの表示は維持される', async () => {
+    const visibilityProvider = {
+      fetchVisibility: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { oshiList: 'private', oshiSeries: 'public' },
+      }),
+    }
+
+    render(
+      <UserOshiSections
+        viewerUserId="viewer-1"
+        targetUserId="target-1"
+        visibilityProvider={visibilityProvider}
+        listPanel={buildSection('推しリスト', 'LIST_CONTENT')}
+        seriesPanel={buildSection('推し作品一覧', 'SERIES_CONTENT')}
+        favoritesPanel={buildSection('お気に入り推しリスト', 'FAVORITES_CONTENT')}
+      />
+    )
+
+    expect(await screen.findByText('SERIES_CONTENT')).toBeInTheDocument()
+    expect(screen.getByText('非公開')).toBeInTheDocument()
+    expect(screen.queryByText('LIST_CONTENT')).not.toBeInTheDocument()
+    expect(screen.queryByText('FAVORITES_CONTENT')).not.toBeInTheDocument()
+  })
 })
