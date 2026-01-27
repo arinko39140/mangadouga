@@ -4,4 +4,21 @@
 
 ステップ2：work-page-playback-episode-list
 
+ステップ3：oshi-list-user-registration-registered-only
+
+ステップ4：oshi-list-favorites-registered-only
+
+ステップ5：user-page-info-links
+
+ステップ6：mypage-oshi-sections
+
 supabase 1192Jmdw!-893
+
+EtmVyaKGnV4Cy69m
+
+・マイページ、推しリスト、グリット表示、サムネも
+・みんなの推しリスト、お気に入り推しリスト、アイコン表示
+・プロフィールアイコン、トリミングできるようにしてほしい
+・推し作品、再生するボタン、削除
+・自分の推しリストのお気に入り登録いらない。（ユーザーページ、みんなの推しリスト）
+・ユーザーマイページ、ログインユーザーの時だけ、マイページ表示してほしい。
