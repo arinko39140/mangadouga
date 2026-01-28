@@ -63,3 +63,4 @@
 1. The Oshi Web App shall 初期表示時の既定ソート基準を「人気」に設定する
 2. The Oshi Web App shall 初期表示時に当日の曜日を既定の曜日フィルタとして選択する
 3. When ページを再読み込みしたとき, the Oshi Web App shall 当日の曜日フィルタと既定ソート（人気）で表示する
+4. When ページを再読み込みしたとき and URLに`sortOrder`が存在する場合, the Oshi Web App shall URLの`sortOrder`を優先して表示する
