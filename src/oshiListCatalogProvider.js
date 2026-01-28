@@ -21,10 +21,11 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const mapCatalogRow = (row, userName, viewerUserId) => ({
+const mapCatalogRow = (row, userName, iconUrl, viewerUserId) => ({
   listId: row.list_id != null ? String(row.list_id) : '',
   userId: row.user_id != null ? String(row.user_id) : '',
   name: userName ?? '',
+  iconUrl: iconUrl ?? null,
   favoriteCount: row.favorite_count ?? 0,
   isFavorited: Boolean(row.is_favorited),
   visibility: row.can_display ? 'public' : 'private',
@@ -60,19 +61,22 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
     const userIds = Array.from(
       new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
     )
-    let userNameMap = new Map()
+    let userProfileMap = new Map()
     if (userIds.length > 0) {
       const { data: usersData, error: usersError } = await supabaseClient
         .from('users')
-        .select('user_id, name')
+        .select('user_id, name, icon_url')
         .in('user_id', userIds)
 
       if (usersError) {
         return { ok: false, error: normalizeError(usersError) }
       }
 
-      userNameMap = new Map(
-        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      userProfileMap = new Map(
+        (usersData ?? []).map((row) => [
+          String(row.user_id),
+          { name: row.name ?? '', iconUrl: row.icon_url ?? null },
+        ])
       )
     }
 
@@ -90,10 +94,10 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
     )
     const items = (listData ?? []).map((row) => {
       const mappedUserId = row.user_id != null ? String(row.user_id) : ''
-      const userName = userNameMap.get(mappedUserId) ?? ''
+      const profile = userProfileMap.get(mappedUserId) ?? { name: '', iconUrl: null }
       const isOwner = mappedUserId === userId
       return {
-        ...mapCatalogRow(row, userName, userId),
+        ...mapCatalogRow(row, profile.name, profile.iconUrl, userId),
         isFavorited: isOwner ? false : favoriteSet.has(String(row.list_id)),
       }
     })

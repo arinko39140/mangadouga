@@ -108,7 +108,18 @@ function OshiFavoritesPage({ dataProvider = defaultDataProvider, authGate }) {
               <article className="oshi-lists__card">
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
-                    <h2 className="oshi-lists__title">{item.name}</h2>
+                    <h2 className="oshi-lists__title">
+                      <span className="oshi-lists__user">
+                        <span className="oshi-lists__avatar" aria-hidden="true">
+                          {item.iconUrl ? (
+                            <img src={item.iconUrl} alt="" aria-hidden="true" />
+                          ) : (
+                            <span className="oshi-lists__avatar-placeholder">?</span>
+                          )}
+                        </span>
+                        <span className="oshi-lists__title-name">{item.name}</span>
+                      </span>
+                    </h2>
                     {isFavorited ? <span className="oshi-lists__chip">推</span> : null}
                   </div>
                   <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>

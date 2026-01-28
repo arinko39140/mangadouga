@@ -136,6 +136,43 @@
   color: #2a1e2f;
 }
 
+.oshi-lists__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.oshi-lists__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47, 32, 53, 0.08);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.oshi-lists__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.oshi-lists__avatar-placeholder {
+  font-size: 0.85rem;
+  color: #6a596b;
+  font-weight: 700;
+}
+
+.oshi-lists__title-name {
+  display: inline-block;
+  color: inherit;
+}
+
 .oshi-lists__chip {
   background: rgba(47, 32, 53, 0.08);
   color: #3b2f40;

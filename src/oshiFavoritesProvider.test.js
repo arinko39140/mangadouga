@@ -162,7 +162,7 @@ describe('OshiFavoritesProvider', () => {
         { list_id: 2, user_id: 'user-1', favorite_count: 2, can_display: true },
         { list_id: 3, user_id: 'user-1', favorite_count: 1, can_display: true },
       ],
-      usersRows: [{ user_id: 'user-1', name: '推しリスト' }],
+      usersRows: [{ user_id: 'user-1', name: '推しリスト', icon_url: null }],
     })
     const provider = createOshiFavoritesProvider(client)
 
@@ -213,9 +213,7 @@ describe('OshiFavoritesProvider', () => {
           can_display: true,
         },
       ],
-      usersRows: [
-        { user_id: 'user-1', name: '推しリスト' },
-      ],
+      usersRows: [{ user_id: 'user-1', name: '推しリスト', icon_url: null }],
     })
     const provider = createOshiFavoritesProvider(client)
 
@@ -231,7 +229,7 @@ describe('OshiFavoritesProvider', () => {
     expect(calls.listInMock).toHaveBeenCalledWith('list_id', ['1', '2'])
     expect(calls.listEqMock).toHaveBeenCalledWith('can_display', true)
     expect(calls.fromMock).toHaveBeenCalledWith('users')
-    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name')
+    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name, icon_url')
     expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
     expect(result).toEqual({
       ok: true,
@@ -240,6 +238,7 @@ describe('OshiFavoritesProvider', () => {
           listId: '1',
           userId: 'user-1',
           name: '推しリスト',
+          iconUrl: null,
           favoriteCount: 3,
           isFavorited: true,
         },

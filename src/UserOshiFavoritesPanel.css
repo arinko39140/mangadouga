@@ -58,6 +58,36 @@
   background: #fff;
 }
 
+.user-oshi-favorites__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.user-oshi-favorites__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47, 32, 53, 0.08);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.user-oshi-favorites__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-oshi-favorites__avatar-placeholder {
+  font-size: 0.75rem;
+  color: #6a596b;
+  font-weight: 700;
+}
+
 .user-oshi-favorites__name {
   margin: 0;
   font-size: 0.95rem;

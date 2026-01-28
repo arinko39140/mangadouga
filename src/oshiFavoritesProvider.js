@@ -21,12 +21,13 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const mapFavoriteRow = (list, userName) => {
+const mapFavoriteRow = (list, userName, iconUrl) => {
   if (!list?.list_id || !list?.user_id) return null
   return {
     listId: String(list.list_id),
     userId: String(list.user_id),
     name: userName ?? '',
+    iconUrl: iconUrl ?? null,
     favoriteCount: list.favorite_count ?? 0,
     isFavorited: true,
   }
@@ -75,19 +76,22 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
     const userIds = Array.from(
       new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
     )
-    let userNameMap = new Map()
+    let userProfileMap = new Map()
     if (userIds.length > 0) {
       const { data: usersData, error: usersError } = await supabaseClient
         .from('users')
-        .select('user_id, name')
+        .select('user_id, name, icon_url')
         .in('user_id', userIds)
 
       if (usersError) {
         return { ok: false, error: normalizeError(usersError) }
       }
 
-      userNameMap = new Map(
-        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      userProfileMap = new Map(
+        (usersData ?? []).map((row) => [
+          String(row.user_id),
+          { name: row.name ?? '', iconUrl: row.icon_url ?? null },
+        ])
       )
     }
 
@@ -95,7 +99,8 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
     ;(listData ?? []).forEach((row) => {
       if (!row?.can_display) return
       const mappedUserId = row.user_id != null ? String(row.user_id) : ''
-      const item = mapFavoriteRow(row, userNameMap.get(mappedUserId))
+      const profile = userProfileMap.get(mappedUserId) ?? { name: '', iconUrl: null }
+      const item = mapFavoriteRow(row, profile.name, profile.iconUrl)
       if (!item) return
       if (!items.has(item.listId)) {
         items.set(item.listId, item)
@@ -144,19 +149,22 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
     const userIds = Array.from(
       new Set((listData ?? []).map((row) => String(row.user_id)).filter(Boolean))
     )
-    let userNameMap = new Map()
+    let userProfileMap = new Map()
     if (userIds.length > 0) {
       const { data: usersData, error: usersError } = await supabaseClient
         .from('users')
-        .select('user_id, name')
+        .select('user_id, name, icon_url')
         .in('user_id', userIds)
 
       if (usersError) {
         return { ok: false, error: normalizeError(usersError) }
       }
 
-      userNameMap = new Map(
-        (usersData ?? []).map((row) => [String(row.user_id), row.name ?? ''])
+      userProfileMap = new Map(
+        (usersData ?? []).map((row) => [
+          String(row.user_id),
+          { name: row.name ?? '', iconUrl: row.icon_url ?? null },
+        ])
       )
     }
 
@@ -164,7 +172,8 @@ export const createOshiFavoritesProvider = (supabaseClient) => ({
     ;(listData ?? []).forEach((row) => {
       if (!row?.can_display) return
       const mappedUserId = row.user_id != null ? String(row.user_id) : ''
-      const item = mapFavoriteRow(row, userNameMap.get(mappedUserId))
+      const profile = userProfileMap.get(mappedUserId) ?? { name: '', iconUrl: null }
+      const item = mapFavoriteRow(row, profile.name, profile.iconUrl)
       if (!item) return
       if (!items.has(item.listId)) {
         items.set(item.listId, item)

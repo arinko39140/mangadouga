@@ -126,7 +126,7 @@ describe('OshiListCatalogProvider', () => {
     expect(calls.listEqMock).toHaveBeenCalledWith('can_display', true)
     expect(calls.listOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
     expect(calls.fromMock).toHaveBeenCalledWith('users')
-    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name')
+    expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name, icon_url')
     expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
     expect(calls.fromMock).toHaveBeenCalledWith('user_list')
     expect(calls.favoriteSelectMock).toHaveBeenCalledWith('list_id')
@@ -138,9 +138,11 @@ describe('OshiListCatalogProvider', () => {
           listId: '1',
           userId: 'user-1',
           name: '推しリスト',
+          iconUrl: null,
           favoriteCount: 5,
-          isFavorited: true,
+          isFavorited: false,
           visibility: 'public',
+          isOwner: true,
         },
       ],
     })

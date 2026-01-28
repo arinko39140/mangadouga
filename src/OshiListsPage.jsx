@@ -122,9 +122,27 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                   <div className="oshi-lists__title-row">
                     <h2 className="oshi-lists__title">
                       {canLinkToUser ? (
-                        <Link to={`/users/${item.userId}/`}>{item.name}</Link>
+                        <Link className="oshi-lists__user" to={`/users/${item.userId}/`}>
+                          <span className="oshi-lists__avatar" aria-hidden="true">
+                            {item.iconUrl ? (
+                              <img src={item.iconUrl} alt="" aria-hidden="true" />
+                            ) : (
+                              <span className="oshi-lists__avatar-placeholder">?</span>
+                            )}
+                          </span>
+                          <span className="oshi-lists__title-name">{item.name}</span>
+                        </Link>
                       ) : (
-                        item.name
+                        <span className="oshi-lists__user">
+                          <span className="oshi-lists__avatar" aria-hidden="true">
+                            {item.iconUrl ? (
+                              <img src={item.iconUrl} alt="" aria-hidden="true" />
+                            ) : (
+                              <span className="oshi-lists__avatar-placeholder">?</span>
+                            )}
+                          </span>
+                          <span className="oshi-lists__title-name">{item.name}</span>
+                        </span>
                       )}
                     </h2>
                     <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>

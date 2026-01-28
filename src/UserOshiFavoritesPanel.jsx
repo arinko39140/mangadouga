@@ -29,7 +29,16 @@ function UserOshiFavoritesPanel({
         {items.map((item) => (
           <li key={item.listId} className="user-oshi-favorites__item">
             <div className="user-oshi-favorites__card">
-              <p className="user-oshi-favorites__name">{item.name}</p>
+              <div className="user-oshi-favorites__title-row">
+                <span className="user-oshi-favorites__avatar" aria-hidden="true">
+                  {item.iconUrl ? (
+                    <img src={item.iconUrl} alt="" aria-hidden="true" />
+                  ) : (
+                    <span className="user-oshi-favorites__avatar-placeholder">?</span>
+                  )}
+                </span>
+                <p className="user-oshi-favorites__name">{item.name}</p>
+              </div>
               {item.favoriteCount != null ? (
                 <p className="user-oshi-favorites__meta">お気に入り数: {item.favoriteCount}</p>
               ) : null}
