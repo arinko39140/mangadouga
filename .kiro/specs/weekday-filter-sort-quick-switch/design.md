@@ -148,6 +148,7 @@ sequenceDiagram
 - `sortOrder` を `popular` / `latest` に正規化する
 - 未対応値の場合は `popular` にフォールバックする
 - URL で参照するキー名を `sortOrder` に統一する
+- 初期表示および再読み込み時は既定値（`popular`）を優先し、URL の `sortOrder` はユーザー操作後の状態再現に限定する
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -167,6 +168,14 @@ sequenceDiagram
 - 統合: `useSearchParams` を使用して URL を更新する
 - 検証: 許可値以外は `popular` に変換
 - リスク: 既存の `favorite_desc` / `favorite_asc` との互換性が必要
+
+**互換マッピング（既存値 → 統一値）**
+| 既存値 | 統一値 | 備考 |
+| --- | --- | --- |
+| favorite_desc | popular | みんなの推しリスト既存値 |
+| favorite_asc | popular | 既存 UI の「少ない順」は維持せず統一側でフォールバック |
+| latest | latest | 作品ページ既存値 |
+| oldest | latest | 作品ページ既存値は統一側でフォールバック |
 
 #### TopPage
 
