@@ -1,7 +1,7 @@
 # Requirements Document
 
 ## Introduction
-本仕様は、トップページにおける曜日別フィルタのクイック切替（タブ/ボタン）と、トップページ・みんなの推しリスト一覧・作品ページにおける投稿日時/人気によるソート機能の強化を定義する。
+本仕様は、トップページにおける曜日別フィルタのクイック切替（タブ/ボタン）と、各ページに応じた投稿日時/人気によるソート機能の強化を定義する。
 
 ## Requirements
 
@@ -21,15 +21,17 @@
 1. When 利用者がソート基準「投稿日」を選択したとき, the Oshi Web App shall 投稿日順に並び替える
 2. When 利用者がソート基準「人気」を選択したとき, the Oshi Web App shall 人気順に並び替える
 3. If 未対応のソート基準が指定されたとき, the Oshi Web App shall 既定のソートにフォールバックする
+4. The Oshi Web App shall 作品ページの人気順ソートを推しリスト登録数に基づいて計算する
 
 ### Requirement 3: 対象ページへの適用範囲
 **Objective:** As a 利用者, I want ページごとに適切な機能が提供される, so that 必要な操作だけを迷わず使える
 
 #### Acceptance Criteria
 1. The Oshi Web App shall トップページで曜日別フィルタのクイック切替を提供する
-2. The Oshi Web App shall みんなの推しリスト一覧でソート切替を提供する
-3. The Oshi Web App shall 作品ページでソート切替を提供する
-4. When 利用者が対象ページ間を移動したとき, the Oshi Web App shall ソートの基準名と意味を統一して用いる
+2. The Oshi Web App shall トップページで「投稿日」「人気」のソート切替を提供する
+3. The Oshi Web App shall みんなの推しリスト一覧で「人気」のソート切替を提供する
+4. The Oshi Web App shall 作品ページで「投稿日」「人気」のソート切替を提供する
+5. When 利用者が対象ページ間を移動したとき, the Oshi Web App shall ソートの基準名と意味を統一して用いる
 
 ### Requirement 4: フィルタとソートの組み合わせ
 **Objective:** As a 利用者, I want フィルタとソートを併用する, so that 条件に合う結果を適切な順序で見られる
