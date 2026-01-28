@@ -9,7 +9,7 @@
 - 曜日フィルタとソートを同時に扱える一貫したUIと状態管理を提供する
 - `sortOrder` キーをページ間で統一し、URL・UI・内部ロジックで同一の意味を保持する
 - 「最新100件」や人気順などの基準をサーバー側クエリで保証する
-- 人気順は常に `list_movie` / `user_list` の件数と一致することを保証する
+- 人気順は常に `list_movie` / `user_list` の件数と一致することを保証する（`favorite_count` をトリガーで同期）
 - WorkPage / OshiLists は無制限件数でも破綻しない取得方式（ページング）を明示し、パフォーマンスを担保する
 
 ### 非目標
@@ -88,9 +88,9 @@ graph TB
 | Frontend | React 18 (Vite) | UI 状態管理、フィルタ/ソート操作 | 既存構成を維持 |
 | Routing | react-router-dom | `sortOrder` の URL 同期 | `useSearchParams` を利用 |
 | Data Access | @supabase/supabase-js | フィルタ・ソート・件数制限クエリ | `order` + `range` を使用 |
-| Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | 集計用RPC/ビューを利用 |
+| Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | `favorite_count` をトリガーで同期 |
 
-> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` は集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。人気順の厳密保証には集計RPC/ビューが必須であり、クライアント集計のみで代替しない。
+> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` はトリガーで集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。
 
 ## システムフロー
 
@@ -258,7 +258,7 @@ sequenceDiagram
 - `weekday` 指定時は `movie.weekday` でフィルタする
 - `sortOrder = latest` は `movie.update` 降順で並び替える
 - `sortOrder = popular` は「最新100件」取得後、その100件内で人気順に並び替える
-- 人気順の基準は常に `list_movie` 件数（集計値）と一致させる
+- 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる
 - 必ず `range(0, 99)` を適用し 100 件に制限する
 
 **依存関係**
@@ -285,9 +285,9 @@ sequenceDiagram
 - 不変条件: `sortOrder` の意味は全ページで共通
 
 **実装上の留意点**
-- 統合: まず `movie.update` 降順で `range(0, 99)` を取得し、取得結果のIDに対して `list_movie` を集計して人気順へ再ソートする（RPC/ビューで集計結果を取得）
+- 統合: まず `movie.update` 降順で `range(0, 99)` を取得し、取得結果を `favorite_count` で人気順へ再ソートする
 - 検証: `weekday` が `all` の場合は `eq` フィルタを付けない
-- 取得: 人気順の集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
+- 取得: 取得に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - 取得: `movie.update` が null の行は除外し、最新100件の条件から外す
 - リスク: 除外対象が多い場合はデータ品質の監視が必要
 
@@ -300,7 +300,7 @@ sequenceDiagram
 
 **責務と制約**
 - `sortOrder = latest` は `movie.update` の降順
-- `sortOrder = popular` は `list_movie` 件数の降順（常に集計値）
+- `sortOrder = popular` は `list_movie` 件数の降順（`favorite_count` と一致）
 - 未対応 `sortOrder` は `popular` として扱う
 - 無制限件数を前提にページング取得を必須とし、UIは段階的に読み込む
 
@@ -323,9 +323,9 @@ sequenceDiagram
 - 不変条件: 「人気」は list_movie 件数の集計結果に一致する
 
 **実装上の留意点**
-- 統合: RPC/ビューで `popularity_count` を付与し、**DB 側で `order(popularity_count)` → `range` を適用**して順序を確定する
+- 統合: `movie.favorite_count` を用い、**DB 側で `order(favorite_count)` → `range` を適用**して順序を確定する
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
-- 取得: 集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
+- 取得: 取得に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
 - リスク: 集計コスト増大（件数が多い場合はインデックスが必要）
 
@@ -337,7 +337,7 @@ sequenceDiagram
 | 要件 | 2.2, 2.6, 3.3 |
 
 **責務と制約**
-- `sortOrder = popular` の場合は `user_list` 件数の降順（常に集計値）
+- `sortOrder = popular` の場合は `user_list` 件数の降順（`favorite_count` と一致）
 - `sortOrder = latest` は未対応のため `popular` にフォールバック
 - みんなの推しリスト一覧はログイン必須とし、未認証は `auth_required` を返す
 - 無制限件数を前提にページング取得を必須とし、UIは段階的に読み込む
@@ -361,7 +361,7 @@ sequenceDiagram
 - 不変条件: `favorite_count` は user_list 件数の集計結果と一致するよう更新される
 
 **実装上の留意点**
-- 統合: RPC/ビューで `popularity_count` を付与し、**DB 側で `order(popularity_count)` → `range` を適用**して順序を確定する
+- 統合: `list.favorite_count` を用い、**DB 側で `order(favorite_count)` → `range` を適用**して順序を確定する
 - 検証: 未対応値は `popular` に変換
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
 - リスク: 既存 UI との表示整合
@@ -372,29 +372,27 @@ sequenceDiagram
 - Entity: `Movie`（`movie_id`, `movie_title`, `update`, `favorite_count`, `weekday`）
 - Entity: `List`（`list_id`, `favorite_count`, `can_display`）
 - Value: `SortOrder`（`popular` / `latest`）
-- Invariants: 人気順は `list_movie` / `user_list` の件数で常に決定し、`favorite_count` は集計値と一致するよう更新・同期する
+- Invariants: 人気順は `list_movie` / `user_list` の件数で常に決定し、`favorite_count` はトリガーで集計値と一致するよう更新・同期する
 
 ### 論理データモデル
 - `movie.weekday` は `mon`-`sun` の固定キー
 - `movie.update` を投稿日として扱う
-- `movie.favorite_count` は `list_movie` 件数の集計値と一致するよう更新し、人気順は集計値で決定する
-- `list.favorite_count` は `user_list` 件数の集計値と一致するよう更新し、人気順は集計値で決定する
+- `movie.favorite_count` は `list_movie` 件数の集計値と一致するようトリガーで更新し、人気順は集計値で決定する
+- `list.favorite_count` は `user_list` 件数の集計値と一致するようトリガーで更新し、人気順は集計値で決定する
 
 ### データ契約と連携
-- API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（RPC/ビュー）を利用
+- API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（`favorite_count`）を利用
 - Validation rules: `weekday` の値域制限、`sortOrder` の許可値
-
-#### 集計RPC/ビュー契約（必須）
-- `public.get_movie_popularity(movie_ids uuid[]) -> { movie_id uuid, popularity_count bigint }`
-- `public.get_list_popularity(list_ids uuid[]) -> { list_id uuid, popularity_count bigint }`
-- WorkPage/OshiLists は **RPC/ビューで `popularity_count` を返し、DB 側で `order`→`range` を完結**する
+#### 集計トリガー（既存）
+- `public.list_movie` への insert/delete で `movie.favorite_count` を更新（`movie_favorite_count_trigger`）
+- `public.user_list` への insert/delete で `list.favorite_count` を更新（`user_list_favorite_count_trigger`）
 
 #### 人気順の集計手順（厳密保証）
-- TopPage: `movie` を `update` 降順で100件取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え（最新100件内の人気順）
-- WorkPage: `series_id` で対象 `movie` を **DB 側で popularity_count を付与して order → range** → 返却結果の順序を保持
-- OshiListsPage: 対象 `list` を **DB 側で popularity_count を付与して order → range** → 返却結果の順序を保持
+- TopPage: `movie` を `update` 降順で100件取得 → 100件内を `favorite_count` 降順で並び替え（最新100件内の人気順）
+- WorkPage: `series_id` で対象 `movie` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
+- OshiListsPage: 対象 `list` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
 
-> 実装指針: 集計はRPC/ビューで実施し、クライアントは「対象ID取得」→「集計結果取得」→「マッピング・ソート」の順で適用する。
+> 実装指針: `favorite_count` はトリガーで同期済みの前提とし、クライアントは追加集計を行わない。
 
 ## エラーハンドリング
 
