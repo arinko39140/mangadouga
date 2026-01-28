@@ -152,6 +152,7 @@ sequenceDiagram
 - 未対応値の場合は `popular` にフォールバックする
 - URL で参照するキー名を `sortOrder` に統一する
 - URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
+- ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先する
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -164,7 +165,7 @@ sequenceDiagram
 
 ##### 状態管理
 - 状態モデル: `{ sortOrder: 'popular' | 'latest' }`
-- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する
+- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する（TopPage の初期化は既定表示を優先）
 - 競合戦略: 画面内の単一状態、最後の操作を優先
 
 **実装上の留意点**
@@ -189,6 +190,7 @@ sequenceDiagram
 
 **責務と制約**
 - 既定の曜日は JST の当日キーで初期化する
+- 再読み込み時は URL の `sortOrder` が存在しても既定表示（当日曜日 + 人気）を優先する
 - 「すべて」タブを含め、再選択時は状態を維持する
 - フィルタとソートの両方の選択状態を同時に表示する
 
@@ -202,7 +204,7 @@ sequenceDiagram
 
 ##### 状態管理
 - 状態モデル: `{ weekday: WeekdayKey, sortOrder: SortOrder, items: WorkItem[] }`
-- 永続性と整合性: `sortOrder` は URL に反映、曜日はページ内状態
+- 永続性と整合性: `sortOrder` は URL に反映するが、初期表示は当日曜日 + 人気を優先する（再読み込み時も同様）。曜日はページ内状態
 - 競合戦略: 最新の操作のみ反映する（requestId/AbortControllerで旧リクエストを破棄）
 
 **実装上の留意点**
@@ -329,6 +331,7 @@ sequenceDiagram
 **責務と制約**
 - `sortOrder = popular` の場合は `user_list` 件数の降順（常に集計値）
 - `sortOrder = latest` は未対応のため `popular` にフォールバック
+- みんなの推しリスト一覧はログイン必須とし、未認証は `auth_required` を返す
 
 **依存関係**
 - 入力: OshiListsPage — `sortOrder` (P1)
