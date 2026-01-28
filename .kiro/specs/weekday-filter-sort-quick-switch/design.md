@@ -10,6 +10,7 @@
 - `sortOrder` キーをページ間で統一し、URL・UI・内部ロジックで同一の意味を保持する
 - 「最新100件」や人気順などの基準をサーバー側クエリで保証する
 - 人気順は常に `list_movie` / `user_list` の件数と一致することを保証する
+- WorkPage / OshiLists は無制限件数でも破綻しない取得方式（ページング）を明示し、パフォーマンスを担保する
 
 ### 非目標
 - 新しいバックエンドAPIやDBスキーマの追加（人気順の集計用に限定的なRPC/ビューを追加する場合を除く）
@@ -89,7 +90,7 @@ graph TB
 | Data Access | @supabase/supabase-js | フィルタ・ソート・件数制限クエリ | `order` + `range` を使用 |
 | Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | 集計用RPC/ビューを利用 |
 
-> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` は集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。
+> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` は集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。人気順の厳密保証には集計RPC/ビューが必須であり、クライアント集計のみで代替しない。
 
 ## システムフロー
 
@@ -300,6 +301,7 @@ sequenceDiagram
 - `sortOrder = latest` は `movie.update` の降順
 - `sortOrder = popular` は `list_movie` 件数の降順（常に集計値）
 - 未対応 `sortOrder` は `popular` として扱う
+- 無制限件数を前提にページング取得を必須とし、UIは段階的に読み込む
 
 **依存関係**
 - 入力: WorkPage — `seriesId` と `sortOrder` (P0)
@@ -323,7 +325,8 @@ sequenceDiagram
 - 統合: 対象 `movie` を取得後に `list_movie` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
 - 取得: 集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
-- リスク: 集計コスト増大（件数が多い場合はページングやインデックスが必要）
+- 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
+- リスク: 集計コスト増大（件数が多い場合はインデックスが必要）
 
 #### OshiListCatalogProvider
 
@@ -336,6 +339,7 @@ sequenceDiagram
 - `sortOrder = popular` の場合は `user_list` 件数の降順（常に集計値）
 - `sortOrder = latest` は未対応のため `popular` にフォールバック
 - みんなの推しリスト一覧はログイン必須とし、未認証は `auth_required` を返す
+- 無制限件数を前提にページング取得を必須とし、UIは段階的に読み込む
 
 **依存関係**
 - 入力: OshiListsPage — `sortOrder` (P1)
@@ -358,6 +362,7 @@ sequenceDiagram
 **実装上の留意点**
 - 統合: 対象 `list` を取得後に `user_list` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
 - 検証: 未対応値は `popular` に変換
+- 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
 - リスク: 既存 UI との表示整合
 
 ## データモデル
@@ -378,7 +383,7 @@ sequenceDiagram
 - API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（RPC/ビュー）を利用
 - Validation rules: `weekday` の値域制限、`sortOrder` の許可値
 
-#### 集計RPC/ビュー契約（案）
+#### 集計RPC/ビュー契約（必須）
 - `public.get_movie_popularity(movie_ids uuid[]) -> { movie_id uuid, popularity_count bigint }`
 - `public.get_list_popularity(list_ids uuid[]) -> { list_id uuid, popularity_count bigint }`
 - DataProvider は「対象ID取得 → 集計取得 → マッピング・ソート」を必ず行う
@@ -394,6 +399,7 @@ sequenceDiagram
 
 ### エラー方針
 - 取得失敗時は既存の `not_configured` / `network` / `unknown` を維持し、TopPage は空状態表示へフォールバックする。
+- `auth_required` は OshiListsPage でログイン画面へリダイレクトする。
 
 ### エラー区分と対応
 - User Errors: 未対応 `sortOrder` → 既定ソートへフォールバック
@@ -424,6 +430,7 @@ sequenceDiagram
 ## 性能とスケーラビリティ
 - TopPage は必ず 100 件に制限し、切替時に同範囲を取得する。
 - `order` と `range` を組み合わせ、DB 側で結果を確定する。
+- WorkPage / OshiLists は 50 件単位のページング取得を基本とし、無制限件数でも破綻しない設計とする。
 
 ## 参考資料（任意）
 - 詳細な API 仕様と検証ログは `research.md` に記載。
