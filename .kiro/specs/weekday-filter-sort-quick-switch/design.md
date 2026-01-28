@@ -182,7 +182,7 @@ sequenceDiagram
 | favorite_desc | popular | みんなの推しリスト既存値 |
 | favorite_asc | popular | 既存 UI の「少ない順」は維持せず統一側でフォールバック |
 | latest | latest | 作品ページ既存値 |
-| oldest | latest | 作品ページ既存値は統一側でフォールバック |
+| oldest | popular | 未対応値は popular に統一する方針に合わせる |
 
 #### TopPage
 
@@ -257,7 +257,7 @@ sequenceDiagram
 **責務と制約**
 - `weekday` 指定時は `movie.weekday` でフィルタする
 - `sortOrder = latest` は `movie.update` 降順で並び替える
-- `sortOrder = popular` は「最新100件」取得後、その100件内で人気順に並び替える
+- `sortOrder = popular` は「曜日フィルタ → `movie.update` 降順 → `range(0,99)`」で最新100件を確定し、その100件内で人気順に並び替える
 - 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる
 - 必ず `range(0, 99)` を適用し 100 件に制限する
 
@@ -388,7 +388,7 @@ sequenceDiagram
 - `public.user_list` への insert/delete で `list.favorite_count` を更新（`user_list_favorite_count_trigger`）
 
 #### 人気順の集計手順（厳密保証）
-- TopPage: `movie` を `update` 降順で100件取得 → 100件内を `favorite_count` 降順で並び替え（最新100件内の人気順）
+- TopPage: `weekday` フィルタ → `update` 降順 → `range(0,99)` で100件確定 → 100件内を `favorite_count` 降順で並び替え（最新100件内の人気順）
 - WorkPage: `series_id` で対象 `movie` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
 - OshiListsPage: 対象 `list` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
 
