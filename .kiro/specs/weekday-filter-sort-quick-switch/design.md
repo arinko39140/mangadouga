@@ -148,7 +148,7 @@ sequenceDiagram
 - `sortOrder` を `popular` / `latest` に正規化する
 - 未対応値の場合は `popular` にフォールバックする
 - URL で参照するキー名を `sortOrder` に統一する
-- 初期表示および再読み込み時は既定値（`popular`）を優先し、URL の `sortOrder` はユーザー操作後の状態再現に限定する
+- URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -256,38 +256,17 @@ sequenceDiagram
 
 **契約**: Service [x]
 
-##### サービスインターフェース
-```typescript
-type SortOrder = 'popular' | 'latest'
-
-type WeekdayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' | 'all'
-
-type WorkItem = {
-  id: string
-  title: string
-  popularityScore: number
-  detailPath: string | null
-  publishedAt: string | null
-  weekday: WeekdayKey
-  seriesId: string | null
-}
-
-type WeekdayListResult = {
-  weekday: WeekdayKey
-  items: WorkItem[]
-}
-
-type Result<T, E> = { ok: true; data: T } | { ok: false; error: E }
-
-type WeekdayQuery = {
-  weekday: WeekdayKey
-  sortOrder: SortOrder
-  limit: 100
-}
-
-interface WeekdayCatalogProvider {
-  fetchWeekdayItems(query: WeekdayQuery): Promise<Result<WeekdayListResult, 'not_configured' | 'network' | 'unknown'>>
-}
+##### サービスインターフェース（JSDoc 風）
+```javascript
+/**
+ * @typedef {'popular'|'latest'} SortOrder
+ * @typedef {'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun'|'all'} WeekdayKey
+ * @typedef {{ id: string, title: string, popularityScore: number, detailPath: (string|null), publishedAt: (string|null), weekday: WeekdayKey, seriesId: (string|null) }} WorkItem
+ * @typedef {{ weekday: WeekdayKey, items: WorkItem[] }} WeekdayListResult
+ * @typedef {{ ok: true, data: WeekdayListResult } | { ok: false, error: 'not_configured'|'network'|'unknown' }} WeekdayResult
+ * @typedef {{ weekday: WeekdayKey, sortOrder: SortOrder, limit: 100 }} WeekdayQuery
+ */
+// WeekdayCatalogProvider.fetchWeekdayItems(query) -> Promise<WeekdayResult>
 ```
 - 前提条件: `weekday` は既知キーまたは `all`
 - 事後条件: `items.length <= 100` を保証
@@ -296,6 +275,7 @@ interface WeekdayCatalogProvider {
 **実装上の留意点**
 - 統合: `order` + `range` によるサーバー側制限
 - 検証: `weekday` が `all` の場合は `eq` フィルタを付けない
+- 取得: 人気順で `favorite_count` 欠損が検出された場合は短い待機（300-500ms）後に1回だけ再取得し、それでも欠損が続く場合は取得済み結果を表示して `unknown` / `network` に記録する
 - リスク: `update` が null の行はソート結果が不定
 
 #### WorkPageDataProvider
@@ -317,11 +297,12 @@ interface WeekdayCatalogProvider {
 
 **契約**: Service [x]
 
-##### サービスインターフェース
-```typescript
-interface WorkPageDataProvider {
-  fetchMovies(seriesId: string, sortOrder: SortOrder): Promise<Result<WorkItem[], 'not_configured' | 'network' | 'unknown'>>
-}
+##### サービスインターフェース（JSDoc 風）
+```javascript
+/**
+ * @typedef {{ ok: true, data: WorkItem[] } | { ok: false, error: 'not_configured'|'network'|'unknown' }} WorkPageResult
+ */
+// WorkPageDataProvider.fetchMovies(seriesId, sortOrder) -> Promise<WorkPageResult>
 ```
 - 前提条件: `seriesId` が空でない
 - 事後条件: `sortOrder` の意味に一致する並び順
@@ -330,6 +311,7 @@ interface WorkPageDataProvider {
 **実装上の留意点**
 - 統合: `favorite_count` を `select` に追加し、`order` を切替
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
+- 取得: `favorite_count` 欠損や取得失敗時は短い待機（300-500ms）後に1回だけ再取得し、それでも失敗した場合は既存取得結果を表示して `unknown` / `network` に記録する
 - リスク: favorite_count 更新遅延による並びの不一致
 
 #### OshiListCatalogProvider
@@ -350,11 +332,12 @@ interface WorkPageDataProvider {
 
 **契約**: Service [x]
 
-##### サービスインターフェース
-```typescript
-interface OshiListCatalogProvider {
-  fetchCatalog(query: { sortOrder: SortOrder }): Promise<Result<ListItem[], 'not_configured' | 'network' | 'unknown' | 'auth_required'>>
-}
+##### サービスインターフェース（JSDoc 風）
+```javascript
+/**
+ * @typedef {{ ok: true, data: ListItem[] } | { ok: false, error: 'not_configured'|'network'|'unknown'|'auth_required' }} OshiListResult
+ */
+// OshiListCatalogProvider.fetchCatalog(query) -> Promise<OshiListResult>
 ```
 - 前提条件: 認証済みユーザーを取得済み
 - 事後条件: `popular` の降順を保証
