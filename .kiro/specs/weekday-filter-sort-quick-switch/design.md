@@ -152,7 +152,7 @@ sequenceDiagram
 - 未対応値の場合は `popular` にフォールバックする
 - URL で参照するキー名を `sortOrder` に統一する
 - URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
-- ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先する
+- ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先し、`sortOrder=popular` に URL を同期更新する
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -165,7 +165,7 @@ sequenceDiagram
 
 ##### 状態管理
 - 状態モデル: `{ sortOrder: 'popular' | 'latest' }`
-- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する（TopPage の初期化は既定表示を優先）
+- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する（TopPage の初期化は既定表示を優先し、URL も `popular` に同期）
 - 競合戦略: 画面内の単一状態、最後の操作を優先
 
 **実装上の留意点**
@@ -191,6 +191,7 @@ sequenceDiagram
 **責務と制約**
 - 既定の曜日は JST の当日キーで初期化する
 - 再読み込み時は URL の `sortOrder` が存在しても既定表示（当日曜日 + 人気）を優先する
+- 再読み込み時は `sortOrder=popular` を URL に同期して意味の統一を維持する
 - 「すべて」タブを含め、再選択時は状態を維持する
 - フィルタとソートの両方の選択状態を同時に表示する
 
@@ -283,7 +284,8 @@ sequenceDiagram
 - 統合: まず `movie.update` 降順で `range(0, 99)` を取得し、取得結果のIDに対して `list_movie` を集計して人気順へ再ソートする（RPC/ビューで集計結果を取得）
 - 検証: `weekday` が `all` の場合は `eq` フィルタを付けない
 - 取得: 人気順の集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
-- リスク: `update` が null の行は除外または末尾固定のルールを明示する（要確認）
+- 取得: `movie.update` が null の行は除外し、最新100件の条件から外す
+- リスク: 除外対象が多い場合はデータ品質の監視が必要
 
 #### WorkPageDataProvider
 
@@ -373,6 +375,11 @@ sequenceDiagram
 ### データ契約と連携
 - API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（RPC/ビュー）を利用
 - Validation rules: `weekday` の値域制限、`sortOrder` の許可値
+
+#### 集計RPC/ビュー契約（案）
+- `public.get_movie_popularity(movie_ids uuid[]) -> { movie_id uuid, popularity_count bigint }`
+- `public.get_list_popularity(list_ids uuid[]) -> { list_id uuid, popularity_count bigint }`
+- DataProvider は「対象ID取得 → 集計取得 → マッピング・ソート」を必ず行う
 
 #### 人気順の集計手順（厳密保証）
 - TopPage: `movie` を `update` 降順で100件取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え
