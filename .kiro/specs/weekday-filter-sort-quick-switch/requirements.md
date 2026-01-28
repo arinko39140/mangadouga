@@ -38,6 +38,7 @@
 4. The Oshi Web App shall 作品ページで「投稿日」「人気」のソート切替を提供する
 5. When 利用者が対象ページ間を移動したとき, the Oshi Web App shall ソートの基準名と意味を統一して用いる
 6. The Oshi Web App shall ソート状態のキー（例: sortOrder）をページ間で統一し、URL・UI表示・内部ロジックで同一の意味を保持する
+7. The Oshi Web App shall みんなの推しリスト一覧をログイン必須として提供する
 
 ### Requirement 4: フィルタとソートの組み合わせ
 **Objective:** As a 利用者, I want フィルタとソートを併用する, so that 条件に合う結果を適切な順序で見られる

@@ -153,6 +153,7 @@ sequenceDiagram
 - URL で参照するキー名を `sortOrder` に統一する
 - URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
 - ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先し、`sortOrder=popular` に URL を同期更新する
+- TopPage の URL は状態の同期用途であり、初期復元の唯一ソースとしては扱わない（深いリンクの再現は対象外）
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -192,6 +193,7 @@ sequenceDiagram
 - 既定の曜日は JST の当日キーで初期化する
 - 再読み込み時は URL の `sortOrder` が存在しても既定表示（当日曜日 + 人気）を優先する
 - 再読み込み時は `sortOrder=popular` を URL に同期して意味の統一を維持する
+- URL の `sortOrder` は表示状態の共有目的のみに使い、TopPage の初期表示は常に既定状態から開始する
 - 「すべて」タブを含め、再選択時は状態を維持する
 - フィルタとソートの両方の選択状態を同時に表示する
 
