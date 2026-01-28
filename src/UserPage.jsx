@@ -24,6 +24,78 @@ const defaultFavoritesProvider = createOshiFavoritesProvider(supabase)
 const ICON_BUCKET = 'user-icons'
 const ICON_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/apng']
 const MAX_ICON_BYTES = 3 * 1024 * 1024
+const ICON_CROP_SIZE = 200
+
+const createCircularIconBlob = async (file, cropState, size = 512) => {
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new Error('icon_load_failed'))
+      img.src = objectUrl
+    })
+
+    const fallbackSourceSize = Math.min(image.width, image.height)
+    const fallbackSourceX = (image.width - fallbackSourceSize) / 2
+    const fallbackSourceY = (image.height - fallbackSourceSize) / 2
+
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('icon_canvas_failed')
+    }
+
+    ctx.clearRect(0, 0, size, size)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+    ctx.closePath()
+    ctx.clip()
+    if (
+      cropState &&
+      typeof cropState.baseScale === 'number' &&
+      typeof cropState.zoom === 'number' &&
+      typeof cropState.x === 'number' &&
+      typeof cropState.y === 'number'
+    ) {
+      const scale = cropState.baseScale * cropState.zoom
+      const sourceSize = ICON_CROP_SIZE / scale
+      const sourceX = -cropState.x / scale
+      const sourceY = -cropState.y / scale
+      ctx.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size)
+    } else {
+      ctx.drawImage(
+        image,
+        fallbackSourceX,
+        fallbackSourceY,
+        fallbackSourceSize,
+        fallbackSourceSize,
+        0,
+        0,
+        size,
+        size
+      )
+    }
+    ctx.restore()
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => {
+        if (!result) {
+          reject(new Error('icon_blob_failed'))
+          return
+        }
+        resolve(result)
+      }, 'image/png')
+    })
+
+    return { blob, contentType: 'image/png', extension: 'png' }
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
 
 function UserPage({
   profileProvider = defaultProfileProvider,
@@ -56,6 +128,7 @@ function UserPage({
   const [profileSaveError, setProfileSaveError] = useState(null)
   const [iconFile, setIconFile] = useState(null)
   const [iconPreviewUrl, setIconPreviewUrl] = useState('')
+  const [iconCrop, setIconCrop] = useState(null)
   const [iconUploadError, setIconUploadError] = useState(null)
   const [iconUploadStatus, setIconUploadStatus] = useState('idle')
   const [profileForm, setProfileForm] = useState({
@@ -268,6 +341,17 @@ function UserPage({
   }, [])
 
   const isOwner = Boolean(viewerUserId) && viewerUserId === userId
+  const profileName = profile?.name?.trim() ?? ''
+  const pageTitle = isOwner
+    ? 'マイページ'
+    : profileName
+      ? `${profileName}のマイページ`
+      : 'マイページ'
+  const iconTransformStyle = iconCrop
+    ? {
+        transform: `translate(${iconCrop.x}px, ${iconCrop.y}px) scale(${iconCrop.baseScale * iconCrop.zoom})`,
+      }
+    : undefined
 
   const handleProfileChange = (field) => (event) => {
     const value = event?.target?.value ?? ''
@@ -299,10 +383,35 @@ function UserPage({
   }
 
   useEffect(() => {
-    if (!iconFile) return undefined
+    if (!iconFile) {
+      setIconCrop(null)
+      return undefined
+    }
     const objectUrl = URL.createObjectURL(iconFile)
+    let isMounted = true
     setIconPreviewUrl(objectUrl)
+
+    const image = new Image()
+    image.onload = () => {
+      if (!isMounted) return
+      const baseScale = Math.max(ICON_CROP_SIZE / image.width, ICON_CROP_SIZE / image.height)
+      const displayWidth = image.width * baseScale
+      const displayHeight = image.height * baseScale
+      const x = (ICON_CROP_SIZE - displayWidth) / 2
+      const y = (ICON_CROP_SIZE - displayHeight) / 2
+      setIconCrop({
+        zoom: 1,
+        x,
+        y,
+        baseScale,
+        naturalWidth: image.width,
+        naturalHeight: image.height,
+      })
+    }
+    image.src = objectUrl
+
     return () => {
+      isMounted = false
       URL.revokeObjectURL(objectUrl)
     }
   }, [iconFile])
@@ -313,6 +422,7 @@ function UserPage({
     setIconUploadError(null)
     setIconFile(null)
     setIconPreviewUrl(profile?.iconUrl ?? '')
+    setIconCrop(null)
   }, [isEditingProfile, profile])
 
   const handleIconFileChange = (event) => {
@@ -336,6 +446,62 @@ function UserPage({
     setIconFile(file)
   }
 
+  const clampIconCrop = (nextCrop) => {
+    if (!nextCrop) return nextCrop
+    const scale = nextCrop.baseScale * nextCrop.zoom
+    const displayWidth = nextCrop.naturalWidth * scale
+    const displayHeight = nextCrop.naturalHeight * scale
+    const minX = Math.min(0, ICON_CROP_SIZE - displayWidth)
+    const minY = Math.min(0, ICON_CROP_SIZE - displayHeight)
+    const maxX = 0
+    const maxY = 0
+    return {
+      ...nextCrop,
+      x: Math.min(maxX, Math.max(minX, nextCrop.x)),
+      y: Math.min(maxY, Math.max(minY, nextCrop.y)),
+    }
+  }
+
+  const handleCropPointerDown = (event) => {
+    if (!iconCrop) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const startX = event.clientX
+    const startY = event.clientY
+    const originX = iconCrop.x
+    const originY = iconCrop.y
+
+    const handleMove = (moveEvent) => {
+      const nextX = originX + (moveEvent.clientX - startX)
+      const nextY = originY + (moveEvent.clientY - startY)
+      setIconCrop((prev) => (prev ? clampIconCrop({ ...prev, x: nextX, y: nextY }) : prev))
+    }
+
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+  }
+
+  const handleCropZoomChange = (event) => {
+    const nextZoom = Number(event.target.value)
+    setIconCrop((prev) => {
+      if (!prev) return prev
+      const prevScale = prev.baseScale * prev.zoom
+      const nextScale = prev.baseScale * nextZoom
+      const centerX = (ICON_CROP_SIZE / 2 - prev.x) / prevScale
+      const centerY = (ICON_CROP_SIZE / 2 - prev.y) / prevScale
+      const nextX = ICON_CROP_SIZE / 2 - centerX * nextScale
+      const nextY = ICON_CROP_SIZE / 2 - centerY * nextScale
+      return clampIconCrop({ ...prev, zoom: nextZoom, x: nextX, y: nextY })
+    })
+  }
+
   const handleIconUpload = async () => {
     if (!iconFile) return
     if (!viewerUserId) {
@@ -350,11 +516,25 @@ function UserPage({
 
     setIconUploadError(null)
     setIconUploadStatus('uploading')
-    const extension = iconFile.name.split('.').pop()?.toLowerCase() || 'png'
+    let uploadPayload = iconFile
+    let contentType = iconFile.type
+    let extension = iconFile.name.split('.').pop()?.toLowerCase() || 'png'
+
+    try {
+      const cropped = await createCircularIconBlob(iconFile, iconCrop)
+      uploadPayload = cropped.blob
+      contentType = cropped.contentType
+      extension = cropped.extension
+    } catch {
+      setIconUploadStatus('idle')
+      setIconUploadError('crop_failed')
+      return
+    }
+
     const filePath = `${viewerUserId}/icon-${Date.now()}.${extension}`
     const { error: uploadError } = await supabase.storage
       .from(ICON_BUCKET)
-      .upload(filePath, iconFile, { upsert: true, contentType: iconFile.type })
+      .upload(filePath, uploadPayload, { upsert: true, contentType })
 
     if (uploadError) {
       setIconUploadStatus('idle')
@@ -508,7 +688,7 @@ function UserPage({
   return (
     <main className="user-page">
       <header className="user-page__header">
-        <h1 className="user-page__title">ユーザーマイページ</h1>
+        <h1 className="user-page__title">{pageTitle}</h1>
         {profile?.name ? (
           <p className="user-page__subtitle">{profile.name}</p>
         ) : null}
@@ -567,7 +747,33 @@ function UserPage({
                       {iconUploadStatus === 'uploading' ? 'アップロード中...' : 'アップロード'}
                     </button>
                   </div>
-                  {iconPreviewUrl ? (
+                  {iconFile && iconPreviewUrl && iconCrop ? (
+                    <div className="user-profile-edit__cropper">
+                      <div
+                        className="user-profile-edit__cropper-area"
+                        onPointerDown={handleCropPointerDown}
+                        role="presentation"
+                      >
+                        <img
+                          src={iconPreviewUrl}
+                          alt="アイコンのトリミング"
+                          style={iconTransformStyle}
+                        />
+                        <span className="user-profile-edit__cropper-mask" aria-hidden="true" />
+                      </div>
+                      <label className="user-profile-edit__cropper-control">
+                        ズーム
+                        <input
+                          type="range"
+                          min="1"
+                          max="2.5"
+                          step="0.01"
+                          value={iconCrop.zoom}
+                          onChange={handleCropZoomChange}
+                        />
+                      </label>
+                    </div>
+                  ) : iconPreviewUrl ? (
                     <div className="user-profile-edit__upload-preview" aria-live="polite">
                       <img src={iconPreviewUrl} alt="選択中のアイコンプレビュー" />
                       <div>
@@ -575,12 +781,20 @@ function UserPage({
                         <p className="user-profile-edit__upload-hint">
                           アップロード後に「保存する」を押してください。
                         </p>
+                        <p className="user-profile-edit__upload-hint">
+                          中央を円形にトリミングして保存されます。
+                        </p>
                       </div>
                     </div>
                   ) : (
-                    <p className="user-profile-edit__upload-hint">
-                      PNG/JPEG/GIF/APNG、3MBまで対応します。
-                    </p>
+                    <>
+                      <p className="user-profile-edit__upload-hint">
+                        PNG/JPEG/GIF/APNG、3MBまで対応します。
+                      </p>
+                      <p className="user-profile-edit__upload-hint">
+                        中央を円形にトリミングして保存されます。
+                      </p>
+                    </>
                   )}
                   {iconUploadStatus === 'done' ? (
                     <p className="user-profile-edit__upload-hint">
@@ -593,6 +807,8 @@ function UserPage({
                         ? '対応していない画像形式です。'
                         : iconUploadError === 'too_large'
                           ? '画像サイズが大きすぎます。'
+                          : iconUploadError === 'crop_failed'
+                            ? 'アイコンのトリミングに失敗しました。'
                           : iconUploadError === 'auth_required'
                             ? 'ログインが必要です。'
                             : iconUploadError === 'not_configured'

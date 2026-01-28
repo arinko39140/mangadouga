@@ -139,7 +139,7 @@ describe('ユーザーページ導線のE2E/UI', () => {
     fireEvent.click(userLink)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'ユーザーマイページ' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'マイページ' })).toBeInTheDocument()
     })
   })
 

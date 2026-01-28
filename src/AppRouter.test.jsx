@@ -44,11 +44,9 @@ describe('AppRouter', () => {
     expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
   })
 
-  it('ルート/users/:userId/でユーザーマイページが表示される', () => {
+  it('ルート/users/:userId/でマイページが表示される', () => {
     renderWithRoute('/users/user-1/')
-    expect(
-      screen.getByRole('heading', { name: 'ユーザーマイページ' })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'マイページ' })).toBeInTheDocument()
   })
 
   it('ルート/users/:userId/oshi-series/で推し作品一覧ページが表示される', () => {
