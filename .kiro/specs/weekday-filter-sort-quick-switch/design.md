@@ -154,9 +154,8 @@ sequenceDiagram
 - 未対応値の場合は `popular` にフォールバックする
 - URL で参照するキー名を `sortOrder` に統一する
 - URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
-- ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先し、`sortOrder=popular` に URL を同期更新する
-- TopPage の URL は状態の同期用途であり、初期復元の唯一ソースとしては扱わない（深いリンクの再現は対象外）
- - 上記の TopPage 例外方針は、ページ間で `sortOrder` の意味を統一する目的を維持したまま、初期表示の一貫性を優先する設計判断とする
+- TopPage も URL を優先して復元し、URL が無い場合のみ既定値（`popular`）を適用する
+- TopPage の URL は状態の同期と共有を目的とし、URL がある場合は表示復元のソースとして扱う
 - 既存の `favorite_asc` / `oldest` は統一方針により無効化し、`popular` にフォールバックする
 
 **依存関係**
@@ -170,7 +169,7 @@ sequenceDiagram
 
 ##### 状態管理
 - 状態モデル: `{ sortOrder: 'popular' | 'latest' }`
-- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する（TopPage の初期化は既定表示を優先し、URL も `popular` に同期）
+- 永続性と整合性: URL クエリに反映し、ページ間で意味を統一する（URL がある場合はそれを優先、無い場合のみ `popular`）
 - 競合戦略: 画面内の単一状態、最後の操作を優先
 
 **実装上の留意点**
@@ -195,9 +194,9 @@ sequenceDiagram
 
 **責務と制約**
 - 既定の曜日は JST の当日キーで初期化する
-- 再読み込み時は URL の `sortOrder` が存在しても既定表示（当日曜日 + 人気）を優先する
-- 再読み込み時は `sortOrder=popular` を URL に同期して意味の統一を維持する
-- URL の `sortOrder` は表示状態の共有目的のみに使い、TopPage の初期表示は常に既定状態から開始する
+- 再読み込み時は URL の `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定表示（当日曜日 + 人気）を適用する
+- URL の `sortOrder` は表示状態の共有・復元の目的で使い、TopPage の初期表示は URL なしの場合に限り既定状態から開始する
+- TopPage の「人気順」は最新100件内での人気順として扱う
 - 「すべて」タブを含め、再選択時は状態を維持する
 - フィルタとソートの両方の選択状態を同時に表示する
 
@@ -211,7 +210,7 @@ sequenceDiagram
 
 ##### 状態管理
 - 状態モデル: `{ weekday: WeekdayKey, sortOrder: SortOrder, items: WorkItem[] }`
-- 永続性と整合性: `sortOrder` は URL に反映するが、初期表示は当日曜日 + 人気を優先する（再読み込み時も同様）。曜日はページ内状態
+- 永続性と整合性: `sortOrder` は URL に反映し、URL がある場合はそれを復元する。URL が無い場合のみ当日曜日 + 人気を初期表示に用いる。曜日はページ内状態
 - 競合戦略: 最新の操作のみ反映する（requestId/AbortControllerで旧リクエストを破棄）
 
 **実装上の留意点**
@@ -260,6 +259,7 @@ sequenceDiagram
 - `weekday` 指定時は `movie.weekday` でフィルタする
 - `sortOrder = latest` は `movie.update` 降順で並び替える
 - `sortOrder = popular` は「曜日フィルタ → `movie.update` 降順 → `range(0,99)`」で最新100件を確定し、その100件内で人気順に並び替える（人気同値は `movie.update` 降順で解消）
+- `movie.update` が null の行は対象外とし、最新100件の判定から除外する
 - 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる（動画=movie）
 - 必ず `range(0, 99)` を適用し 100 件に制限する
 
