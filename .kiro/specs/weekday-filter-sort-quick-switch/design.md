@@ -12,7 +12,7 @@
 - 人気順は常に `list_movie` / `user_list` の件数と一致することを保証する
 
 ### 非目標
-- 新しいバックエンドAPIやDBスキーマの追加
+- 新しいバックエンドAPIやDBスキーマの追加（人気順の集計用に限定的なRPC/ビューを追加する場合を除く）
 - ユーザー別のソート・フィルタ状態の永続化
 - グローバル状態管理ストアの導入
 
@@ -87,9 +87,9 @@ graph TB
 | Frontend | React 18 (Vite) | UI 状態管理、フィルタ/ソート操作 | 既存構成を維持 |
 | Routing | react-router-dom | `sortOrder` の URL 同期 | `useSearchParams` を利用 |
 | Data Access | @supabase/supabase-js | フィルタ・ソート・件数制限クエリ | `order` + `range` を使用 |
-| Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | `favorite_count` を参照 |
+| Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | 集計用RPC/ビューを利用 |
 
-> 注記: 人気順は `favorite_count` を信頼せず、`list_movie` / `user_list` の件数集計で厳密に決定する。非目標により新規RPCは追加せず、クライアント側の二段階取得で集計値を作る。
+> 注記: 人気順は `favorite_count` を信頼せず、`list_movie` / `user_list` の件数集計で厳密に決定する。集計はRPCまたはビューで提供し、クライアントは集計結果を参照する。
 
 ## システムフロー
 
@@ -203,7 +203,7 @@ sequenceDiagram
 ##### 状態管理
 - 状態モデル: `{ weekday: WeekdayKey, sortOrder: SortOrder, items: WorkItem[] }`
 - 永続性と整合性: `sortOrder` は URL に反映、曜日はページ内状態
-- 競合戦略: 直前操作の結果を表示し、取得中はローディング表示
+- 競合戦略: 最新の操作のみ反映する（requestId/AbortControllerで旧リクエストを破棄）
 
 **実装上の留意点**
 - 統合: `WeekdayCatalogProvider.fetchWeekdayItems` を操作ごとに呼び出す
@@ -278,7 +278,7 @@ sequenceDiagram
 - 不変条件: `sortOrder` の意味は全ページで共通
 
 **実装上の留意点**
-- 統合: まず `movie.update` 降順で `range(0, 99)` を取得し、取得結果のIDに対して `list_movie` を集計して人気順へ再ソートする（新規RPCは追加しない）
+- 統合: まず `movie.update` 降順で `range(0, 99)` を取得し、取得結果のIDに対して `list_movie` を集計して人気順へ再ソートする（RPC/ビューで集計結果を取得）
 - 検証: `weekday` が `all` の場合は `eq` フィルタを付けない
 - 取得: 人気順の集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - リスク: `update` が null の行は除外または末尾固定のルールを明示する（要確認）
@@ -311,10 +311,10 @@ sequenceDiagram
 ```
 - 前提条件: `seriesId` が空でない
 - 事後条件: `sortOrder` の意味に一致する並び順
-- 不変条件: 「人気」は list_movie 件数に一致する `favorite_count` を参照
+- 不変条件: 「人気」は list_movie 件数の集計結果に一致する
 
 **実装上の留意点**
-- 統合: 対象 `movie` を取得後に `list_movie` の件数を集計し、集計値で並び替える
+- 統合: 対象 `movie` を取得後に `list_movie` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
 - 取得: 集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - リスク: 集計コスト増大（件数が多い場合はページングやインデックスが必要）
@@ -349,7 +349,7 @@ sequenceDiagram
 - 不変条件: `favorite_count` は user_list トリガーで更新される
 
 **実装上の留意点**
-- 統合: 対象 `list` を取得後に `user_list` の件数を集計し、集計値で並び替える
+- 統合: 対象 `list` を取得後に `user_list` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
 - 検証: 未対応値は `popular` に変換
 - リスク: 既存 UI との表示整合
 
@@ -368,7 +368,7 @@ sequenceDiagram
 - `list.favorite_count` は参照せず、`user_list` 件数を集計した値で人気順を決定する
 
 ### データ契約と連携
-- API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果を利用
+- API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（RPC/ビュー）を利用
 - Validation rules: `weekday` の値域制限、`sortOrder` の許可値
 
 #### 人気順の集計手順（厳密保証）
@@ -376,7 +376,7 @@ sequenceDiagram
 - WorkPage: `series_id` で対象 `movie` を取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え
 - OshiListsPage: `list` を取得 → 取得した `list_id` を `user_list` で集計 → 集計値で並び替え
 
-> 実装指針: Supabaseの取得は「対象IDの集合」→「関連テーブルの集計」→「クライアントでマッピング・ソート」の二段階で行う。
+> 実装指針: 集計はRPC/ビューで実施し、クライアントは「対象ID取得」→「集計結果取得」→「マッピング・ソート」の順で適用する。
 
 ## エラーハンドリング
 

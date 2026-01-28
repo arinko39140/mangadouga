@@ -8,76 +8,83 @@
 - **機能**: weekday-filter-sort-quick-switch
 - **調査範囲**: 拡張
 - **主要な知見**:
-  - Supabase JavaScript クライアントは `order()` と `range()` を組み合わせて並び順と取得件数を制御できるため、「最新100件」の要件をサーバー側で満たせる。
-  - React Router の検索パラメータ操作は `useSearchParams` で管理でき、ページ間で `sortOrder` のキーを統一する設計方針に適合する。
-  - PostgREST は HTTP Range/limit をサポートしており、Supabase の `range()` は並び順の指定と組み合わせる前提で利用する必要がある。
+  - 既存のTopPage/WorkPage/OshiListsPageはそれぞれ異なるsortOrder値を使用しており、統一には正規化ポリシーが必要。
+  - Supabaseの`order()`と`range()`を併用することで並び順と取得件数をサーバー側で制御できるため、「最新100件」制約に適合する。
+  - React Routerの`useSearchParams`はURLクエリの更新をナビゲーションとして反映するため、`sortOrder`のURL同期に適合する。
 
 ## 調査ログ
 
-### Supabase の並び替えと件数制限
-- **背景**: 「最新100件」を確実に返すため、クエリ側で並び順と範囲指定を行う必要がある。
-- **参照ソース**: Supabase JavaScript `select` / `range` ドキュメント、PostgREST の Pagination 仕様
+### 既存ソートキーの分散
+- **背景**: 要件 3.5/3.6 でソート名と意味の統一が必要。
+- **参照ソース**: `src/WorkPage.jsx`, `src/SortControl.jsx`, `src/OshiListsPage.jsx`
 - **知見**:
-  - `range(from, to)` は 0-based の inclusive 範囲で取得件数を制限する。
-  - `order()` と `range()` は組み合わせて使用することが前提であり、並び順が未指定の場合は期待しない結果になり得る。
-  - PostgREST はクエリパラメータや Range ヘッダでページング可能で、Supabase はそれをラップしている。
-- **影響**: すべてのソートで `order()` を先に定義し、`range(0, 99)` によって「最新100件」または「人気100件」を確定させる。
+  - WorkPageは`latest/oldest`を使用している。
+  - OshiListsPageは`favorite_desc/favorite_asc`を使用している。
+- **影響**: `sortOrder`を`popular/latest`に統一し、既存値は正規化ポリシーで変換する。
 
-### URL クエリの統一キー
-- **背景**: 要件 3.6 が「ページ間で同一キーと意味を保持」と規定している。
+### Supabaseの並び替えと件数制限
+- **背景**: 「最新100件」を常に保証する必要がある。
+- **参照ソース**: Supabase JavaScript `range`, `select` ドキュメント
+- **知見**:
+  - `range(from, to)`は0-basedのinclusive範囲で取得件数を制限する。
+  - `range()`は`order()`と併用する前提であり、並び順が未指定の場合は期待通りの結果にならない。
+- **影響**: TopPageの「最新100件」は`order(update desc)` + `range(0, 99)`で確定させる。
+
+### URLクエリの統一キー
+- **背景**: ページ間で同一キーと意味を保つ必要がある。
 - **参照ソース**: React Router `useSearchParams` ドキュメント
 - **知見**:
-  - `useSearchParams` は URL の検索パラメータと更新関数を提供し、変更はナビゲーションとして反映される。
-  - `URLSearchParams` は安定参照だが mutable であり、更新は setter を通すべきと明記されている。
-- **影響**: `sortOrder` を URL の単一キーとして統一し、TopPage / WorkPage / OshiListsPage の UI とデータ取得に同じ意味付けを使う。
+  - `useSearchParams`はURLクエリと更新関数のタプルを返し、更新はナビゲーションとして反映される。
+  - `searchParams`は安定参照だがmutableであり、更新は`setSearchParams`経由が推奨される。
+- **影響**: `sortOrder`のURL同期は`useSearchParams`を用いた一貫した更新ルールで行う。
 
 ## アーキテクチャパターン評価
 
 | 選択肢 | 説明 | 強み | リスク / 制約 | 補足 |
 | --- | --- | --- | --- | --- |
-| UI State + Data Provider | 既存のページコンポーネントに状態とデータ取得アダプタを追加 | 既存構成と整合、変更範囲が限定的 | ページごとに状態管理が分散 | 既存パターンを継続しやすい |
-| Global Store | 共通ストアでフィルタ/ソート状態を集中管理 | 状態共有が容易 | 既存構成から逸脱、導入コスト増 | 本機能では過剰 |
+| UI State + Data Provider | 既存のページコンポーネントに状態とデータ取得アダプタを追加 | 既存構成と整合、変更範囲が限定的 | ページごとに状態管理が分散 | 既存パターンの踏襲 |
+| 集約サービス導入 | 集計・ソートを共通サービスへ集約 | 実装の再利用性 | 新規境界の追加コスト | 今回は非目標 |
 
 ## 設計判断
 
 ### 判断: sortOrder の標準化
-- **背景**: 要件 3.5, 3.6 でページ間のソート名と意味の統一が求められる。
+- **背景**: 要件 3.5/3.6 でページ間のソート名と意味の統一が求められる。
 - **代替案**:
   1. ページごとにローカルなキーを持つ
   2. `sortOrder` を全ページで共有する
 - **採用方針**: `sortOrder` を全ページ共通のクエリキーとし、値は `popular` / `latest` の 2 種に統一する。
 - **理由**: UI と URL の整合性を保ち、要件 3.5/3.6 を満たす。
 - **トレードオフ**: 一部ページで使わない値が存在するが、未対応の場合はフォールバックする。
-- **フォローアップ**: 未対応の値受信時のフォールバックをユーティリティに集約する。
+- **フォローアップ**: 既存の`favorite_desc/favorite_asc/oldest`は正規化で`popular/latest`に変換する。
 
-### 判断: 「人気」ソートの指標
-- **背景**: 要件 2.4/2.6 が list_movie 件数に基づく人気順を定義している。
+### 判断: 人気順の厳密保証
+- **背景**: 要件 2.4/2.6 が list_movie / user_list 件数に基づく人気順を要求。
 - **代替案**:
-  1. list_movie を集計して都度計算する
-  2. movie.favorite_count を参照する
-- **採用方針**: 既存トリガーで更新される `movie.favorite_count` を利用して人気順を表現する。
-- **理由**: 集計クエリを避け、既存スキーマと整合する。
-- **トレードオフ**: トリガーの正確性に依存する。
-- **フォローアップ**: 既存トリガーの監視とテストで整合性を担保する。
+  1. list_movie / user_list を都度集計して並び替える
+  2. `favorite_count` を参照する
+- **採用方針**: **常に集計値で人気順を決定**し、`favorite_count`は参照しない。
+- **理由**: 正確性を最優先とする要件解釈に一致する。
+- **トレードオフ**: 追加クエリによる負荷が増える。
+- **フォローアップ**: TopPageは100件に限定し、WorkPageは件数が多い場合にページング検討。
 
-### 判断: TopPage の取得件数制限
+### 判断: TopPage の「最新100件」保証
 - **背景**: 要件 1.5/1.6/1.7 で「最新100件」を定義。
 - **代替案**:
   1. 全件取得後にフロントで絞り込み
   2. Supabase クエリで 100 件に制限
-- **採用方針**: `order()` + `range(0, 99)` によってクエリ側で制限。
-- **理由**: 通信量を抑制し、パフォーマンスを改善。
-- **トレードオフ**: 各切替時のクエリが必要になる。
-- **フォローアップ**: 連続切替時の UX を考慮し、必要ならキャッシュを追加。
+- **採用方針**: `order(update desc)` + `range(0, 99)` によってクエリ側で制限。
+- **理由**: 通信量を抑制し、要件の「最新100件」を満たす。
+- **トレードオフ**: 切替時に都度クエリが必要。
+- **フォローアップ**: 連続切替の競合対策（requestId/abort）を設計に組み込む。
 
 ## リスクと緩和策
-- URL と UI の状態不整合 — クエリ更新を単一ユーティリティに統一し、初期化は URL ではなく日付基準で行う。
-- 人気順の正確性 — トリガー更新の前提を明示し、テストで favorite_count 更新を検証する。
-- 切替時の再取得による遅延 — ローディング表示と空状態文言を明確化する。
+- 二段階取得による遅延 — TopPageは100件制限を維持し、UIはローディング/空状態を明示する。
+- 人気順の集計コスト増 — WorkPageは必要に応じてページングや取得上限を検討する。
+- URLとUIの不整合 — `SortOrderPolicy`で正規化し、URL更新は単一路線に統一する。
 
 ## 参考資料
-- Supabase JavaScript `select` ドキュメント: https://supabase.com/docs/reference/javascript/select
-- Supabase JavaScript `range` ドキュメント: https://supabase.com/docs/reference/javascript/range
-- Supabase JavaScript `gte` ドキュメント: https://supabase.com/docs/reference/javascript/gte
-- PostgREST Pagination: https://postgrest.org/en/v10/api.html
+- Supabase JavaScript `range`: https://supabase.com/docs/reference/javascript/range
+- Supabase JavaScript `select`: https://supabase.com/docs/reference/javascript/select
+- Supabase JavaScript `filter`: https://supabase.com/docs/reference/javascript/filter
 - React Router `useSearchParams`: https://reactrouter.com/api/hooks/useSearchParams
+- PostgREST Pagination: https://docs.postgrest.org/en/v12/references/api/pagination_count.html
