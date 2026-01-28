@@ -9,7 +9,7 @@
 - 曜日フィルタとソートを同時に扱える一貫したUIと状態管理を提供する
 - `sortOrder` キーをページ間で統一し、URL・UI・内部ロジックで同一の意味を保持する
 - 「最新100件」や人気順などの基準をサーバー側クエリで保証する
-- 人気順は常に `list_movie` / `user_list` の件数と一致することを保証する（`favorite_count` をトリガーで同期）
+- 人気順は対象に応じて `list_movie`（動画=movie）/ `user_list` の件数と一致することを保証する（`favorite_count` をトリガーで同期）
 - WorkPage / OshiLists は無制限件数でも破綻しない取得方式（ページング）を明示し、パフォーマンスを担保する
 
 ### 非目標
@@ -33,7 +33,7 @@
 | 2.3 | 未対応ソートのフォールバック | SortOrderPolicy | Service | - |
 | 2.4 | 作品ページの人気は推し数 | WorkPageDataProvider | Service | フロー B |
 | 2.5 | 投稿日は movie.update | WorkPageDataProvider, WeekdayCatalogProvider | Service | フロー A, フロー B |
-| 2.6 | 人気は list_movie 件数 | WorkPageDataProvider, OshiListCatalogProvider | Service | フロー B |
+| 2.6 | 人気は list_movie 件数 | WeekdayCatalogProvider, WorkPageDataProvider | Service | フロー A, フロー B |
 | 3.1 | トップページに曜日切替 | TopPage | State | - |
 | 3.2 | トップページに投稿日/人気切替 | TopPage, SortControl | State | フロー A |
 | 3.3 | 推しリスト一覧に人気切替 | OshiListsPage | State | - |
@@ -56,6 +56,7 @@
 - UI は React コンポーネントごとに状態と描画を保持する構成で、データ取得は各ページ専用の DataProvider に集約されている。
 - URL パラメータは WorkPage が `sortOrder` を扱っており、検索パラメータを読む設計が既に存在する。
 - Supabase 取得は各 DataProvider で `select` / `order` を使用しており、人気順はDB側で件数集計した結果を参照する前提に更新する。
+- 動画は `movie` テーブルを指す。
 
 ### Architecture Pattern & Boundary Map（アーキテクチャパターンと境界）
 **アーキテクチャ統合**:
@@ -90,7 +91,7 @@ graph TB
 | Data Access | @supabase/supabase-js | フィルタ・ソート・件数制限クエリ | `order` + `range` を使用 |
 | Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | `favorite_count` をトリガーで同期 |
 
-> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` はトリガーで集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。
+> 注記: 人気順は対象に応じて `list_movie`（動画=movie）/ `user_list` の件数集計で厳密に決定する。`favorite_count` はトリガーで集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。
 
 ## システムフロー
 
@@ -156,6 +157,7 @@ sequenceDiagram
 - ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先し、`sortOrder=popular` に URL を同期更新する
 - TopPage の URL は状態の同期用途であり、初期復元の唯一ソースとしては扱わない（深いリンクの再現は対象外）
  - 上記の TopPage 例外方針は、ページ間で `sortOrder` の意味を統一する目的を維持したまま、初期表示の一貫性を優先する設計判断とする
+- 既存の `favorite_asc` / `oldest` は統一方針により無効化し、`popular` にフォールバックする
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -180,9 +182,9 @@ sequenceDiagram
 | 既存値 | 統一値 | 備考 |
 | --- | --- | --- |
 | favorite_desc | popular | みんなの推しリスト既存値 |
-| favorite_asc | popular | 既存 UI の「少ない順」は維持せず統一側でフォールバック |
+| favorite_asc | popular | 既存 UI の「少ない順」は維持せず無効化する |
 | latest | latest | 作品ページ既存値 |
-| oldest | popular | 未対応値は popular に統一する方針に合わせる |
+| oldest | popular | 既存 UI の「古い順」は維持せず無効化する |
 
 #### TopPage
 
@@ -258,7 +260,7 @@ sequenceDiagram
 - `weekday` 指定時は `movie.weekday` でフィルタする
 - `sortOrder = latest` は `movie.update` 降順で並び替える
 - `sortOrder = popular` は「曜日フィルタ → `movie.update` 降順 → `range(0,99)`」で最新100件を確定し、その100件内で人気順に並び替える
-- 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる
+- 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる（動画=movie）
 - 必ず `range(0, 99)` を適用し 100 件に制限する
 
 **依存関係**
@@ -372,7 +374,7 @@ sequenceDiagram
 - Entity: `Movie`（`movie_id`, `movie_title`, `update`, `favorite_count`, `weekday`）
 - Entity: `List`（`list_id`, `favorite_count`, `can_display`）
 - Value: `SortOrder`（`popular` / `latest`）
-- Invariants: 人気順は `list_movie` / `user_list` の件数で常に決定し、`favorite_count` はトリガーで集計値と一致するよう更新・同期する
+- Invariants: 人気順は対象に応じて `list_movie`（動画=movie）/ `user_list` の件数で決定し、`favorite_count` はトリガーで集計値と一致するよう更新・同期する
 
 ### 論理データモデル
 - `movie.weekday` は `mon`-`sun` の固定キー
@@ -381,7 +383,7 @@ sequenceDiagram
 - `list.favorite_count` は `user_list` 件数の集計値と一致するようトリガーで更新し、人気順は集計値で決定する
 
 ### データ契約と連携
-- API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（`favorite_count`）を利用
+- API Data Transfer: Supabase `movie`（動画）, `list` と `list_movie` / `user_list` の集計結果（`favorite_count`）を利用
 - Validation rules: `weekday` の値域制限、`sortOrder` の許可値
 #### 集計トリガー（既存）
 - `public.list_movie` への insert/delete で `movie.favorite_count` を更新（`movie_favorite_count_trigger`）
