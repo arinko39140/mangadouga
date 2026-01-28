@@ -247,13 +247,29 @@ describe('UserOshiListProvider', () => {
     })
   })
 
-  it('最近追加した推し作品をsummaryに含める', async () => {
+  it('最近追加した推し動画をsummaryに含める', async () => {
     const { client } = buildUserOshiListSupabaseMock({
       listRows: [{ list_id: 12, favorite_count: 4, can_display: true }],
       favoriteRows: [],
       listMovieRows: [
-        { movie: { movie_id: 'm1', movie_title: '推し作品1' }, created_at: '2026-01-01' },
-        { movie: { movie_id: 'm2', movie_title: '推し作品2' }, created_at: '2026-01-02' },
+        {
+          movie: {
+            movie_id: 'm1',
+            movie_title: '推し作品1',
+            url: 'https://youtu.be/abc',
+            thumbnail_url: '/thumb/1.png',
+          },
+          created_at: '2026-01-01',
+        },
+        {
+          movie: {
+            movie_id: 'm2',
+            movie_title: '推し作品2',
+            url: 'https://youtu.be/def',
+            thumbnail_url: null,
+          },
+          created_at: '2026-01-02',
+        },
       ],
     })
     const provider = createUserOshiListProvider(client)
@@ -271,8 +287,18 @@ describe('UserOshiListProvider', () => {
         favoriteCount: 4,
         isFavorited: false,
         items: [
-          { movieId: 'm1', title: '推し作品1' },
-          { movieId: 'm2', title: '推し作品2' },
+          {
+            movieId: 'm1',
+            title: '推し作品1',
+            videoUrl: 'https://youtu.be/abc',
+            thumbnailUrl: '/thumb/1.png',
+          },
+          {
+            movieId: 'm2',
+            title: '推し作品2',
+            videoUrl: 'https://youtu.be/def',
+            thumbnailUrl: null,
+          },
         ],
       },
     })

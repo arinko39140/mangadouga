@@ -307,6 +307,7 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
   }
 
   const isFavorited = Boolean(summary?.isFavorited)
+  const isOwner = Boolean(summary?.isOwner)
   const visibilityLabel = visibility === 'private' ? '非公開' : '公開'
 
   return (
@@ -316,15 +317,21 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
         {summary?.name ? <p className="oshi-lists__meta">{summary.name}</p> : null}
         <p className="oshi-lists__meta">お気に入り数: {summary?.favoriteCount ?? 0}</p>
         <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
-        <button
-          type="button"
-          className={isFavorited ? 'oshi-lists__oshi-button is-registered' : 'oshi-lists__oshi-button'}
-          aria-pressed={isFavorited}
-          disabled={oshiUpdating}
-          onClick={handleFavoriteToggle}
-        >
-          {isFavorited ? '解除' : '登録'}
-        </button>
+        {!isOwner ? (
+          <button
+            type="button"
+            className={
+              isFavorited
+                ? 'oshi-lists__oshi-button is-registered'
+                : 'oshi-lists__oshi-button'
+            }
+            aria-pressed={isFavorited}
+            disabled={oshiUpdating}
+            onClick={handleFavoriteToggle}
+          >
+            {isFavorited ? '解除' : '登録'}
+          </button>
+        ) : null}
         {oshiError ? (
           <p className="oshi-lists__status oshi-lists__status--error">
             お気に入り操作に失敗しました。

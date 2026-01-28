@@ -112,6 +112,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
           const isFavorited = Boolean(item.isFavorited)
           const isUpdating = oshiUpdatingIds.includes(item.listId)
           const canLinkToUser = Boolean(item.userId)
+          const isOwner = Boolean(item.isOwner)
           return (
             <li key={item.listId} className="oshi-lists__item">
               <article
@@ -131,19 +132,21 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                   <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
                   <div className="oshi-lists__actions">
                     <span className="oshi-lists__muted">公開中</span>
-                    <button
-                      type="button"
-                      className={
-                        isFavorited
-                          ? 'oshi-lists__oshi-button is-registered'
-                          : 'oshi-lists__oshi-button'
-                      }
-                      aria-pressed={isFavorited}
-                      disabled={isUpdating}
-                      onClick={() => handleOshiToggle(item.listId)}
-                    >
-                      {isFavorited ? '解除' : '登録'}
-                    </button>
+                    {!isOwner ? (
+                      <button
+                        type="button"
+                        className={
+                          isFavorited
+                            ? 'oshi-lists__oshi-button is-registered'
+                            : 'oshi-lists__oshi-button'
+                        }
+                        aria-pressed={isFavorited}
+                        disabled={isUpdating}
+                        onClick={() => handleOshiToggle(item.listId)}
+                      >
+                        {isFavorited ? '解除' : '登録'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </article>

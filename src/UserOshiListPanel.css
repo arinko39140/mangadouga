@@ -48,9 +48,11 @@
 
 .user-oshi-list__items-list {
   margin: 0;
-  padding-left: 1.1rem;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .user-oshi-list__items-item {
@@ -60,14 +62,50 @@
 .user-oshi-list__item-link {
   color: inherit;
   text-decoration: none;
+  display: grid;
+  gap: 0.4rem;
 }
 
 .user-oshi-list__item-link:hover {
   text-decoration: underline;
 }
 
+.user-oshi-list__item-card {
+  display: grid;
+  gap: 0.4rem;
+}
+
 .user-oshi-list__item-name {
   color: inherit;
+}
+
+.user-oshi-list__thumb {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(47, 32, 53, 0.08);
+  display: grid;
+  place-items: center;
+}
+
+.user-oshi-list__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-oshi-list__thumb-placeholder {
+  font-size: 0.7rem;
+  color: #6a596b;
+}
+
+.user-oshi-list__item-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2f2035;
+  line-height: 1.35;
 }
 
 .user-oshi-list__count {

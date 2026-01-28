@@ -486,6 +486,7 @@ function UserPage({
       isFavoriteUpdating={isFavoriteUpdating}
       isAuthenticated={isAuthenticated}
       onToggleFavorite={handleToggleFavorite}
+      isOwner={isOwner}
     />
   )
   const seriesPanel = (

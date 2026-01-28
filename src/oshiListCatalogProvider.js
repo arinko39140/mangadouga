@@ -21,13 +21,17 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const mapCatalogRow = (row, userName) => ({
+const mapCatalogRow = (row, userName, viewerUserId) => ({
   listId: row.list_id != null ? String(row.list_id) : '',
   userId: row.user_id != null ? String(row.user_id) : '',
   name: userName ?? '',
   favoriteCount: row.favorite_count ?? 0,
   isFavorited: Boolean(row.is_favorited),
   visibility: row.can_display ? 'public' : 'private',
+  isOwner:
+    typeof viewerUserId === 'string' &&
+    viewerUserId !== '' &&
+    String(row.user_id) === viewerUserId,
 })
 
 export const createOshiListCatalogProvider = (supabaseClient) => ({
@@ -87,9 +91,10 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
     const items = (listData ?? []).map((row) => {
       const mappedUserId = row.user_id != null ? String(row.user_id) : ''
       const userName = userNameMap.get(mappedUserId) ?? ''
+      const isOwner = mappedUserId === userId
       return {
-        ...mapCatalogRow(row, userName),
-        isFavorited: favoriteSet.has(String(row.list_id)),
+        ...mapCatalogRow(row, userName, userId),
+        isFavorited: isOwner ? false : favoriteSet.has(String(row.list_id)),
       }
     })
 

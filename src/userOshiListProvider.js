@@ -30,6 +30,8 @@ const buildPrivateSummary = (status) => ({
 const mapListItem = (row) => ({
   movieId: row.movie_id,
   title: row.movie_title,
+  videoUrl: row.url ?? null,
+  thumbnailUrl: row.thumbnail_url ?? null,
 })
 
 const fetchRecentListItems = async (supabaseClient, listId, limit) => {
@@ -38,7 +40,7 @@ const fetchRecentListItems = async (supabaseClient, listId, limit) => {
 
   const { data, error } = await supabaseClient
     .from('list_movie')
-    .select('movie:movie_id (movie_id, movie_title), created_at')
+    .select('movie:movie_id (movie_id, movie_title, url, thumbnail_url), created_at')
     .eq('list_id', listId)
     .order('created_at', { ascending: false })
     .limit(resolvedLimit)

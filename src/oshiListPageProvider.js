@@ -156,11 +156,17 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: userResult.error }
       }
 
-      const favoriteState = await fetchFavoriteState(targetListId, userResult.userId)
-      if (!favoriteState.ok) {
-        return { ok: false, error: favoriteState.error }
+      const isOwner = String(listRow.user_id ?? '') === userResult.userId
+      summary.isOwner = isOwner
+      if (!isOwner) {
+        const favoriteState = await fetchFavoriteState(targetListId, userResult.userId)
+        if (!favoriteState.ok) {
+          return { ok: false, error: favoriteState.error }
+        }
+        summary.isFavorited = favoriteState.isFavorited
+      } else {
+        summary.isFavorited = false
       }
-      summary.isFavorited = favoriteState.isFavorited
       return { ok: true, data: summary }
     },
 

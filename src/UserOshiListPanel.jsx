@@ -8,6 +8,7 @@ function UserOshiListPanel({
   isFavoriteUpdating = false,
   isAuthenticated = true,
   onToggleFavorite,
+  isOwner = false,
 }) {
   const status = summary?.status ?? null
   const isPublic = status === 'public'
@@ -20,12 +21,54 @@ function UserOshiListPanel({
     isAuthenticated &&
     isPublic &&
     Boolean(summary?.listId) &&
+    !isOwner &&
     !isFavoriteUpdating
 
   const listId = summary?.listId ?? null
   const canViewList = isPublic && Boolean(listId)
   const favoriteLabel = summary?.isFavorited ? '登録済み' : 'お気に入り登録'
   const items = Array.isArray(summary?.items) ? summary.items : []
+
+  const getYouTubeVideoId = (videoUrl) => {
+    if (!videoUrl) return null
+
+    let parsed
+    try {
+      parsed = new URL(videoUrl)
+    } catch {
+      return null
+    }
+
+    const hostname = parsed.hostname.replace(/^www\./, '')
+    const pathname = parsed.pathname
+
+    if (hostname === 'youtu.be') {
+      const id = pathname.split('/').filter(Boolean)[0]
+      return id || null
+    }
+
+    if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+      if (pathname === '/watch') {
+        return parsed.searchParams.get('v')
+      }
+
+      if (pathname.startsWith('/embed/')) {
+        return pathname.split('/').filter(Boolean)[1] ?? null
+      }
+
+      if (pathname.startsWith('/shorts/')) {
+        return pathname.split('/').filter(Boolean)[1] ?? null
+      }
+    }
+
+    return null
+  }
+
+  const resolveThumbnailUrl = (item) => {
+    if (item.thumbnailUrl) return item.thumbnailUrl
+    const videoId = getYouTubeVideoId(item.videoUrl)
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+  }
 
   const renderContent = () => {
     if (isLoading) {
@@ -56,17 +99,38 @@ function UserOshiListPanel({
       <div className="user-oshi-list__summary">
         {items.length > 0 ? (
           <div className="user-oshi-list__items">
-            <p className="user-oshi-list__items-title">最近追加した推し作品</p>
-            <ul className="user-oshi-list__items-list" aria-label="推しリストの最近追加した作品">
+            <p className="user-oshi-list__items-title">最近追加した推し動画</p>
+            <ul className="user-oshi-list__items-list" aria-label="推しリストの最近追加した動画">
               {items.map((item) => (
                 <li key={item.movieId} className="user-oshi-list__items-item">
-                  {canViewList ? (
-                    <Link className="user-oshi-list__item-link" to={`/oshi-lists/${listId}/`}>
-                      {item.title}
-                    </Link>
-                  ) : (
-                    <span className="user-oshi-list__item-name">{item.title}</span>
-                  )}
+                  {(() => {
+                    const thumbnailUrl = resolveThumbnailUrl(item)
+                    const content = (
+                      <>
+                        <div className="user-oshi-list__thumb">
+                          {thumbnailUrl ? (
+                            <img src={thumbnailUrl} alt={`${item.title}のサムネイル`} />
+                          ) : (
+                            <span className="user-oshi-list__thumb-placeholder">
+                              サムネイル準備中
+                            </span>
+                          )}
+                        </div>
+                        <p className="user-oshi-list__item-title">{item.title}</p>
+                      </>
+                    )
+
+                    return canViewList ? (
+                      <Link
+                        className="user-oshi-list__item-link"
+                        to={`/oshi-lists/${listId}/`}
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="user-oshi-list__item-card">{content}</div>
+                    )
+                  })()}
                 </li>
               ))}
             </ul>
@@ -75,25 +139,27 @@ function UserOshiListPanel({
         {summary?.favoriteCount != null ? (
           <p className="user-oshi-list__count">お気に入り数: {summary.favoriteCount}</p>
         ) : null}
-        <button
-          type="button"
-          className={
-            summary?.isFavorited
-              ? 'user-oshi-list__favorite-button is-active'
-              : 'user-oshi-list__favorite-button'
-          }
-          aria-pressed={summary?.isFavorited ? 'true' : 'false'}
-          disabled={!canToggleFavorite}
-          onClick={canToggleFavorite ? onToggleFavorite : undefined}
-        >
-          {favoriteLabel}
-        </button>
+        {!isOwner ? (
+          <button
+            type="button"
+            className={
+              summary?.isFavorited
+                ? 'user-oshi-list__favorite-button is-active'
+                : 'user-oshi-list__favorite-button'
+            }
+            aria-pressed={summary?.isFavorited ? 'true' : 'false'}
+            disabled={!canToggleFavorite}
+            onClick={canToggleFavorite ? onToggleFavorite : undefined}
+          >
+            {favoriteLabel}
+          </button>
+        ) : null}
         {canViewList ? (
           <Link className="user-oshi-list__link" to={`/oshi-lists/${listId}/`}>
             推しリストを見る
           </Link>
         ) : null}
-        {!isAuthenticated ? (
+        {!isAuthenticated && !isOwner ? (
           <p className="user-oshi-list__note">ログインするとお気に入り登録できます。</p>
         ) : null}
       </div>
