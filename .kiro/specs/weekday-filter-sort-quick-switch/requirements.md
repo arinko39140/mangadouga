@@ -13,6 +13,9 @@
 2. When 利用者が「すべて」またはフィルタ解除操作を選択したとき, the Oshi Web App shall 曜日フィルタを解除して全件表示に戻す
 3. While 曜日フィルタが有効なとき, the Oshi Web App shall 現在選択中の曜日を判別可能な状態で表示する
 4. If 利用者が同一の曜日タブ/ボタンを再選択したとき, the Oshi Web App shall 現在のフィルタ状態を維持する
+5. When 利用者が曜日タブ/ボタンを選択したとき, the Oshi Web App shall 選択された曜日に投稿された直近100件の動画を表示する
+6. When 「すべて」表示が有効なとき, the Oshi Web App shall 曜日条件を解除し、全曜日の最新100件を表示する
+7. The Oshi Web App shall 「最新100件」をmovie.updateの降順で判定する
 
 ### Requirement 2: ソート機能（投稿日/人気）
 **Objective:** As a 利用者, I want 表示順を切り替える, so that 関心の高い順序で情報を確認できる
@@ -22,6 +25,8 @@
 2. When 利用者がソート基準「人気」を選択したとき, the Oshi Web App shall 人気順に並び替える
 3. If 未対応のソート基準が指定されたとき, the Oshi Web App shall 既定のソートにフォールバックする
 4. The Oshi Web App shall 作品ページの人気順ソートを推しリスト登録数に基づいて計算する
+5. The Oshi Web App shall 「投稿日」を作品の更新日時（movie.update）として扱う
+6. The Oshi Web App shall 「人気」を推しリスト登録数（list_movie件数）として扱う
 
 ### Requirement 3: 対象ページへの適用範囲
 **Objective:** As a 利用者, I want ページごとに適切な機能が提供される, so that 必要な操作だけを迷わず使える
@@ -32,6 +37,7 @@
 3. The Oshi Web App shall みんなの推しリスト一覧で「人気」のソート切替を提供する
 4. The Oshi Web App shall 作品ページで「投稿日」「人気」のソート切替を提供する
 5. When 利用者が対象ページ間を移動したとき, the Oshi Web App shall ソートの基準名と意味を統一して用いる
+6. The Oshi Web App shall ソート状態のキー（例: sortOrder）をページ間で統一し、URL・UI表示・内部ロジックで同一の意味を保持する
 
 ### Requirement 4: フィルタとソートの組み合わせ
 **Objective:** As a 利用者, I want フィルタとソートを併用する, so that 条件に合う結果を適切な順序で見られる
