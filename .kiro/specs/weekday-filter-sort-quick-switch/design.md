@@ -155,6 +155,7 @@ sequenceDiagram
 - URL に `sortOrder` が存在する場合はそれを優先し、存在しない場合のみ既定値（`popular`）を適用する
 - ただし TopPage の再読み込み時は、URL よりも既定表示（当日曜日 + 人気）を優先し、`sortOrder=popular` に URL を同期更新する
 - TopPage の URL は状態の同期用途であり、初期復元の唯一ソースとしては扱わない（深いリンクの再現は対象外）
+ - 上記の TopPage 例外方針は、ページ間で `sortOrder` の意味を統一する目的を維持したまま、初期表示の一貫性を優先する設計判断とする
 
 **依存関係**
 - 入力: TopPage — UI 状態初期化 (P0)
@@ -322,7 +323,7 @@ sequenceDiagram
 - 不変条件: 「人気」は list_movie 件数の集計結果に一致する
 
 **実装上の留意点**
-- 統合: 対象 `movie` を取得後に `list_movie` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
+- 統合: RPC/ビューで `popularity_count` を付与し、**DB 側で `order(popularity_count)` → `range` を適用**して順序を確定する
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
 - 取得: 集計に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
@@ -360,7 +361,7 @@ sequenceDiagram
 - 不変条件: `favorite_count` は user_list 件数の集計結果と一致するよう更新される
 
 **実装上の留意点**
-- 統合: 対象 `list` を取得後に `user_list` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
+- 統合: RPC/ビューで `popularity_count` を付与し、**DB 側で `order(popularity_count)` → `range` を適用**して順序を確定する
 - 検証: 未対応値は `popular` に変換
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
 - リスク: 既存 UI との表示整合
@@ -386,12 +387,12 @@ sequenceDiagram
 #### 集計RPC/ビュー契約（必須）
 - `public.get_movie_popularity(movie_ids uuid[]) -> { movie_id uuid, popularity_count bigint }`
 - `public.get_list_popularity(list_ids uuid[]) -> { list_id uuid, popularity_count bigint }`
-- DataProvider は「対象ID取得 → 集計取得 → マッピング・ソート」を必ず行う
+- WorkPage/OshiLists は **RPC/ビューで `popularity_count` を返し、DB 側で `order`→`range` を完結**する
 
 #### 人気順の集計手順（厳密保証）
-- TopPage: `movie` を `update` 降順で100件取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え
-- WorkPage: `series_id` で対象 `movie` を取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え
-- OshiListsPage: `list` を取得 → 取得した `list_id` を `user_list` で集計 → 集計値で並び替え
+- TopPage: `movie` を `update` 降順で100件取得 → 取得した `movie_id` を `list_movie` で集計 → 集計値で並び替え（最新100件内の人気順）
+- WorkPage: `series_id` で対象 `movie` を **DB 側で popularity_count を付与して order → range** → 返却結果の順序を保持
+- OshiListsPage: 対象 `list` を **DB 側で popularity_count を付与して order → range** → 返却結果の順序を保持
 
 > 実装指針: 集計はRPC/ビューで実施し、クライアントは「対象ID取得」→「集計結果取得」→「マッピング・ソート」の順で適用する。
 
@@ -429,7 +430,7 @@ sequenceDiagram
 
 ## 性能とスケーラビリティ
 - TopPage は必ず 100 件に制限し、切替時に同範囲を取得する。
-- `order` と `range` を組み合わせ、DB 側で結果を確定する。
+- **人気順のページングは DB 側で `order` → `range` を適用して結果を確定する。**
 - WorkPage / OshiLists は 50 件単位のページング取得を基本とし、無制限件数でも破綻しない設計とする。
 
 ## 参考資料（任意）
