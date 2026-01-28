@@ -259,7 +259,7 @@ sequenceDiagram
 **責務と制約**
 - `weekday` 指定時は `movie.weekday` でフィルタする
 - `sortOrder = latest` は `movie.update` 降順で並び替える
-- `sortOrder = popular` は「曜日フィルタ → `movie.update` 降順 → `range(0,99)`」で最新100件を確定し、その100件内で人気順に並び替える
+- `sortOrder = popular` は「曜日フィルタ → `movie.update` 降順 → `range(0,99)`」で最新100件を確定し、その100件内で人気順に並び替える（人気同値は `movie.update` 降順で解消）
 - 人気順の基準は常に `list_movie` 件数（`favorite_count` と一致）と一致させる（動画=movie）
 - 必ず `range(0, 99)` を適用し 100 件に制限する
 
@@ -291,6 +291,7 @@ sequenceDiagram
 - 検証: `weekday` が `all` の場合は `eq` フィルタを付けない
 - 取得: 取得に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - 取得: `movie.update` が null の行は除外し、最新100件の条件から外す
+- 取得: 対象件数が 100 件未満の場合は存在する件数まで表示する
 - リスク: 除外対象が多い場合はデータ品質の監視が必要
 
 #### WorkPageDataProvider
@@ -302,7 +303,7 @@ sequenceDiagram
 
 **責務と制約**
 - `sortOrder = latest` は `movie.update` の降順
-- `sortOrder = popular` は `list_movie` 件数の降順（`favorite_count` と一致）
+- `sortOrder = popular` は `list_movie` 件数の降順（`favorite_count` と一致）。同値は `movie.update` の降順で解消する
 - 未対応 `sortOrder` は `popular` として扱う
 - 無制限件数を前提にページング取得を必須とし、UIは段階的に読み込む
 
@@ -326,6 +327,7 @@ sequenceDiagram
 
 **実装上の留意点**
 - 統合: `movie.favorite_count` を用い、**DB 側で `order(favorite_count)` → `range` を適用**して順序を確定する
+- 統合: 同値解消のため **`order(favorite_count, desc).order(update, desc)`** を適用する
 - 検証: `sortOrder` は `SortOrderPolicy` を通す
 - 取得: 取得に失敗した場合はエラーとして扱い、空状態またはエラー表示へフォールバックする
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
@@ -364,6 +366,7 @@ sequenceDiagram
 
 **実装上の留意点**
 - 統合: `list.favorite_count` を用い、**DB 側で `order(favorite_count)` → `range` を適用**して順序を確定する
+- 統合: 同値解消のため **`order(favorite_count, desc).order(update, desc)`**（または `created_at`）を適用する
 - 検証: 未対応値は `popular` に変換
 - 取得: `range` / `limit` を用いたページングを必須とし、初期表示は 50 件、以降は追加取得（例: 50 件ずつ）
 - リスク: 既存 UI との表示整合
@@ -391,8 +394,8 @@ sequenceDiagram
 
 #### 人気順の集計手順（厳密保証）
 - TopPage: `weekday` フィルタ → `update` 降順 → `range(0,99)` で100件確定 → 100件内を `favorite_count` 降順で並び替え（最新100件内の人気順）
-- WorkPage: `series_id` で対象 `movie` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
-- OshiListsPage: 対象 `list` を **DB 側で `order(favorite_count)` → `range`** → 返却結果の順序を保持
+- WorkPage: `series_id` で対象 `movie` を **DB 側で `order(favorite_count, desc).order(update, desc)` → `range`** → 返却結果の順序を保持
+- OshiListsPage: 対象 `list` を **DB 側で `order(favorite_count, desc).order(update, desc)` → `range`** → 返却結果の順序を保持
 
 > 実装指針: `favorite_count` はトリガーで同期済みの前提とし、クライアントは追加集計を行わない。
 
