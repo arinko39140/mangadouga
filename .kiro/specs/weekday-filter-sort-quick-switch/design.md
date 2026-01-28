@@ -89,7 +89,7 @@ graph TB
 | Data Access | @supabase/supabase-js | フィルタ・ソート・件数制限クエリ | `order` + `range` を使用 |
 | Data | Supabase Postgres | `movie` / `list` / `list_movie` の参照 | 集計用RPC/ビューを利用 |
 
-> 注記: 人気順は `favorite_count` を信頼せず、`list_movie` / `user_list` の件数集計で厳密に決定する。集計はRPCまたはビューで提供し、クライアントは集計結果を参照する。
+> 注記: 人気順は `list_movie` / `user_list` の件数集計で厳密に決定する。`favorite_count` は集計結果と一致するよう更新・同期し、参照する場合も集計値と整合していることを前提とする。
 
 ## システムフロー
 
@@ -353,7 +353,7 @@ sequenceDiagram
 ```
 - 前提条件: 認証済みユーザーを取得済み
 - 事後条件: `popular` の降順を保証
-- 不変条件: `favorite_count` は user_list トリガーで更新される
+- 不変条件: `favorite_count` は user_list 件数の集計結果と一致するよう更新される
 
 **実装上の留意点**
 - 統合: 対象 `list` を取得後に `user_list` の件数を集計し、集計値で並び替える（RPC/ビューで集計結果を取得）
@@ -366,13 +366,13 @@ sequenceDiagram
 - Entity: `Movie`（`movie_id`, `movie_title`, `update`, `favorite_count`, `weekday`）
 - Entity: `List`（`list_id`, `favorite_count`, `can_display`）
 - Value: `SortOrder`（`popular` / `latest`）
-- Invariants: 人気順は `list_movie` / `user_list` の件数で常に決定し、`favorite_count` は参照しない
+- Invariants: 人気順は `list_movie` / `user_list` の件数で常に決定し、`favorite_count` は集計値と一致するよう更新・同期する
 
 ### 論理データモデル
 - `movie.weekday` は `mon`-`sun` の固定キー
 - `movie.update` を投稿日として扱う
-- `movie.favorite_count` は参照せず、`list_movie` 件数を集計した値で人気順を決定する
-- `list.favorite_count` は参照せず、`user_list` 件数を集計した値で人気順を決定する
+- `movie.favorite_count` は `list_movie` 件数の集計値と一致するよう更新し、人気順は集計値で決定する
+- `list.favorite_count` は `user_list` 件数の集計値と一致するよう更新し、人気順は集計値で決定する
 
 ### データ契約と連携
 - API Data Transfer: Supabase `movie`, `list` と `list_movie` / `user_list` の集計結果（RPC/ビュー）を利用
