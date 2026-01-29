@@ -135,6 +135,47 @@ describe('WeekdayDataProvider', () => {
     expect(result.data.items[0].title).toBe('更新あり')
   })
 
+  it('人気順は最新100件内でfavorite_count降順に並び替え、同値はupdate降順で解消する', async () => {
+    const rows = [
+      {
+        movie_id: 'm1',
+        movie_title: '人気低め',
+        url: '/movies/m1',
+        favorite_count: 10,
+        update: '2026-01-19T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 'm2',
+        movie_title: '人気上位',
+        url: '/movies/m2',
+        favorite_count: 50,
+        update: '2026-01-18T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 'm3',
+        movie_title: '人気上位（新しい）',
+        url: '/movies/m3',
+        favorite_count: 50,
+        update: '2026-01-20T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+    ]
+    const { client, calls } = buildWeekdayItemsSupabaseMock({ rows })
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayItems({ weekday: 'mon', sortOrder: 'popular' })
+
+    expect(calls.orderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(calls.rangeMock).toHaveBeenCalledWith(0, 99)
+    expect(result.ok).toBe(true)
+    expect(result.data.items.map((item) => item.id)).toEqual(['m3', 'm2', 'm1'])
+  })
+
   it('過去1週間の条件と人気順の条件で取得し、曜日ごとに返す', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))

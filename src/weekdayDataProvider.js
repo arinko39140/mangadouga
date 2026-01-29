@@ -18,6 +18,24 @@ const mapRowToItem = (row) => ({
   seriesId: row.series_id ?? null,
 })
 
+const resolveTimestamp = (item) => {
+  const time = Date.parse(item?.publishedAt ?? '')
+  return Number.isFinite(time) ? time : 0
+}
+
+const resolvePopularity = (item) =>
+  Number.isFinite(item?.popularityScore) ? item.popularityScore : 0
+
+const sortItemsByPopularity = (items) => {
+  const sorted = [...items]
+  sorted.sort((a, b) => {
+    const popularityDiff = resolvePopularity(b) - resolvePopularity(a)
+    if (popularityDiff !== 0) return popularityDiff
+    return resolveTimestamp(b) - resolveTimestamp(a)
+  })
+  return sorted
+}
+
 const normalizeWeekdayLists = (rows) => {
   const lists = buildEmptyWeekdayLists()
   const indexByWeekday = new Map(lists.map((list) => [list.weekday, list]))
@@ -55,7 +73,7 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
     }
 
     const resolvedWeekday = WEEKDAY_KEYS.includes(weekday) ? weekday : 'all'
-    void sortOrder
+    const resolvedSortOrder = sortOrder === 'latest' ? 'latest' : 'popular'
     const resolvedLimit =
       Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_WEEKDAY_LIMIT
 
@@ -81,9 +99,13 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       }
     }
 
-    const items = (data ?? [])
+    const fetchedItems = (data ?? [])
       .filter((row) => row.update != null)
       .map(mapRowToItem)
+    const items =
+      resolvedSortOrder === 'popular'
+        ? sortItemsByPopularity(fetchedItems)
+        : fetchedItems
 
     return {
       ok: true,
