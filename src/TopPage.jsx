@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import PlaybackPanel from './PlaybackPanel.jsx'
+import SortControl from './SortControl.jsx'
+import {
+  DEFAULT_SORT_ORDER,
+  SORT_ORDER_QUERY_KEY,
+  normalizeSortOrder,
+} from './sortOrderPolicy.js'
 import { supabase } from './supabaseClient.js'
 import { createWeekdayDataProvider } from './weekdayDataProvider.js'
 import './TopPage.css'
@@ -34,6 +40,27 @@ const isWithinWeekRange = (item, thresholdMs) => {
   return time >= thresholdMs
 }
 
+const resolveTimestamp = (item) => {
+  const time = Date.parse(item?.publishedAt ?? item?.update ?? '')
+  return Number.isFinite(time) ? time : 0
+}
+
+const resolvePopularity = (item) =>
+  Number.isFinite(item?.popularityScore) ? item.popularityScore : 0
+
+const sortItems = (items, sortOrder) => {
+  const sorted = [...items]
+  sorted.sort((a, b) => {
+    if (sortOrder === 'latest') {
+      return resolveTimestamp(b) - resolveTimestamp(a)
+    }
+    const popularityDiff = resolvePopularity(b) - resolvePopularity(a)
+    if (popularityDiff !== 0) return popularityDiff
+    return resolveTimestamp(b) - resolveTimestamp(a)
+  })
+  return sorted
+}
+
 const defaultWeekdayDataProvider = createWeekdayDataProvider(supabase)
 
 const buildEmptyWeekdayLists = () =>
@@ -44,10 +71,11 @@ const buildEmptyWeekdayLists = () =>
 
 function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
-  const [sortOrder] = useState('popular')
+  const [sortOrder, setSortOrder] = useState(DEFAULT_SORT_ORDER)
   const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [, setSearchParams] = useSearchParams()
   const isAllSelected = selectedWeekday === 'all'
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
@@ -55,9 +83,12 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
     ? 'すべて'
     : `${selectedWeekdayLabel}曜日`
   const selectedSortLabel = sortOrder === 'latest' ? '投稿日' : '人気'
-  const selectedList = isAllSelected
-    ? weekdayLists.flatMap((list) => list.items)
-    : weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+  const selectedList = useMemo(() => {
+    const items = isAllSelected
+      ? weekdayLists.flatMap((list) => list.items)
+      : weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+    return sortItems(items, sortOrder)
+  }, [isAllSelected, selectedWeekday, sortOrder, weekdayLists])
   const listTitle = isAllSelected
     ? 'すべての一覧'
     : `${selectedWeekdayLabel}曜日の一覧`
@@ -71,6 +102,17 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
         videoUrl: selectedList[0].detailPath ?? null,
       }
     : null
+  const handleSortChange = (nextSortOrder) => {
+    setSortOrder(normalizeSortOrder(nextSortOrder))
+  }
+
+  useEffect(() => {
+    setSearchParams((params) => {
+      const nextParams = new URLSearchParams(params)
+      nextParams.set(SORT_ORDER_QUERY_KEY, sortOrder)
+      return nextParams
+    }, { replace: true })
+  }, [setSearchParams, sortOrder])
 
   useEffect(() => {
     let isMounted = true
@@ -144,6 +186,10 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
           <p>{listTitle}</p>
+          <div className="top-page__sort">
+            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
+            <SortControl sortOrder={sortOrder} onChange={handleSortChange} />
+          </div>
           <p className="top-page__filter-summary">
             表示中: {selectedFilterLabel} / {selectedSortLabel}
           </p>

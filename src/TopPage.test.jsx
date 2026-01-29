@@ -1,12 +1,28 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { vi } from 'vitest'
 import TopPage from './TopPage.jsx'
 
-const renderTopPage = (props = {}) =>
+const LocationDisplay = () => {
+  const location = useLocation()
+  return <p data-testid="location-search">{location.search}</p>
+}
+
+const buildEmptyLists = () => [
+  { weekday: 'mon', items: [] },
+  { weekday: 'tue', items: [] },
+  { weekday: 'wed', items: [] },
+  { weekday: 'thu', items: [] },
+  { weekday: 'fri', items: [] },
+  { weekday: 'sat', items: [] },
+  { weekday: 'sun', items: [] },
+]
+
+const renderTopPage = ({ routerEntries = ['/'], showLocation = false, ...props } = {}) =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={routerEntries}>
       <TopPage {...props} />
+      {showLocation ? <LocationDisplay /> : null}
     </MemoryRouter>
   )
 
@@ -28,7 +44,8 @@ describe('TopPage layout', () => {
   it('曜日ナビゲーションは全曜日と「すべて」を表示し、選択状態が識別できる', () => {
     renderTopPage()
 
-    const buttons = screen.getAllByRole('button')
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    const buttons = within(nav).getAllByRole('button')
     expect(buttons).toHaveLength(8)
 
     const selected = buttons.find((button) => button.getAttribute('aria-pressed') === 'true')
@@ -92,13 +109,63 @@ describe('TopPage layout', () => {
     vi.useRealTimers()
   })
 
+  it('URLのsortOrder指定があっても既定は人気になりURLが同期される', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: true, data: buildEmptyLists() }),
+    }
+
+    renderTopPage({
+      dataProvider,
+      routerEntries: ['/?sortOrder=latest'],
+      showLocation: true,
+    })
+
+    expect(screen.getByText('表示中: 火曜日 / 人気')).toBeInTheDocument()
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent(
+        'sortOrder=popular'
+      )
+    })
+  })
+
+  it('ソート変更後も曜日切替でソートが維持される', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: true, data: buildEmptyLists() }),
+    }
+
+    renderTopPage({ dataProvider, showLocation: true })
+
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+
+    expect(screen.getByText('表示中: 火曜日 / 投稿日')).toBeInTheDocument()
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent(
+        'sortOrder=latest'
+      )
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '土' }))
+
+    expect(screen.getByText('表示中: 土曜日 / 投稿日')).toBeInTheDocument()
+  })
+
   it('曜日を選択すると選択状態と一覧が切り替わる', () => {
     renderTopPage()
 
-    const targetButton = screen.getByRole('button', { name: '土' })
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    const targetButton = within(nav).getByRole('button', { name: '土' })
     fireEvent.click(targetButton)
 
-    const selectedButtons = screen
+    const selectedButtons = within(nav)
       .getAllByRole('button')
       .filter((button) => button.getAttribute('aria-pressed') === 'true')
 

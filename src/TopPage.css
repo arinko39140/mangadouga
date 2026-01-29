@@ -189,6 +189,41 @@
   font-weight: 600;
 }
 
+.top-page__sort {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.top-page__sort-label {
+  margin: 0;
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.8);
+}
+
+.work-page__sort-control {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.work-page__sort-button {
+  border: 1px solid rgba(90, 70, 110, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.work-page__sort-button.is-selected {
+  background: #f2d2c7;
+  border-color: rgba(90, 70, 110, 0.35);
+  box-shadow: 0 6px 16px rgba(90, 70, 110, 0.2);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 860px) {
   .top-page__grid {
     grid-template-columns: 1fr;
