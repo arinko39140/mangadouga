@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. ソート共通ポリシーと切替UIの基盤を整える
-- [ ] 1.1 SortOrderPolicyの正規化と既定値を実装する
+- [x] 1.1 SortOrderPolicyの正規化と既定値を実装する
   - sortOrderをpopular/latestの2値に正規化し、未対応値はpopularへフォールバックさせる
   - URLキー名をsortOrderに統一し、既定値popularを提供する
   - 既存の互換値（favorite_desc/favorite_asc/oldest）をpopularへ変換する
