@@ -204,7 +204,9 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
                 : '不明なエラーが発生しました。'}
             </p>
           ) : selectedList.length === 0 ? (
-            <p className="top-page__status">表示できる一覧がありません。</p>
+            <p className="top-page__status">
+              {selectedFilterLabel}の一覧がありません。
+            </p>
           ) : (
             <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
               {selectedList.map((item) => (

@@ -357,6 +357,9 @@ describe('TopPage layout', () => {
   })
 
   it('一覧が空の場合は空状態を表示する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
     const emptyLists = [
       { weekday: 'mon', items: [] },
       { weekday: 'tue', items: [] },
@@ -372,8 +375,46 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    expect(
-      await screen.findByText('表示できる一覧がありません。')
-    ).toBeInTheDocument()
+    vi.useRealTimers()
+    expect(await screen.findByText('火曜日の一覧がありません。')).toBeInTheDocument()
+  })
+
+  it('選択した曜日に該当がない場合は空状態を明示する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'mon',
+            items: [
+              {
+                id: 'm1',
+                title: '月の動画',
+                popularityScore: 120,
+                seriesId: 'series-1',
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'tue', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    fireEvent.click(screen.getByRole('button', { name: '火' }))
+
+    vi.useRealTimers()
+    expect(await screen.findByText('火曜日の一覧がありません。')).toBeInTheDocument()
+    expect(screen.queryByText('月の動画')).not.toBeInTheDocument()
   })
 })
