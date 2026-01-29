@@ -1,4 +1,5 @@
 export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+const DEFAULT_WEEKDAY_LIMIT = 100
 
 const buildEmptyWeekdayLists = () =>
   WEEKDAY_KEYS.map((weekday) => ({
@@ -48,6 +49,51 @@ const isNetworkError = (error) => {
 }
 
 export const createWeekdayDataProvider = (supabaseClient) => ({
+  async fetchWeekdayItems({ weekday, sortOrder, limit } = {}) {
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const resolvedWeekday = WEEKDAY_KEYS.includes(weekday) ? weekday : 'all'
+    void sortOrder
+    const resolvedLimit =
+      Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_WEEKDAY_LIMIT
+
+    let query = supabaseClient
+      .from('movie')
+      .select(
+        'movie_id, movie_title, url, favorite_count, update, series_id, weekday'
+      )
+      .not('update', 'is', null)
+
+    if (resolvedWeekday !== 'all') {
+      query = query.eq('weekday', resolvedWeekday)
+    }
+
+    const { data, error } = await query
+      .order('update', { ascending: false })
+      .range(0, resolvedLimit - 1)
+
+    if (error) {
+      return {
+        ok: false,
+        error: isNetworkError(error) ? 'network' : 'unknown',
+      }
+    }
+
+    const items = (data ?? [])
+      .filter((row) => row.update != null)
+      .map(mapRowToItem)
+
+    return {
+      ok: true,
+      data: {
+        weekday: resolvedWeekday,
+        items,
+      },
+    }
+  },
+
   async fetchWeekdayLists() {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
