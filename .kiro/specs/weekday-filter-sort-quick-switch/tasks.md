@@ -51,7 +51,7 @@
   - 未対応のソート値はpopularへフォールバックする
   - _Requirements: 2.1, 2.2, 2.3, 3.4, 3.5, 3.6_
 
-- [ ] 4.2 (P) WorkPageの人気/投稿日ソート取得とページングを実装する
+- [x] 4.2 (P) WorkPageの人気/投稿日ソート取得とページングを実装する
   - popularはfavorite_count降順、同値はupdate降順で並び替える
   - latestはmovie.update降順で並び替える
   - 50件単位のページング取得で無制限件数にも対応する

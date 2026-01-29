@@ -15,7 +15,12 @@ const buildEpisodesSupabaseMock = ({
   const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
   const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
 
-  const movieOrderMock = vi.fn().mockResolvedValue({ data: movieRows, error: movieError })
+  const movieRangeMock = vi
+    .fn()
+    .mockResolvedValue({ data: movieRows, error: movieError })
+  const movieOrderMock = vi
+    .fn()
+    .mockImplementation(() => ({ order: movieOrderMock, range: movieRangeMock }))
   const movieEqMock = vi.fn().mockReturnValue({ order: movieOrderMock })
   const movieSelectMock = vi.fn().mockReturnValue({ eq: movieEqMock })
 
@@ -42,6 +47,7 @@ const buildEpisodesSupabaseMock = ({
       movieSelectMock,
       movieEqMock,
       movieOrderMock,
+      movieRangeMock,
       listMovieSelectMock,
       listMovieEqMock,
       listMovieInMock,
@@ -265,22 +271,8 @@ describe('WorkPageDataProvider', () => {
     expect(result).toEqual({ ok: false, error: 'not_found' })
   })
 
-  it('話数一覧を公開日順に並び替え、未設定は末尾に配置する', async () => {
+  it('話数一覧は投稿日降順で取得し、取得順のまま返す', async () => {
     const rows = [
-      {
-        movie_id: 'movie-null',
-        movie_title: '未設定',
-        url: null,
-        thumbnail_url: null,
-        update: null,
-      },
-      {
-        movie_id: 'movie-old',
-        movie_title: '第1話',
-        url: '/watch/old',
-        thumbnail_url: null,
-        update: '2025-12-01T00:00:00Z',
-      },
       {
         movie_id: 'movie-latest',
         movie_title: '最新話',
@@ -288,22 +280,6 @@ describe('WorkPageDataProvider', () => {
         thumbnail_url: null,
         update: '2026-01-01T00:00:00Z',
       },
-    ]
-    const { client } = buildEpisodesSupabaseMock({ movieRows: rows })
-    const provider = createWorkPageDataProvider(client)
-
-    const result = await provider.fetchMovies('series-1', 'latest')
-
-    expect(result.ok).toBe(true)
-    expect(result.data.map((episode) => episode.id)).toEqual([
-      'movie-latest',
-      'movie-old',
-      'movie-null',
-    ])
-  })
-
-  it('古い順を指定した場合は古い順で並び替える', async () => {
-    const rows = [
       {
         movie_id: 'movie-old',
         movie_title: '第1話',
@@ -311,10 +287,34 @@ describe('WorkPageDataProvider', () => {
         thumbnail_url: null,
         update: '2025-12-01T00:00:00Z',
       },
+    ]
+    const { client, calls } = buildEpisodesSupabaseMock({ movieRows: rows })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchMovies('series-1', 'latest')
+
+    expect(result.ok).toBe(true)
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(calls.movieRangeMock).toHaveBeenCalledWith(0, 49)
+    expect(result.data.map((episode) => episode.id)).toEqual([
+      'movie-latest',
+      'movie-old',
+    ])
+  })
+
+  it('人気順はfavorite_count降順→update降順で取得する', async () => {
+    const rows = [
       {
-        movie_id: 'movie-latest',
-        movie_title: '最新話',
-        url: '/watch/latest',
+        movie_id: 'movie-popular',
+        movie_title: '人気話',
+        url: '/watch/popular',
+        thumbnail_url: null,
+        update: '2026-01-02T00:00:00Z',
+      },
+      {
+        movie_id: 'movie-less',
+        movie_title: '控えめ',
+        url: '/watch/less',
         thumbnail_url: null,
         update: '2026-01-01T00:00:00Z',
       },
@@ -322,7 +322,7 @@ describe('WorkPageDataProvider', () => {
     const { client, calls } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.fetchMovies('series-1', 'oldest')
+    const result = await provider.fetchMovies('series-1', 'popular')
 
     expect(calls.fromMock).toHaveBeenCalledWith('list')
     expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
@@ -330,14 +330,16 @@ describe('WorkPageDataProvider', () => {
     expect(calls.listLimitMock).toHaveBeenCalledWith(1)
     expect(calls.fromMock).toHaveBeenCalledWith('movie')
     expect(calls.movieSelectMock).toHaveBeenCalledWith(
-      'movie_id, movie_title, url, thumbnail_url, update'
+      'movie_id, movie_title, url, thumbnail_url, update, favorite_count'
     )
     expect(calls.movieEqMock).toHaveBeenCalledWith('series_id', 'series-1')
-    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: true })
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(calls.movieRangeMock).toHaveBeenCalledWith(0, 49)
     expect(result.ok).toBe(true)
     expect(result.data.map((episode) => episode.id)).toEqual([
-      'movie-old',
-      'movie-latest',
+      'movie-popular',
+      'movie-less',
     ])
   })
 
@@ -367,7 +369,7 @@ describe('WorkPageDataProvider', () => {
     const result = await provider.fetchMovies('series-1', 'latest')
 
     expect(result.ok).toBe(true)
-    expect(result.data.map((episode) => episode.isOshi)).toEqual([true, false])
+    expect(result.data.map((episode) => episode.isOshi)).toEqual([false, true])
   })
 
   it('推し未登録の動画はisOshiがfalseになる', async () => {
@@ -396,41 +398,25 @@ describe('WorkPageDataProvider', () => {
     expect(result.data.map((episode) => episode.isOshi)).toEqual([false, false])
   })
 
-  it('古い順でも公開日未設定は末尾に配置する', async () => {
+  it('未対応のsortOrderは人気順として扱う', async () => {
     const rows = [
       {
-        movie_id: 'movie-null',
-        movie_title: '未設定',
-        url: null,
+        movie_id: 'movie-popular',
+        movie_title: '人気話',
+        url: '/watch/popular',
         thumbnail_url: null,
-        update: null,
-      },
-      {
-        movie_id: 'movie-old',
-        movie_title: '第1話',
-        url: '/watch/old',
-        thumbnail_url: null,
-        update: '2025-12-01T00:00:00Z',
-      },
-      {
-        movie_id: 'movie-latest',
-        movie_title: '最新話',
-        url: '/watch/latest',
-        thumbnail_url: null,
-        update: '2026-01-01T00:00:00Z',
+        update: '2026-01-02T00:00:00Z',
       },
     ]
-    const { client } = buildEpisodesSupabaseMock({ movieRows: rows })
+    const { client, calls } = buildEpisodesSupabaseMock({ movieRows: rows })
     const provider = createWorkPageDataProvider(client)
 
-    const result = await provider.fetchMovies('series-1', 'oldest')
+    const result = await provider.fetchMovies('series-1', 'invalid')
 
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(calls.movieRangeMock).toHaveBeenCalledWith(0, 49)
     expect(result.ok).toBe(true)
-    expect(result.data.map((episode) => episode.id)).toEqual([
-      'movie-old',
-      'movie-latest',
-      'movie-null',
-    ])
   })
 
   it('Supabase未設定の場合はnot_configuredとして返す', async () => {

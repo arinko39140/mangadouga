@@ -1,3 +1,4 @@
+import { normalizeSortOrder } from './sortOrderPolicy.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 
 const isNetworkError = (error) => {
@@ -11,20 +12,7 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-const sortEpisodes = (episodes, sortOrder) => {
-  const sorted = [...episodes]
-  sorted.sort((a, b) => {
-    const aTime = a.publishedAt ? Date.parse(a.publishedAt) : null
-    const bTime = b.publishedAt ? Date.parse(b.publishedAt) : null
-
-    if (aTime === null && bTime === null) return 0
-    if (aTime === null) return 1
-    if (bTime === null) return -1
-
-    return sortOrder === 'oldest' ? aTime - bTime : bTime - aTime
-  })
-  return sorted
-}
+const PAGE_SIZE = 50
 
 const mapSeriesRow = (row) => ({
   id: row.series_id,
@@ -198,11 +186,21 @@ export const createWorkPageDataProvider = (supabaseClient) => {
         return { ok: false, error: listResult.error }
       }
 
-      const { data, error } = await supabaseClient
+      const resolvedSortOrder = normalizeSortOrder(sortOrder)
+      let query = supabaseClient
         .from('movie')
-        .select('movie_id, movie_title, url, thumbnail_url, update')
+        .select('movie_id, movie_title, url, thumbnail_url, update, favorite_count')
         .eq('series_id', seriesId)
-        .order('update', { ascending: sortOrder === 'oldest' })
+
+      if (resolvedSortOrder === 'latest') {
+        query = query.order('update', { ascending: false })
+      } else {
+        query = query
+          .order('favorite_count', { ascending: false })
+          .order('update', { ascending: false })
+      }
+
+      const { data, error } = await query.range(0, PAGE_SIZE - 1)
 
       if (error) {
         return { ok: false, error: normalizeError(error) }
@@ -226,7 +224,7 @@ export const createWorkPageDataProvider = (supabaseClient) => {
       }
 
       const episodes = (data ?? []).map((row) => mapEpisodeRow(row, oshiIds.has(row.movie_id)))
-      return { ok: true, data: sortEpisodes(episodes, sortOrder) }
+      return { ok: true, data: episodes }
     },
 
     async toggleSeriesFavorite(seriesId) {
