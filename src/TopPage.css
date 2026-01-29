@@ -184,6 +184,11 @@
   color: rgba(44, 32, 50, 0.75);
 }
 
+.top-page__filter-summary {
+  margin-top: 0.35rem;
+  font-weight: 600;
+}
+
 @media (max-width: 860px) {
   .top-page__grid {
     grid-template-columns: 1fr;

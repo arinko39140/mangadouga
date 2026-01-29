@@ -6,6 +6,7 @@ import { createWeekdayDataProvider } from './weekdayDataProvider.js'
 import './TopPage.css'
 
 const WEEKDAYS = [
+  { key: 'all', label: 'すべて' },
   { key: 'mon', label: '月' },
   { key: 'tue', label: '火' },
   { key: 'wed', label: '水' },
@@ -43,13 +44,26 @@ const buildEmptyWeekdayLists = () =>
 
 function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
+  const [sortOrder] = useState('popular')
   const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const isAllSelected = selectedWeekday === 'all'
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
-  const selectedList =
-    weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+  const selectedFilterLabel = isAllSelected
+    ? 'すべて'
+    : `${selectedWeekdayLabel}曜日`
+  const selectedSortLabel = sortOrder === 'latest' ? '投稿日' : '人気'
+  const selectedList = isAllSelected
+    ? weekdayLists.flatMap((list) => list.items)
+    : weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
+  const listTitle = isAllSelected
+    ? 'すべての一覧'
+    : `${selectedWeekdayLabel}曜日の一覧`
+  const playbackLabel = isAllSelected
+    ? 'すべての人気動画を再生できます。'
+    : `${selectedWeekdayLabel}曜日の人気動画を再生できます。`
   const featuredEpisode = selectedList[0]
     ? {
         id: selectedList[0].id,
@@ -97,7 +111,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
       <div className="top-page__grid">
         <section className="top-page__playback" aria-label="動画再生">
           <h2>ピックアップ動画</h2>
-          <p>{selectedWeekdayLabel}曜日の人気動画を再生できます。</p>
+          <p>{playbackLabel}</p>
           {isLoading ? (
             <p className="top-page__status">再生準備中...</p>
           ) : featuredEpisode ? (
@@ -129,7 +143,10 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
         </nav>
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
-          <p>{selectedWeekdayLabel}曜日の一覧</p>
+          <p>{listTitle}</p>
+          <p className="top-page__filter-summary">
+            表示中: {selectedFilterLabel} / {selectedSortLabel}
+          </p>
           {isLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : error ? (

@@ -25,11 +25,11 @@ describe('TopPage layout', () => {
     ).toBeInTheDocument()
   })
 
-  it('曜日ナビゲーションは7曜日を表示し、選択状態が識別できる', () => {
+  it('曜日ナビゲーションは全曜日と「すべて」を表示し、選択状態が識別できる', () => {
     renderTopPage()
 
     const buttons = screen.getAllByRole('button')
-    expect(buttons).toHaveLength(7)
+    expect(buttons).toHaveLength(8)
 
     const selected = buttons.find((button) => button.getAttribute('aria-pressed') === 'true')
     expect(selected).toBeTruthy()
@@ -81,6 +81,17 @@ describe('TopPage layout', () => {
     vi.useRealTimers()
   })
 
+  it('曜日とソートの選択状態が同時に表示される', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    renderTopPage()
+
+    expect(screen.getByText('表示中: 火曜日 / 人気')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
   it('曜日を選択すると選択状態と一覧が切り替わる', () => {
     renderTopPage()
 
@@ -94,6 +105,63 @@ describe('TopPage layout', () => {
     expect(selectedButtons).toHaveLength(1)
     expect(selectedButtons[0]).toBe(targetButton)
     expect(screen.getByText('土曜日の一覧')).toBeInTheDocument()
+  })
+
+  it('「すべて」を選択すると全曜日の一覧が表示される', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'mon',
+            items: [
+              {
+                id: 'm1',
+                title: '月の動画',
+                popularityScore: 120,
+                seriesId: 'series-1',
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+            ],
+          },
+          {
+            weekday: 'tue',
+            items: [
+              {
+                id: 'm2',
+                title: '火の動画',
+                popularityScore: 99,
+                seriesId: 'series-2',
+                publishedAt: '2026-01-18T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    fireEvent.click(screen.getByRole('button', { name: 'すべて' }))
+
+    vi.useRealTimers()
+    await screen.findByText('月の動画')
+    await screen.findByText('火の動画')
+    expect(screen.getByText('すべての一覧')).toBeInTheDocument()
+    const list = screen.getByRole('list', { name: '曜日別一覧のアイテム' })
+    const items = list.querySelectorAll('li')
+
+    expect(items).toHaveLength(2)
+    expect(screen.getByText('月の動画')).toBeInTheDocument()
+    expect(screen.getByText('火の動画')).toBeInTheDocument()
   })
 
   it('取得データが曜日別一覧に反映され、人気順で表示される', async () => {
