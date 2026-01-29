@@ -1,13 +1,17 @@
+import { normalizeSortOrder } from './sortOrderPolicy.js'
+
 const sortOptions = [
-  { value: 'latest', label: '最新話' },
-  { value: 'oldest', label: '古い順' },
+  { value: 'popular', label: '人気' },
+  { value: 'latest', label: '投稿日' },
 ]
 
-function SortControl({ sortOrder = 'latest', onChange }) {
+function SortControl({ sortOrder = 'popular', onChange }) {
+  const normalizedSortOrder = normalizeSortOrder(sortOrder)
+
   return (
     <div className="work-page__sort-control" role="group" aria-label="並び順">
       {sortOptions.map((option) => {
-        const isSelected = option.value === sortOrder
+        const isSelected = option.value === normalizedSortOrder
         return (
           <button
             key={option.value}

@@ -4,13 +4,13 @@ import SortControl from './SortControl.jsx'
 
 describe('SortControl', () => {
   it('現在の並び順が分かるように表示する', () => {
-    render(<SortControl sortOrder="latest" onChange={vi.fn()} />)
+    render(<SortControl sortOrder="popular" onChange={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: '最新話' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '人気' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
-    expect(screen.getByRole('button', { name: '古い順' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '投稿日' })).toHaveAttribute(
       'aria-pressed',
       'false'
     )
@@ -19,9 +19,18 @@ describe('SortControl', () => {
   it('並び順の選択でコールバックを呼び出す', () => {
     const handleChange = vi.fn()
 
-    render(<SortControl sortOrder="latest" onChange={handleChange} />)
+    render(<SortControl sortOrder="popular" onChange={handleChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: '古い順' }))
-    expect(handleChange).toHaveBeenCalledWith('oldest')
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+    expect(handleChange).toHaveBeenCalledWith('latest')
+  })
+
+  it('未対応の値はpopular扱いにする', () => {
+    render(<SortControl sortOrder="oldest" onChange={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: '人気' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
   })
 })

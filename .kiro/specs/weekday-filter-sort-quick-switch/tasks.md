@@ -7,7 +7,7 @@
   - 既存の互換値（favorite_desc/favorite_asc/oldest）をpopularへ変換する
   - _Requirements: 2.3, 3.5, 3.6, 6.1_
 
-- [ ] 1.2 「投稿日／人気」切替UIの表示と選択状態を更新する
+- [x] 1.2 「投稿日／人気」切替UIの表示と選択状態を更新する
   - popular/latestの2択のみを扱い、現在選択中の項目を視覚的に区別する
   - 想定外の値はpopularに戻す挙動をUI側でも担保する
   - _Requirements: 2.1, 2.2, 3.2, 3.4_

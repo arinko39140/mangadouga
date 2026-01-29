@@ -17,7 +17,11 @@ const defaultDataProvider = supabase
   ? createWorkPageDataProvider(supabase)
   : createMockWorkPageDataProvider()
 
-const formatSortLabel = (sortOrder) => (sortOrder === 'latest' ? '最新話' : '古い順')
+const formatSortLabel = (sortOrder) => {
+  if (sortOrder === 'latest') return '投稿日'
+  if (sortOrder === 'popular') return '人気'
+  return '古い順'
+}
 const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
 
 function WorkPage({ dataProvider = defaultDataProvider, authGate }) {

@@ -166,7 +166,7 @@ describe('WorkPage state', () => {
         },
       }),
       fetchMovies: vi.fn((seriesId, sortOrder) => {
-        if (sortOrder === 'oldest') {
+        if (sortOrder === 'popular') {
           return Promise.resolve({
             ok: true,
             data: [
@@ -210,10 +210,10 @@ describe('WorkPage state', () => {
     const latestButton = await screen.findByRole('button', { name: '最新話' })
     expect(latestButton).toHaveAttribute('aria-pressed', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: '古い順' }))
+    fireEvent.click(screen.getByRole('button', { name: '人気' }))
 
     await waitFor(() => {
-      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'oldest')
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'popular')
     })
 
     const oldestButton = await screen.findByRole('button', { name: '最古話' })
@@ -249,10 +249,10 @@ describe('WorkPage state', () => {
 
     renderWorkPage(dataProvider, 'series-1')
 
-    expect(await screen.findByText('並び順: 最新話')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '古い順' }))
+    expect(await screen.findByText('並び順: 投稿日')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '人気' }))
 
-    expect(await screen.findByText('並び順: 古い順')).toBeInTheDocument()
+    expect(await screen.findByText('並び順: 人気')).toBeInTheDocument()
   })
 
   it('話数一覧の更新で選択が失われた場合は先頭話数に切り替える', async () => {
@@ -422,7 +422,7 @@ describe('WorkPage state', () => {
 
     const latestButton = await screen.findByRole('button', { name: '最新話' })
     expect(latestButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('並び順: 最新話')).toBeInTheDocument()
+    expect(screen.getByText('並び順: 投稿日')).toBeInTheDocument()
   })
 
   it('お気に入り操作で認証済みなら状態が更新される', async () => {
