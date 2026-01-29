@@ -45,7 +45,7 @@
   - _Requirements: 2.2, 2.6, 4.1_
 
 - [ ] 4. WorkPageのソート連動と取得ロジックを統合する
-- [ ] 4.1 (P) WorkPageでsortOrderの統一とUI切替を反映する
+- [x] 4.1 (P) WorkPageでsortOrderの統一とUI切替を反映する
   - sortOrderの値を共通ポリシーで正規化し、URLに同期する
   - 「投稿日／人気」の切替が一覧に反映されるよう連携する
   - 未対応のソート値はpopularへフォールバックする

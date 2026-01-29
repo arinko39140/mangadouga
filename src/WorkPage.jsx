@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import EpisodeListPanel from './EpisodeListPanel.jsx'
 import FavoriteStarButton from './FavoriteStarButton.jsx'
@@ -9,6 +9,11 @@ import SortControl from './SortControl.jsx'
 import { createMockWorkPageDataProvider } from './mockWorkPageDataProvider.js'
 import { publishOshiListUpdated } from './oshiListEvents.js'
 import { publishUserSeriesUpdated } from './userSeriesEvents.js'
+import {
+  DEFAULT_SORT_ORDER,
+  SORT_ORDER_QUERY_KEY,
+  normalizeSortOrder,
+} from './sortOrderPolicy.js'
 import { supabase } from './supabaseClient.js'
 import { createWorkPageDataProvider } from './workPageDataProvider.js'
 import './WorkPage.css'
@@ -19,24 +24,20 @@ const defaultDataProvider = supabase
 
 const formatSortLabel = (sortOrder) => {
   if (sortOrder === 'latest') return '投稿日'
-  if (sortOrder === 'popular') return '人気'
-  return '古い順'
+  return '人気'
 }
-const parseSortOrder = (value) => (value === 'oldest' ? 'oldest' : 'latest')
 
 function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   const { seriesId } = useParams()
-  const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [series, setSeries] = useState(null)
   const [episodes, setEpisodes] = useState([])
   const [selectedMovieId, setSelectedMovieId] = useState(() => {
-    const params = new URLSearchParams(location.search)
-    return params.get('selectedMovieId')
+    return searchParams.get('selectedMovieId')
   })
   const [sortOrder, setSortOrder] = useState(() => {
-    const params = new URLSearchParams(location.search)
-    return parseSortOrder(params.get('sortOrder'))
+    return normalizeSortOrder(searchParams.get(SORT_ORDER_QUERY_KEY))
   })
   const [favoriteUpdating, setFavoriteUpdating] = useState(false)
   const [loading, setLoading] = useState({ series: false, episodes: false })
@@ -110,18 +111,28 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
   }
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const requestedSortOrder = params.get('sortOrder')
-    const requestedMovieId = params.get('selectedMovieId')
+    const requestedSortOrder = searchParams.get(SORT_ORDER_QUERY_KEY)
+    const requestedMovieId = searchParams.get('selectedMovieId')
 
-    if (requestedSortOrder) {
-      setSortOrder(parseSortOrder(requestedSortOrder))
-    }
+    setSortOrder(normalizeSortOrder(requestedSortOrder))
 
     if (requestedMovieId) {
       setSelectedMovieId(requestedMovieId)
     }
-  }, [location.search])
+  }, [searchParams])
+
+  useEffect(() => {
+    const currentSortOrder = searchParams.get(SORT_ORDER_QUERY_KEY)
+    const nextSortOrder = sortOrder ?? DEFAULT_SORT_ORDER
+
+    if (currentSortOrder === nextSortOrder) return
+
+    setSearchParams((params) => {
+      const nextParams = new URLSearchParams(params)
+      nextParams.set(SORT_ORDER_QUERY_KEY, nextSortOrder)
+      return nextParams
+    }, { replace: true })
+  }, [searchParams, setSearchParams, sortOrder])
 
   useEffect(() => {
     if (!seriesId) return
@@ -212,7 +223,12 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       </section>
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>
-        <SortControl sortOrder={sortOrder} onChange={setSortOrder} />
+        <SortControl
+          sortOrder={sortOrder}
+          onChange={(nextSortOrder) =>
+            setSortOrder(normalizeSortOrder(nextSortOrder))
+          }
+        />
         {oshiError ? (
           <p className="work-page__status work-page__status--error">
             推し登録に失敗しました。

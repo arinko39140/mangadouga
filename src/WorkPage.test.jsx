@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { vi } from 'vitest'
 import WorkPage from './WorkPage.jsx'
 import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
@@ -27,6 +27,11 @@ const renderWorkPageWithUrl = (dataProvider, url, authGate) =>
       </Routes>
     </MemoryRouter>
   )
+
+const LocationSpy = () => {
+  const location = useLocation()
+  return <p data-testid="location-search">{location.search}</p>
+}
 
 describe('WorkPage state', () => {
   it('初期表示で最新話を選択し、再生対象に反映する', async () => {
@@ -113,7 +118,7 @@ describe('WorkPage state', () => {
     expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
   })
 
-  it('初期ソート順は最新話で取得される', async () => {
+  it('初期ソート順は人気で取得される', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
         ok: true,
@@ -130,7 +135,7 @@ describe('WorkPage state', () => {
     renderWorkPage(dataProvider, 'series-99')
 
     await waitFor(() => {
-      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-99', 'latest')
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-99', 'popular')
     })
   })
 
@@ -166,7 +171,7 @@ describe('WorkPage state', () => {
         },
       }),
       fetchMovies: vi.fn((seriesId, sortOrder) => {
-        if (sortOrder === 'popular') {
+        if (sortOrder === 'latest') {
           return Promise.resolve({
             ok: true,
             data: [
@@ -185,8 +190,8 @@ describe('WorkPage state', () => {
           ok: true,
           data: [
             {
-              id: 'movie-latest',
-              title: '最新話',
+              id: 'movie-popular',
+              title: '人気話',
               thumbnailUrl: null,
               publishedAt: '2026-01-01T00:00:00Z',
               videoUrl: 'https://youtu.be/latest',
@@ -207,13 +212,13 @@ describe('WorkPage state', () => {
 
     renderWorkPage(dataProvider, 'series-1')
 
-    const latestButton = await screen.findByRole('button', { name: '最新話' })
-    expect(latestButton).toHaveAttribute('aria-pressed', 'true')
+    const popularButton = await screen.findByRole('button', { name: '人気話' })
+    expect(popularButton).toHaveAttribute('aria-pressed', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: '人気' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
 
     await waitFor(() => {
-      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'popular')
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'latest')
     })
 
     const oldestButton = await screen.findByRole('button', { name: '最古話' })
@@ -249,10 +254,10 @@ describe('WorkPage state', () => {
 
     renderWorkPage(dataProvider, 'series-1')
 
-    expect(await screen.findByText('並び順: 投稿日')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '人気' }))
-
     expect(await screen.findByText('並び順: 人気')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+
+    expect(await screen.findByText('並び順: 投稿日')).toBeInTheDocument()
   })
 
   it('話数一覧の更新で選択が失われた場合は先頭話数に切り替える', async () => {
@@ -385,7 +390,7 @@ describe('WorkPage state', () => {
 
     const selectedButton = await screen.findByRole('button', { name: '第1話' })
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('並び順: 古い順')).toBeInTheDocument()
+    expect(screen.getByText('並び順: 人気')).toBeInTheDocument()
     expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
   })
 
@@ -420,9 +425,66 @@ describe('WorkPage state', () => {
       '/series/series-1/?selectedMovieId=unknown&sortOrder=invalid'
     )
 
-    const latestButton = await screen.findByRole('button', { name: '最新話' })
-    expect(latestButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('並び順: 投稿日')).toBeInTheDocument()
+    const popularButton = await screen.findByRole('button', { name: '人気' })
+    expect(popularButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('並び順: 人気')).toBeInTheDocument()
+  })
+
+  it('並び順の変更でURLのsortOrderが同期される', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: '/video/latest',
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/series/series-1/']}>
+        <Routes>
+          <Route
+            path="/series/:seriesId/"
+            element={
+              <>
+                <WorkPage dataProvider={dataProvider} />
+                <LocationSpy />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent(
+        'sortOrder=popular'
+      )
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent(
+        'sortOrder=latest'
+      )
+    })
   })
 
   it('お気に入り操作で認証済みなら状態が更新される', async () => {
