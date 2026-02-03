@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import { createOshiListCatalogProvider } from './oshiListCatalogProvider.js'
 import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEvents.js'
+import { DEFAULT_SORT_ORDER, normalizeSortOrder } from './sortOrderPolicy.js'
 import { supabase } from './supabaseClient.js'
 import './OshiListsPage.css'
 
@@ -13,7 +14,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
   const [isLoading, setIsLoading] = useState(true)
   const [errorType, setErrorType] = useState(null)
   const [items, setItems] = useState([])
-  const [sortOrder, setSortOrder] = useState('favorite_desc')
+  const [sortOrder, setSortOrder] = useState(DEFAULT_SORT_ORDER)
   const [oshiError, setOshiError] = useState(null)
   const [oshiUpdatingIds, setOshiUpdatingIds] = useState([])
   const authGateInstance = useMemo(() => {
@@ -38,7 +39,8 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
         authGateInstance.redirectToLogin()
         return
       }
-      const result = await dataProvider.fetchCatalog({ sortOrder })
+      const normalizedSortOrder = normalizeSortOrder(sortOrder)
+      const result = await dataProvider.fetchCatalog({ sortOrder: normalizedSortOrder })
       if (!isMounted) return
       if (result.ok) {
         setItems(result.data)
@@ -179,31 +181,19 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
     <main className="oshi-lists">
       <h1>みんなの推しリスト</h1>
       <div className="oshi-lists__controls">
-        <span className="oshi-lists__label">お気に入り数:</span>
+        <span className="oshi-lists__label">並び順:</span>
         <div className="oshi-lists__toggle-group" role="group" aria-label="並び替え">
           <button
             type="button"
             className={
-              sortOrder === 'favorite_desc'
+              normalizeSortOrder(sortOrder) === 'popular'
                 ? 'oshi-lists__toggle is-active'
                 : 'oshi-lists__toggle'
             }
-            aria-pressed={sortOrder === 'favorite_desc'}
-            onClick={() => setSortOrder('favorite_desc')}
+            aria-pressed={normalizeSortOrder(sortOrder) === 'popular'}
+            onClick={() => setSortOrder('popular')}
           >
-            多い順
-          </button>
-          <button
-            type="button"
-            className={
-              sortOrder === 'favorite_asc'
-                ? 'oshi-lists__toggle is-active'
-                : 'oshi-lists__toggle'
-            }
-            aria-pressed={sortOrder === 'favorite_asc'}
-            onClick={() => setSortOrder('favorite_asc')}
-          >
-            少ない順
+            人気
           </button>
         </div>
       </div>

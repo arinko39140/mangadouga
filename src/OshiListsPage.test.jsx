@@ -44,7 +44,7 @@ describe('OshiListsPage', () => {
     renderOshiListsPage(dataProvider, authGate)
 
     await waitFor(() => {
-      expect(dataProvider.fetchCatalog).toHaveBeenCalledWith({ sortOrder: 'favorite_desc' })
+      expect(dataProvider.fetchCatalog).toHaveBeenCalledWith({ sortOrder: 'popular' })
     })
     expect(authGate.redirectToLogin).not.toHaveBeenCalled()
   })
@@ -135,7 +135,7 @@ describe('OshiListsPage', () => {
     expect(screen.getByRole('button', { name: '登録' })).toBeInTheDocument()
   })
 
-  it('並び替え条件を切り替える', async () => {
+  it('人気順の並び替えUIを表示する', async () => {
     const dataProvider = {
       fetchCatalog: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
@@ -149,13 +149,10 @@ describe('OshiListsPage', () => {
     await waitFor(() => {
       expect(dataProvider.fetchCatalog).toHaveBeenCalledTimes(1)
     })
-    fireEvent.click(screen.getByRole('button', { name: '少ない順' }))
 
-    await waitFor(() => {
-      expect(dataProvider.fetchCatalog).toHaveBeenCalledWith({
-        sortOrder: 'favorite_asc',
-      })
-    })
+    expect(screen.getByRole('button', { name: '人気' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '多い順' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '少ない順' })).not.toBeInTheDocument()
   })
 
   it('お気に入りトグルで状態と登録数を更新する', async () => {
