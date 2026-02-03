@@ -169,6 +169,19 @@ describe('OshiListCatalogProvider', () => {
     expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
   })
 
+  it('latest指定でも人気順として扱う', async () => {
+    const { client, calls } = buildCatalogSupabaseMock()
+    const provider = createOshiListCatalogProvider(client)
+
+    await provider.fetchCatalog({ sortOrder: 'latest' })
+
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
+      ascending: false,
+    })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
+    expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
+  })
+
   it('ページング指定で50件単位の範囲を指定する', async () => {
     const { client, calls } = buildCatalogSupabaseMock()
     const provider = createOshiListCatalogProvider(client)

@@ -72,7 +72,7 @@
   - _Requirements: 3.3, 3.5, 3.6, 3.7_
 
 - [ ] 6. テストでフィルタ/ソートの統一挙動を検証する
-- [ ] 6.1 SortOrderPolicyと各データ取得のユニット検証を追加する
+- [x] 6.1 SortOrderPolicyと各データ取得のユニット検証を追加する
   - 未対応sortOrderのフォールバックと既定値popularを確認する
   - Weekday/WorkPage/OshiListの並び順ルールが要件通りであることを確認する
   - _Requirements: 1.7, 2.3, 2.4, 2.5, 2.6, 6.1_

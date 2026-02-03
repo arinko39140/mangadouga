@@ -419,6 +419,29 @@ describe('WorkPageDataProvider', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('sortOrder未指定は人気順として扱う', async () => {
+    const rows = [
+      {
+        movie_id: 'movie-popular',
+        movie_title: '人気話',
+        url: '/watch/popular',
+        thumbnail_url: null,
+        update: '2026-01-02T00:00:00Z',
+      },
+    ]
+    const { client, calls } = buildEpisodesSupabaseMock({ movieRows: rows })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.fetchMovies('series-1')
+
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('favorite_count', {
+      ascending: false,
+    })
+    expect(calls.movieOrderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(calls.movieRangeMock).toHaveBeenCalledWith(0, 49)
+    expect(result.ok).toBe(true)
+  })
+
   it('Supabase未設定の場合はnot_configuredとして返す', async () => {
     const provider = createWorkPageDataProvider(null)
 

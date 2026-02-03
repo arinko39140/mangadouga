@@ -176,6 +176,36 @@ describe('WeekdayDataProvider', () => {
     expect(result.data.items.map((item) => item.id)).toEqual(['m3', 'm2', 'm1'])
   })
 
+  it('未対応のsortOrderは人気順として扱う', async () => {
+    const rows = [
+      {
+        movie_id: 'm1',
+        movie_title: '更新は新しいが人気低め',
+        url: '/movies/m1',
+        favorite_count: 5,
+        update: '2026-01-20T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 'm2',
+        movie_title: '更新は古いが人気上位',
+        url: '/movies/m2',
+        favorite_count: 50,
+        update: '2026-01-18T10:00:00Z',
+        series_id: null,
+        weekday: 'mon',
+      },
+    ]
+    const { client } = buildWeekdayItemsSupabaseMock({ rows })
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchWeekdayItems({ weekday: 'mon', sortOrder: 'invalid' })
+
+    expect(result.ok).toBe(true)
+    expect(result.data.items.map((item) => item.id)).toEqual(['m2', 'm1'])
+  })
+
   it('過去1週間の条件と人気順の条件で取得し、曜日ごとに返す', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
