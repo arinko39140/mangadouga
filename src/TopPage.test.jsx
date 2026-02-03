@@ -99,13 +99,13 @@ describe('TopPage layout', () => {
     vi.useRealTimers()
   })
 
-  it('曜日とソートの選択状態が同時に表示される', () => {
+  it('曜日の選択状態が表示される', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
 
     renderTopPage()
 
-    expect(screen.getByText('表示中: 火曜日 / 人気')).toBeInTheDocument()
+    expect(screen.getByText('表示中: 火曜日')).toBeInTheDocument()
 
     vi.useRealTimers()
   })
@@ -124,7 +124,10 @@ describe('TopPage layout', () => {
       showLocation: true,
     })
 
-    expect(screen.getByText('表示中: 火曜日 / 人気')).toBeInTheDocument()
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+
+    expect(screen.getByText('表示中: 火曜日')).toBeInTheDocument()
+    expect(within(searchSection).getByText('並び順: 人気')).toBeInTheDocument()
 
     vi.useRealTimers()
     await waitFor(() => {
@@ -144,12 +147,13 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider, showLocation: true })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
     fireEvent.click(
-      within(listSection).getByRole('button', { name: '投稿日(新しい順)' })
+      within(searchSection).getByRole('button', { name: '投稿日(新しい順)' })
     )
 
-    expect(screen.getByText('表示中: 火曜日 / 投稿日(新しい順)')).toBeInTheDocument()
+    expect(screen.getByText('表示中: 火曜日')).toBeInTheDocument()
+    expect(within(searchSection).getByText('並び順: 投稿日(新しい順)')).toBeInTheDocument()
     vi.useRealTimers()
     await waitFor(() => {
       expect(screen.getByTestId('location-search')).toHaveTextContent(
@@ -160,7 +164,8 @@ describe('TopPage layout', () => {
     const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
     fireEvent.click(within(nav).getByRole('button', { name: '土' }))
 
-    expect(screen.getByText('表示中: 土曜日 / 投稿日(新しい順)')).toBeInTheDocument()
+    expect(screen.getByText('表示中: 土曜日')).toBeInTheDocument()
+    expect(within(searchSection).getByText('並び順: 投稿日(新しい順)')).toBeInTheDocument()
   })
 
   it('曜日を選択すると選択状態と一覧が切り替わる', () => {
@@ -478,12 +483,12 @@ describe('TopPage search entry', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: 'hero' } })
     expect(input).toHaveValue('hero')
 
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     await waitFor(() => {
       expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
@@ -498,8 +503,8 @@ describe('TopPage search entry', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: 'hero' } })
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', charCode: 13 })
 
@@ -555,26 +560,31 @@ describe('TopPage search flow', () => {
     renderTopPage({ dataProvider })
 
     const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
 
     fireEvent.change(input, { target: { value: '検索' } })
     expect(input).toHaveValue('検索')
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     vi.useRealTimers()
     await waitFor(() => {
       expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
     })
-    expect(within(listSection).getByText('検索対象の動画')).toBeInTheDocument()
+    expect(within(searchSection).getByText('検索対象の動画')).toBeInTheDocument()
 
     fireEvent.change(input, { target: { value: '   ' } })
     expect(input).toHaveValue('   ')
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     await waitFor(() => {
       expect(within(listSection).getByText('通常の動画')).toBeInTheDocument()
     })
-    expect(within(listSection).queryByText('検索対象の動画')).not.toBeInTheDocument()
+    expect(
+      within(searchSection).getByText('タイトル検索を実行すると結果が表示されます。')
+    ).toBeInTheDocument()
+    expect(within(searchSection).queryByText('検索対象の動画')).not.toBeInTheDocument()
   })
 
   it('クエリ更新で検索結果が上書きされる', async () => {
@@ -606,29 +616,30 @@ describe('TopPage search flow', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
 
     fireEvent.change(input, { target: { value: 'Alpha' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     vi.useRealTimers()
     await waitFor(() => {
-      expect(within(listSection).getByText('Alpha Movie')).toBeInTheDocument()
+      expect(within(searchSection).getByText('Alpha Movie')).toBeInTheDocument()
     })
 
     fireEvent.change(input, { target: { value: 'Beta' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     await waitFor(() => {
-      expect(within(listSection).getByText('Beta Movie')).toBeInTheDocument()
+      expect(within(searchSection).getByText('Beta Movie')).toBeInTheDocument()
     })
-    expect(within(listSection).queryByText('Alpha Movie')).not.toBeInTheDocument()
+    expect(within(searchSection).queryByText('Alpha Movie')).not.toBeInTheDocument()
   })
 })
 
 describe('TopPage search results', () => {
-  it('検索未適用時は通常一覧の100件制限が適用され、検索適用で検索結果に切り替わる', async () => {
+  it('検索未適用時は通常一覧の100件制限が適用され、検索結果は別セクションに表示される', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
 
@@ -682,6 +693,8 @@ describe('TopPage search results', () => {
     renderTopPage({ dataProvider })
 
     const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
     vi.useRealTimers()
     await waitFor(() => {
       expect(within(listSection).getByText('通常の動画1')).toBeInTheDocument()
@@ -692,19 +705,19 @@ describe('TopPage search results', () => {
     })
     expect(within(initialList).getAllByRole('listitem')).toHaveLength(100)
 
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: '検索' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     await waitFor(() => {
-      expect(within(listSection).getByText('検索対象の動画1')).toBeInTheDocument()
+      expect(within(searchSection).getByText('検索対象の動画1')).toBeInTheDocument()
     })
 
-    const searchList = within(listSection).getByRole('list', {
-      name: '曜日別一覧のアイテム',
+    const searchList = within(searchSection).getByRole('list', {
+      name: '検索結果のアイテム',
     })
     expect(within(searchList).getAllByRole('listitem')).toHaveLength(101)
-    expect(within(listSection).queryByText('通常の動画1')).not.toBeInTheDocument()
+    expect(within(listSection).getByText('通常の動画1')).toBeInTheDocument()
 
     const recentSection = screen.getByRole('region', { name: '過去100件一覧' })
     const recentList = within(recentSection).getByRole('list', {
@@ -713,7 +726,7 @@ describe('TopPage search results', () => {
     expect(within(recentList).getAllByRole('listitem')).toHaveLength(100)
   })
 
-  it('検索適用中は検索結果一覧に切り替わる', async () => {
+  it('検索適用中は検索結果セクションに結果が表示される', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
 
@@ -757,18 +770,18 @@ describe('TopPage search results', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: '検索' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     vi.useRealTimers()
     await waitFor(() => {
       expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
     })
 
-    expect(within(listSection).getByText('検索対象の動画')).toBeInTheDocument()
-    expect(within(listSection).queryByText('通常の動画')).not.toBeInTheDocument()
+    expect(within(searchSection).getByText('検索対象の動画')).toBeInTheDocument()
 
   })
 
@@ -816,18 +829,18 @@ describe('TopPage search results', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: '検索' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     vi.useRealTimers()
     await waitFor(() => {
       expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
     })
 
-    expect(within(listSection).getByText('該当する結果がありません。')).toBeInTheDocument()
-    expect(within(listSection).queryByText('通常の動画')).not.toBeInTheDocument()
+    expect(within(searchSection).getByText('該当する結果がありません。')).toBeInTheDocument()
 
   })
 
@@ -869,18 +882,19 @@ describe('TopPage search results', () => {
 
     renderTopPage({ dataProvider })
 
-    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
-    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    const header = screen.getByRole('banner', { name: 'トップページヘッダー' })
+    const searchSection = screen.getByRole('region', { name: '検索結果' })
+    const input = within(header).getByRole('textbox', { name: 'タイトル検索' })
     fireEvent.change(input, { target: { value: '検索' } })
-    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+    fireEvent.click(within(header).getByRole('button', { name: '検索' }))
 
     vi.useRealTimers()
     await waitFor(() => {
       expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
     })
 
-    const searchList = within(listSection).getByRole('list', {
-      name: '曜日別一覧のアイテム',
+    const searchList = within(searchSection).getByRole('list', {
+      name: '検索結果のアイテム',
     })
     expect(within(searchList).getAllByRole('listitem')).toHaveLength(101)
 

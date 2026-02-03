@@ -95,6 +95,12 @@ const formatSortLabel = (sortOrder) => {
   return '人気'
 }
 
+const formatPublishedDate = (item) => {
+  const timestamp = Date.parse(item?.publishedAt ?? item?.update ?? '')
+  if (!Number.isFinite(timestamp)) return '未設定'
+  return new Date(timestamp).toLocaleDateString('ja-JP')
+}
+
 const sortItems = (items, sortOrder) => {
   const sorted = [...items]
   sorted.sort((a, b) => {
@@ -139,7 +145,6 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
     [dataProvider]
   )
   const [searchState, setSearchState] = useState(searchController.state)
-  const isSearchApplied = searchState.status === 'active'
   const isAllSelected = selectedWeekday === 'all'
   const isAllRecent = recentWeekday === 'all'
   const selectedWeekdayLabel =
@@ -159,6 +164,9 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const recentListItems = useMemo(() => {
     return sortItems(recentItems, sortOrder).slice(0, MAX_LIST_ITEMS)
   }, [recentItems, sortOrder])
+  const searchResults = useMemo(() => {
+    return sortItems(searchState.results, sortOrder)
+  }, [searchState.results, sortOrder])
   const listTitle = isAllSelected
     ? 'すべての一覧'
     : `${selectedWeekdayLabel}曜日の一覧`
@@ -275,8 +283,29 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
 
   return (
     <main className="top-page">
-      <header className="top-page__header">
+      <header
+        className="top-page__header"
+        aria-label="トップページヘッダー"
+        role="banner"
+      >
         <h1>トップページ</h1>
+        <form className="search top-page__search" onSubmit={handleSearchSubmit}>
+          <label htmlFor="top-page-search-input">タイトル検索</label>
+          <div className="top-page__search-controls">
+            <input
+              id="top-page-search-input"
+              name="top-page-search-input"
+              type="text"
+              value={searchState.inputValue}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="タイトルで検索"
+            />
+            <button className="button button--ghost" type="submit">
+              検索
+            </button>
+          </div>
+        </form>
       </header>
       <div className="top-page__grid">
         <section className="top-page__playback" aria-label="動画再生">
@@ -314,52 +343,10 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
         <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
           <h2>曜日別一覧</h2>
           <p>{listTitle}</p>
-          <div className="top-page__sort">
-            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
-            <SortControl sortOrder={sortOrder} onChange={handleSortChange} />
-          </div>
           <p className="top-page__filter-summary">
-            表示中: {selectedFilterLabel} / {selectedSortLabel}
+            表示中: {selectedFilterLabel}
           </p>
-          <form className="search top-page__search" onSubmit={handleSearchSubmit}>
-            <label htmlFor="top-page-search-input">タイトル検索</label>
-            <div className="top-page__search-controls">
-              <input
-                id="top-page-search-input"
-                name="top-page-search-input"
-                type="text"
-                value={searchState.inputValue}
-                onChange={handleSearchInputChange}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="タイトルで検索"
-              />
-              <button className="button button--ghost" type="submit">
-                検索
-              </button>
-            </div>
-          </form>
-          {isSearchApplied ? (
-            searchState.results.length === 0 ? (
-              <p className="top-page__status">該当する結果がありません。</p>
-            ) : (
-              <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
-                {searchState.results.map((item) => (
-                  <li key={item.id} className="top-page__work-item">
-                    {item.seriesId ? (
-                      <Link
-                        className="top-page__work-link"
-                        to={`/series/${item.seriesId}/`}
-                      >
-                        {item.title}
-                      </Link>
-                    ) : (
-                      <span className="top-page__work-title">{item.title}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )
-          ) : isLoading ? (
+          {isLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : error ? (
             <p className="top-page__status top-page__status--error">
@@ -391,6 +378,81 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
               ))}
             </ul>
           )}
+        </section>
+        <section
+          className="top-page__search-results top-page__list top-page__list--panel"
+          aria-label="検索結果"
+        >
+          <h2>検索結果</h2>
+          <div className="top-page__sort">
+            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
+            <SortControl
+              sortOrder={sortOrder}
+              onChange={handleSortChange}
+              label="検索結果の並び順"
+            />
+          </div>
+          {searchState.status === 'idle' ? (
+            <p className="top-page__status">
+              タイトル検索を実行すると結果が表示されます。
+            </p>
+          ) : (
+            <p className="top-page__filter-summary">
+              検索クエリ: {searchState.appliedQuery}
+            </p>
+          )}
+          {searchState.status === 'loading' ? (
+            <p className="top-page__status">検索中...</p>
+          ) : searchState.status === 'error' ? (
+            <p className="top-page__status top-page__status--error">
+              {searchState.error === 'not_configured'
+                ? 'Supabaseの設定が不足しています。'
+                : searchState.error === 'network'
+                ? '通信エラーが発生しました。'
+                : '不明なエラーが発生しました。'}
+            </p>
+          ) : searchState.status === 'active' ? (
+            searchState.results.length === 0 ? (
+              <p className="top-page__status">該当する結果がありません。</p>
+            ) : (
+              <ul
+                className="top-page__list-items top-page__list-items--grid"
+                aria-label="検索結果のアイテム"
+              >
+                {searchResults.map((item) => (
+                  <li key={item.id} className="top-page__work-item">
+                    <div className="top-page__work-card">
+                      <div className="top-page__work-thumb">
+                        {resolveThumbnailUrl(item) ? (
+                          <img
+                            src={resolveThumbnailUrl(item)}
+                            alt={`${item.title}のサムネイル`}
+                          />
+                        ) : (
+                          <span className="top-page__work-thumb-placeholder">
+                            サムネイルなし
+                          </span>
+                        )}
+                      </div>
+                      {item.seriesId ? (
+                        <Link
+                          className="top-page__work-link"
+                          to={`/series/${item.seriesId}/`}
+                        >
+                          {item.title}
+                        </Link>
+                      ) : (
+                        <span className="top-page__work-title">{item.title}</span>
+                      )}
+                      <p className="top-page__work-meta">
+                        投稿日: {formatPublishedDate(item)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
         </section>
         <section
           className="top-page__recent top-page__list top-page__list--panel"

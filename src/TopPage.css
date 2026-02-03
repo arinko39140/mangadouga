@@ -5,6 +5,14 @@
   padding: 2.5rem clamp(1.5rem, 3vw, 3rem) 3rem;
 }
 
+.top-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .top-page__header h1 {
   margin: 0;
   font-family: 'Playfair Display', 'Times New Roman', serif;
@@ -19,6 +27,7 @@
     'playback playback'
     'nav list'
     'link list'
+    'search-results search-results'
     'recent recent';
 }
 
@@ -49,6 +58,10 @@
   grid-area: recent;
 }
 
+.top-page__search-results {
+  grid-area: search-results;
+}
+
 .top-page__playback {
   grid-area: playback;
   background: rgba(255, 255, 255, 0.85);
@@ -70,6 +83,11 @@
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.top-page__header .top-page__search {
+  margin-top: 0;
+  min-width: min(360px, 100%);
 }
 
 .top-page__playback .work-page__playback-fallback {
@@ -129,6 +147,12 @@
 .top-page__work-title {
   font-weight: 600;
   color: rgba(44, 32, 50, 0.9);
+}
+
+.top-page__work-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(44, 32, 50, 0.65);
 }
 
 .top-page__work-card {
