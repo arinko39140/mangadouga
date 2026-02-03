@@ -39,6 +39,18 @@ const buildWeekdayItemsSupabaseMock = ({ rows = [], error = null } = {}) => {
   }
 }
 
+const buildFetchAllItemsSupabaseMock = ({ rows = [], error = null } = {}) => {
+  const orderMock = vi.fn().mockResolvedValue({ data: rows, error })
+  const notMock = vi.fn().mockReturnValue({ order: orderMock })
+  const selectMock = vi.fn().mockReturnValue({ not: notMock })
+  const fromMock = vi.fn().mockReturnValue({ select: selectMock })
+
+  return {
+    client: { from: fromMock },
+    calls: { fromMock, selectMock, notMock, orderMock },
+  }
+}
+
 describe('WeekdayDataProvider', () => {
   it('曜日指定時はweekdayで絞り込み、update降順で最新100件を取得する', async () => {
     const rows = [
@@ -366,5 +378,77 @@ describe('WeekdayDataProvider', () => {
     expect(result.ok).toBe(true)
     expect(result.data).toHaveLength(WEEKDAY_KEYS.length)
     expect(result.data.every((list) => list.items.length === 0)).toBe(true)
+  })
+
+  it('検索用全件取得は必要フィールドを取得しupdate欠損を除外する', async () => {
+    const rows = [
+      {
+        movie_id: 'm1',
+        movie_title: '更新なし',
+        url: '/movies/m1',
+        favorite_count: 10,
+        update: null,
+        series_id: null,
+        weekday: 'mon',
+      },
+      {
+        movie_id: 'm2',
+        movie_title: '更新あり',
+        url: '/movies/m2',
+        favorite_count: 20,
+        update: '2026-01-19T10:00:00Z',
+        series_id: 's1',
+        weekday: 'tue',
+      },
+    ]
+    const { client, calls } = buildFetchAllItemsSupabaseMock({ rows })
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchAllItems()
+
+    expect(calls.fromMock).toHaveBeenCalledWith('movie')
+    expect(calls.selectMock).toHaveBeenCalled()
+    expect(calls.selectMock.mock.calls[0][0]).toContain('movie_title')
+    expect(calls.selectMock.mock.calls[0][0]).toContain('update')
+    expect(calls.notMock).toHaveBeenCalledWith('update', 'is', null)
+    expect(calls.orderMock).toHaveBeenCalledWith('update', { ascending: false })
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({
+      id: 'm2',
+      title: '更新あり',
+      weekday: 'tue',
+      seriesId: 's1',
+    })
+  })
+
+  it('検索用全件取得はSupabase未設定の場合にnot_configuredを返す', async () => {
+    const provider = createWeekdayDataProvider(null)
+
+    const result = await provider.fetchAllItems()
+
+    expect(result).toEqual({ ok: false, error: 'not_configured' })
+  })
+
+  it('検索用全件取得は通信失敗時にnetworkを返す', async () => {
+    const { client } = buildFetchAllItemsSupabaseMock({
+      error: new Error('Failed to fetch'),
+    })
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchAllItems()
+
+    expect(result).toEqual({ ok: false, error: 'network' })
+  })
+
+  it('検索用全件取得は不明な失敗時にunknownを返す', async () => {
+    const { client } = buildFetchAllItemsSupabaseMock({
+      error: new Error('boom'),
+    })
+    const provider = createWeekdayDataProvider(client)
+
+    const result = await provider.fetchAllItems()
+
+    expect(result).toEqual({ ok: false, error: 'unknown' })
   })
 })

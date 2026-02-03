@@ -71,6 +71,34 @@ const isNetworkError = (error) => {
 }
 
 export const createWeekdayDataProvider = (supabaseClient) => ({
+  async fetchAllItems({ select = 'minimal' } = {}) {
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const fields =
+      select === 'full'
+        ? '*'
+        : 'movie_id, movie_title, url, thumbnail_url, favorite_count, update, series_id, weekday'
+
+    const { data, error } = await supabaseClient
+      .from('movie')
+      .select(fields)
+      .not('update', 'is', null)
+      .order('update', { ascending: false })
+
+    if (error) {
+      return {
+        ok: false,
+        error: isNetworkError(error) ? 'network' : 'unknown',
+      }
+    }
+
+    return {
+      ok: true,
+      data: (data ?? []).filter((row) => row.update != null).map(mapRowToItem),
+    }
+  },
   async fetchWeekdayItems({ weekday, sortOrder, limit } = {}) {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
