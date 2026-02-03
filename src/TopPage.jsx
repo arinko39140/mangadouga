@@ -25,6 +25,7 @@ const WEEKDAYS = [
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const JST_WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const WEEK_RANGE_MS = 7 * 24 * 60 * 60 * 1000
+const MAX_LIST_ITEMS = 100
 
 const getJstWeekdayKey = () => {
   const jstDate = new Date(Date.now() + JST_OFFSET_MS)
@@ -87,7 +88,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
     const items = isAllSelected
       ? weekdayLists.flatMap((list) => list.items)
       : weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
-    return sortItems(items, sortOrder)
+    return sortItems(items, sortOrder).slice(0, MAX_LIST_ITEMS)
   }, [isAllSelected, selectedWeekday, sortOrder, weekdayLists])
   const listTitle = isAllSelected
     ? 'すべての一覧'

@@ -487,6 +487,80 @@ describe('WorkPage state', () => {
     })
   })
 
+  it('ソート切替で話数一覧の表示順が更新される', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn((seriesId, sortOrder) => {
+        if (sortOrder === 'latest') {
+          return Promise.resolve({
+            ok: true,
+            data: [
+              {
+                id: 'movie-new',
+                title: '新しい話',
+                thumbnailUrl: null,
+                publishedAt: '2026-02-01T00:00:00Z',
+                videoUrl: '/video/new',
+                isOshi: false,
+              },
+              {
+                id: 'movie-old',
+                title: '古い話',
+                thumbnailUrl: null,
+                publishedAt: '2026-01-01T00:00:00Z',
+                videoUrl: '/video/old',
+                isOshi: false,
+              },
+            ],
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          data: [
+            {
+              id: 'movie-popular',
+              title: '人気話',
+              thumbnailUrl: null,
+              publishedAt: '2026-01-15T00:00:00Z',
+              videoUrl: '/video/popular',
+              isOshi: false,
+            },
+            {
+              id: 'movie-mid',
+              title: '中間話',
+              thumbnailUrl: null,
+              publishedAt: '2026-01-10T00:00:00Z',
+              videoUrl: '/video/mid',
+              isOshi: false,
+            },
+          ],
+        })
+      }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1')
+
+    const list = await screen.findByRole('list', { name: '話数一覧のアイテム' })
+    expect(list.querySelectorAll('li')[0]).toHaveTextContent('人気話')
+
+    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+
+    await waitFor(() => {
+      const items = screen
+        .getByRole('list', { name: '話数一覧のアイテム' })
+        .querySelectorAll('li')
+      expect(items[0]).toHaveTextContent('新しい話')
+    })
+  })
+
   it('URLのsortOrderがlatestの場合は投稿日で取得して表示する', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
