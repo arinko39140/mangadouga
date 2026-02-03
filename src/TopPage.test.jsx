@@ -508,3 +508,123 @@ describe('TopPage search entry', () => {
     })
   })
 })
+
+describe('TopPage search results', () => {
+  it('検索適用中は検索結果一覧に切り替わる', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'tue',
+            items: [
+              {
+                id: 't1',
+                title: '通常の動画',
+                popularityScore: 10,
+                seriesId: null,
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'mon', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+      fetchAllItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 's1',
+            title: '検索対象の動画',
+            popularityScore: 50,
+            seriesId: null,
+            publishedAt: '2026-01-10T10:00:00Z',
+          },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: '検索' } })
+    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
+    })
+
+    expect(within(listSection).getByText('検索対象の動画')).toBeInTheDocument()
+    expect(within(listSection).queryByText('通常の動画')).not.toBeInTheDocument()
+
+  })
+
+  it('検索結果が0件のときは該当なしメッセージを表示する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'tue',
+            items: [
+              {
+                id: 't1',
+                title: '通常の動画',
+                popularityScore: 10,
+                seriesId: null,
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'mon', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+      fetchAllItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 's1',
+            title: '別の動画',
+            popularityScore: 50,
+            seriesId: null,
+            publishedAt: '2026-01-10T10:00:00Z',
+          },
+        ],
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: '検索' } })
+    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
+    })
+
+    expect(within(listSection).getByText('該当する結果がありません。')).toBeInTheDocument()
+    expect(within(listSection).queryByText('通常の動画')).not.toBeInTheDocument()
+
+  })
+})

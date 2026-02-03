@@ -139,6 +139,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
     [dataProvider]
   )
   const [searchState, setSearchState] = useState(searchController.state)
+  const isSearchApplied = searchState.status === 'active'
   const isAllSelected = selectedWeekday === 'all'
   const isAllRecent = recentWeekday === 'all'
   const selectedWeekdayLabel =
@@ -337,7 +338,28 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
               </button>
             </div>
           </form>
-          {isLoading ? (
+          {isSearchApplied ? (
+            searchState.results.length === 0 ? (
+              <p className="top-page__status">該当する結果がありません。</p>
+            ) : (
+              <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
+                {searchState.results.map((item) => (
+                  <li key={item.id} className="top-page__work-item">
+                    {item.seriesId ? (
+                      <Link
+                        className="top-page__work-link"
+                        to={`/series/${item.seriesId}/`}
+                      >
+                        {item.title}
+                      </Link>
+                    ) : (
+                      <span className="top-page__work-title">{item.title}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : isLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : error ? (
             <p className="top-page__status top-page__status--error">
