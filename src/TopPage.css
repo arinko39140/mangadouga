@@ -18,7 +18,8 @@
   grid-template-areas:
     'playback playback'
     'nav list'
-    'link list';
+    'link list'
+    'recent recent';
 }
 
 .top-page__nav,
@@ -42,6 +43,10 @@
 
 .top-page__link {
   grid-area: link;
+}
+
+.top-page__recent {
+  grid-area: recent;
 }
 
 .top-page__playback {
@@ -231,6 +236,7 @@
       'playback'
       'nav'
       'list'
-      'link';
+      'link'
+      'recent';
   }
 }

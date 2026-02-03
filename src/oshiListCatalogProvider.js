@@ -14,6 +14,7 @@ const isAuthError = (error) => {
 }
 
 import { resolveCurrentUserId } from './supabaseSession.js'
+import { normalizeSortOrder } from './sortOrderPolicy.js'
 
 const normalizeError = (error) => {
   if (error?.code === '23505') return 'conflict'
@@ -34,13 +35,6 @@ const mapCatalogRow = (row, userName, iconUrl, viewerUserId) => ({
     viewerUserId !== '' &&
     String(row.user_id) === viewerUserId,
 })
-
-const normalizeSortOrder = (sortOrder) => {
-  if (sortOrder === 'popular') return 'popular'
-  if (sortOrder === 'latest') return 'popular'
-  if (sortOrder === 'favorite_desc' || sortOrder === 'favorite_asc') return 'popular'
-  return 'popular'
-}
 
 const resolvePageRange = (page, pageSize) => {
   const safePage = Number.isInteger(page) && page >= 0 ? page : 0
@@ -67,9 +61,17 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
       .select('list_id, user_id, favorite_count, can_display')
       .eq('can_display', true)
     if (normalizedSortOrder === 'popular') {
-      query = query.order('favorite_count', { ascending: false }).order('update', {
-        ascending: false,
-      })
+      query = query
+        .order('favorite_count', { ascending: false })
+        .order('created_at', { ascending: false })
+    } else if (normalizedSortOrder === 'favorite_asc') {
+      query = query
+        .order('favorite_count', { ascending: true })
+        .order('created_at', { ascending: false })
+    } else if (normalizedSortOrder === 'latest') {
+      query = query.order('created_at', { ascending: false })
+    } else if (normalizedSortOrder === 'oldest') {
+      query = query.order('created_at', { ascending: true })
     }
     const { data: listData, error: listError } = await query.range(start, end)
 
@@ -87,16 +89,14 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
         .select('user_id, name, icon_url')
         .in('user_id', userIds)
 
-      if (usersError) {
-        return { ok: false, error: normalizeError(usersError) }
+      if (!usersError) {
+        userProfileMap = new Map(
+          (usersData ?? []).map((row) => [
+            String(row.user_id),
+            { name: row.name ?? '', iconUrl: row.icon_url ?? null },
+          ])
+        )
       }
-
-      userProfileMap = new Map(
-        (usersData ?? []).map((row) => [
-          String(row.user_id),
-          { name: row.name ?? '', iconUrl: row.icon_url ?? null },
-        ])
-      )
     }
 
     const { data: favoriteData, error: favoriteError } = await supabaseClient
@@ -104,12 +104,10 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
       .select('list_id')
       .eq('user_id', userId)
 
-    if (favoriteError) {
-      return { ok: false, error: normalizeError(favoriteError) }
-    }
-
     const favoriteSet = new Set(
-      (favoriteData ?? []).map((row) => String(row.list_id))
+      favoriteError
+        ? []
+        : (favoriteData ?? []).map((row) => String(row.list_id))
     )
     const items = (listData ?? []).map((row) => {
       const mappedUserId = row.user_id != null ? String(row.user_id) : ''

@@ -23,7 +23,9 @@ const defaultDataProvider = supabase
   : createMockWorkPageDataProvider()
 
 const formatSortLabel = (sortOrder) => {
-  if (sortOrder === 'latest') return '投稿日'
+  if (sortOrder === 'favorite_asc') return '人気(少ない順)'
+  if (sortOrder === 'latest') return '投稿日(新しい順)'
+  if (sortOrder === 'oldest') return '投稿日(古い順)'
   return '人気'
 }
 

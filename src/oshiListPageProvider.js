@@ -24,6 +24,7 @@ const mapVisibility = (canDisplay) => (canDisplay ? 'public' : 'private')
 
 const mapListRow = (row, name) => ({
   listId: String(row.list_id),
+  userId: row.user_id ? String(row.user_id) : '',
   name: name ?? '',
   favoriteCount: row.favorite_count ?? 0,
   isFavorited: false,

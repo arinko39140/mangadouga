@@ -2,7 +2,9 @@ import { normalizeSortOrder } from './sortOrderPolicy.js'
 
 const sortOptions = [
   { value: 'popular', label: '人気' },
-  { value: 'latest', label: '投稿日' },
+  { value: 'favorite_asc', label: '人気(少ない順)' },
+  { value: 'latest', label: '投稿日(新しい順)' },
+  { value: 'oldest', label: '投稿日(古い順)' },
 ]
 
 function SortControl({ sortOrder = 'popular', onChange }) {

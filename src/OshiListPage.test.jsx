@@ -100,6 +100,32 @@ describe('OshiListPage', () => {
     expect(screen.getByText('推し作品')).toBeInTheDocument()
   })
 
+  it('推しリスト名からユーザーマイページへ移動できる', async () => {
+    const dataProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          name: '推しリストA',
+          userId: 'user-1',
+          favoriteCount: 1,
+          isFavorited: false,
+          visibility: 'public',
+        },
+      }),
+      fetchListItems: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      fetchVisibility: vi.fn().mockResolvedValue({ ok: false, error: 'forbidden' }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderOshiListPage(dataProvider, authGate)
+
+    const link = await screen.findByRole('link', { name: '推しリストA' })
+    expect(link).toHaveAttribute('href', '/users/user-1/')
+  })
+
   it('表示形式の切り替えでリスト/グリッドを切り替える', async () => {
     const dataProvider = {
       fetchListSummary: vi.fn().mockResolvedValue({

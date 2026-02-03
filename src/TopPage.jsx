@@ -49,14 +49,28 @@ const resolveTimestamp = (item) => {
 const resolvePopularity = (item) =>
   Number.isFinite(item?.popularityScore) ? item.popularityScore : 0
 
+const formatSortLabel = (sortOrder) => {
+  if (sortOrder === 'favorite_asc') return '人気(少ない順)'
+  if (sortOrder === 'latest') return '投稿日(新しい順)'
+  if (sortOrder === 'oldest') return '投稿日(古い順)'
+  return '人気'
+}
+
 const sortItems = (items, sortOrder) => {
   const sorted = [...items]
   sorted.sort((a, b) => {
     if (sortOrder === 'latest') {
       return resolveTimestamp(b) - resolveTimestamp(a)
     }
+    if (sortOrder === 'oldest') {
+      return resolveTimestamp(a) - resolveTimestamp(b)
+    }
     const popularityDiff = resolvePopularity(b) - resolvePopularity(a)
-    if (popularityDiff !== 0) return popularityDiff
+    if (sortOrder === 'favorite_asc') {
+      if (popularityDiff !== 0) return -popularityDiff
+    } else if (popularityDiff !== 0) {
+      return popularityDiff
+    }
     return resolveTimestamp(b) - resolveTimestamp(a)
   })
   return sorted
@@ -72,27 +86,40 @@ const buildEmptyWeekdayLists = () =>
 
 function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
+  const [recentWeekday, setRecentWeekday] = useState('all')
   const [sortOrder, setSortOrder] = useState(DEFAULT_SORT_ORDER)
   const [weekdayLists, setWeekdayLists] = useState(buildEmptyWeekdayLists)
+  const [recentItems, setRecentItems] = useState([])
+  const [recentLoading, setRecentLoading] = useState(true)
+  const [recentError, setRecentError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [, setSearchParams] = useSearchParams()
   const isAllSelected = selectedWeekday === 'all'
+  const isAllRecent = recentWeekday === 'all'
   const selectedWeekdayLabel =
     WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
+  const recentWeekdayLabel =
+    WEEKDAYS.find((weekday) => weekday.key === recentWeekday)?.label ?? ''
   const selectedFilterLabel = isAllSelected
     ? 'すべて'
     : `${selectedWeekdayLabel}曜日`
-  const selectedSortLabel = sortOrder === 'latest' ? '投稿日' : '人気'
+  const selectedSortLabel = formatSortLabel(sortOrder)
   const selectedList = useMemo(() => {
     const items = isAllSelected
       ? weekdayLists.flatMap((list) => list.items)
       : weekdayLists.find((list) => list.weekday === selectedWeekday)?.items ?? []
     return sortItems(items, sortOrder).slice(0, MAX_LIST_ITEMS)
   }, [isAllSelected, selectedWeekday, sortOrder, weekdayLists])
+  const recentListItems = useMemo(() => {
+    return sortItems(recentItems, sortOrder).slice(0, MAX_LIST_ITEMS)
+  }, [recentItems, sortOrder])
   const listTitle = isAllSelected
     ? 'すべての一覧'
     : `${selectedWeekdayLabel}曜日の一覧`
+  const recentListTitle = isAllRecent
+    ? 'すべての過去100件'
+    : `${recentWeekdayLabel}曜日の過去100件`
   const playbackLabel = isAllSelected
     ? 'すべての人気動画を再生できます。'
     : `${selectedWeekdayLabel}曜日の人気動画を再生できます。`
@@ -145,6 +172,38 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
       isMounted = false
     }
   }, [dataProvider])
+
+  useEffect(() => {
+    let isMounted = true
+
+    if (!dataProvider || typeof dataProvider.fetchWeekdayItems !== 'function') {
+      setRecentLoading(false)
+      return () => {}
+    }
+
+    setRecentLoading(true)
+    setRecentError(null)
+
+    dataProvider
+      .fetchWeekdayItems({ weekday: recentWeekday, sortOrder: 'latest', limit: 100 })
+      .then((result) => {
+        if (!isMounted) return
+        if (result.ok) {
+          setRecentItems(result.data.items ?? [])
+        } else {
+          setRecentItems([])
+          setRecentError(result.error ?? 'unknown')
+        }
+      })
+      .finally(() => {
+        if (!isMounted) return
+        setRecentLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [dataProvider, recentWeekday])
 
   return (
     <main className="top-page">
@@ -211,6 +270,65 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
           ) : (
             <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
               {selectedList.map((item) => (
+                <li key={item.id} className="top-page__work-item">
+                  {item.seriesId ? (
+                    <Link
+                      className="top-page__work-link"
+                      to={`/series/${item.seriesId}/`}
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className="top-page__work-title">{item.title}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section
+          className="top-page__recent top-page__list top-page__list--panel"
+          aria-label="過去100件一覧"
+        >
+          <h2>過去100件の作品</h2>
+          <div className="top-page__weekday" role="group" aria-label="過去100件の曜日">
+            {WEEKDAYS.map((weekday) => (
+              <button
+                key={weekday.key}
+                type="button"
+                className={
+                  weekday.key === recentWeekday
+                    ? 'top-page__weekday-button is-selected'
+                    : 'top-page__weekday-button'
+                }
+                aria-pressed={weekday.key === recentWeekday}
+                onClick={() => setRecentWeekday(weekday.key)}
+              >
+                {weekday.label}
+              </button>
+            ))}
+          </div>
+          <p>{recentListTitle}</p>
+          <p className="top-page__filter-summary">
+            並び順: {selectedSortLabel}
+          </p>
+          {recentLoading ? (
+            <p className="top-page__status">読み込み中...</p>
+          ) : recentError ? (
+            <p className="top-page__status top-page__status--error">
+              {recentError === 'not_configured'
+                ? 'Supabaseの設定が不足しています。'
+                : recentError === 'network'
+                ? '通信エラーが発生しました。'
+                : '不明なエラーが発生しました。'}
+            </p>
+          ) : recentListItems.length === 0 ? (
+            <p className="top-page__status">
+              {recentListTitle}がありません。
+            </p>
+          ) : (
+            <ul className="top-page__list-items" aria-label="過去100件のアイテム">
+              {recentListItems.map((item) => (
                 <li key={item.id} className="top-page__work-item">
                   {item.seriesId ? (
                     <Link

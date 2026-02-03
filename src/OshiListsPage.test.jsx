@@ -135,7 +135,7 @@ describe('OshiListsPage', () => {
     expect(screen.getByRole('button', { name: '登録' })).toBeInTheDocument()
   })
 
-  it('人気順の並び替えUIを表示する', async () => {
+  it('並び替えUIで4択を表示する', async () => {
     const dataProvider = {
       fetchCatalog: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     }
@@ -151,8 +151,9 @@ describe('OshiListsPage', () => {
     })
 
     expect(screen.getByRole('button', { name: '人気' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '多い順' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '少ない順' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '人気(少ない順)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '投稿日(新しい順)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '投稿日(古い順)' })).toBeInTheDocument()
   })
 
   it('お気に入りトグルで状態と登録数を更新する', async () => {

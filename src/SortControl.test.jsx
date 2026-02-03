@@ -10,7 +10,7 @@ describe('SortControl', () => {
       'aria-pressed',
       'true'
     )
-    expect(screen.getByRole('button', { name: '投稿日' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '投稿日(新しい順)' })).toHaveAttribute(
       'aria-pressed',
       'false'
     )
@@ -21,14 +21,14 @@ describe('SortControl', () => {
 
     render(<SortControl sortOrder="popular" onChange={handleChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿日(新しい順)' }))
     expect(handleChange).toHaveBeenCalledWith('latest')
   })
 
-  it('未対応の値はpopular扱いにする', () => {
+  it('並び順の値に応じて選択状態を更新する', () => {
     render(<SortControl sortOrder="oldest" onChange={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: '人気' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '投稿日(古い順)' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )

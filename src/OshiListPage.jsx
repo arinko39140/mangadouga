@@ -314,7 +314,15 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
     <main className="oshi-lists">
       <header className="oshi-lists__header">
         <h1>推しリスト</h1>
-        {summary?.name ? <p className="oshi-lists__meta">{summary.name}</p> : null}
+        {summary?.name ? (
+          summary.userId ? (
+            <Link className="oshi-lists__link" to={`/users/${summary.userId}/`}>
+              {summary.name}
+            </Link>
+          ) : (
+            <p className="oshi-lists__meta">{summary.name}</p>
+          )
+        ) : null}
         <p className="oshi-lists__meta">お気に入り数: {summary?.favoriteCount ?? 0}</p>
         <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
         {!isOwner ? (

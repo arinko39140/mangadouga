@@ -131,7 +131,9 @@ describe('OshiListCatalogProvider', () => {
     expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
       ascending: false,
     })
-    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'created_at', {
+      ascending: false,
+    })
     expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
     expect(calls.fromMock).toHaveBeenCalledWith('users')
     expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name, icon_url')
@@ -160,25 +162,41 @@ describe('OshiListCatalogProvider', () => {
     const { client, calls } = buildCatalogSupabaseMock()
     const provider = createOshiListCatalogProvider(client)
 
-    await provider.fetchCatalog({ sortOrder: 'favorite_asc' })
+    await provider.fetchCatalog({ sortOrder: 'invalid' })
 
     expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
       ascending: false,
     })
-    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'created_at', {
+      ascending: false,
+    })
     expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
   })
 
-  it('latest指定でも人気順として扱う', async () => {
+  it('人気の少ない順はfavorite_count昇順で取得する', async () => {
+    const { client, calls } = buildCatalogSupabaseMock()
+    const provider = createOshiListCatalogProvider(client)
+
+    await provider.fetchCatalog({ sortOrder: 'favorite_asc' })
+
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
+      ascending: true,
+    })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'created_at', {
+      ascending: false,
+    })
+    expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
+  })
+
+  it('latest指定はcreated_at降順で取得する', async () => {
     const { client, calls } = buildCatalogSupabaseMock()
     const provider = createOshiListCatalogProvider(client)
 
     await provider.fetchCatalog({ sortOrder: 'latest' })
 
-    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'created_at', {
       ascending: false,
     })
-    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
     expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
   })
 

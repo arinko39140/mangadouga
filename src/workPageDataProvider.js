@@ -194,6 +194,12 @@ export const createWorkPageDataProvider = (supabaseClient) => {
 
       if (resolvedSortOrder === 'latest') {
         query = query.order('update', { ascending: false })
+      } else if (resolvedSortOrder === 'oldest') {
+        query = query.order('update', { ascending: true })
+      } else if (resolvedSortOrder === 'favorite_asc') {
+        query = query
+          .order('favorite_count', { ascending: true })
+          .order('update', { ascending: false })
       } else {
         query = query
           .order('favorite_count', { ascending: false })

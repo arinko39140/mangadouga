@@ -1,3 +1,5 @@
+import { normalizeSortOrder } from './sortOrderPolicy.js'
+
 export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DEFAULT_WEEKDAY_LIMIT = 100
 
@@ -26,11 +28,13 @@ const resolveTimestamp = (item) => {
 const resolvePopularity = (item) =>
   Number.isFinite(item?.popularityScore) ? item.popularityScore : 0
 
-const sortItemsByPopularity = (items) => {
+const sortItemsByPopularity = (items, direction = 'desc') => {
   const sorted = [...items]
   sorted.sort((a, b) => {
     const popularityDiff = resolvePopularity(b) - resolvePopularity(a)
-    if (popularityDiff !== 0) return popularityDiff
+    if (popularityDiff !== 0) {
+      return direction === 'asc' ? -popularityDiff : popularityDiff
+    }
     return resolveTimestamp(b) - resolveTimestamp(a)
   })
   return sorted
@@ -73,7 +77,7 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
     }
 
     const resolvedWeekday = WEEKDAY_KEYS.includes(weekday) ? weekday : 'all'
-    const resolvedSortOrder = sortOrder === 'latest' ? 'latest' : 'popular'
+    const resolvedSortOrder = normalizeSortOrder(sortOrder)
     const resolvedLimit =
       Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_WEEKDAY_LIMIT
 
@@ -102,10 +106,18 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
     const fetchedItems = (data ?? [])
       .filter((row) => row.update != null)
       .map(mapRowToItem)
-    const items =
-      resolvedSortOrder === 'popular'
-        ? sortItemsByPopularity(fetchedItems)
-        : fetchedItems
+    const items = (() => {
+      if (resolvedSortOrder === 'favorite_asc') {
+        return sortItemsByPopularity(fetchedItems, 'asc')
+      }
+      if (resolvedSortOrder === 'oldest') {
+        return [...fetchedItems].sort((a, b) => resolveTimestamp(a) - resolveTimestamp(b))
+      }
+      if (resolvedSortOrder === 'latest') {
+        return [...fetchedItems].sort((a, b) => resolveTimestamp(b) - resolveTimestamp(a))
+      }
+      return sortItemsByPopularity(fetchedItems)
+    })()
 
     return {
       ok: true,

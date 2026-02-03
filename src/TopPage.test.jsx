@@ -91,7 +91,8 @@ describe('TopPage layout', () => {
 
     renderTopPage()
 
-    const selectedButton = screen.getByRole('button', { name: '火' })
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    const selectedButton = within(nav).getByRole('button', { name: '火' })
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('火曜日の一覧')).toBeInTheDocument()
 
@@ -143,9 +144,9 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider, showLocation: true })
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿日' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿日(新しい順)' }))
 
-    expect(screen.getByText('表示中: 火曜日 / 投稿日')).toBeInTheDocument()
+    expect(screen.getByText('表示中: 火曜日 / 投稿日(新しい順)')).toBeInTheDocument()
     vi.useRealTimers()
     await waitFor(() => {
       expect(screen.getByTestId('location-search')).toHaveTextContent(
@@ -153,9 +154,10 @@ describe('TopPage layout', () => {
       )
     })
 
-    fireEvent.click(screen.getByRole('button', { name: '土' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: '土' }))
 
-    expect(screen.getByText('表示中: 土曜日 / 投稿日')).toBeInTheDocument()
+    expect(screen.getByText('表示中: 土曜日 / 投稿日(新しい順)')).toBeInTheDocument()
   })
 
   it('曜日を選択すると選択状態と一覧が切り替わる', () => {
@@ -217,7 +219,8 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: 'すべて' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'すべて' }))
 
     vi.useRealTimers()
     await screen.findByText('月の動画')
@@ -261,7 +264,8 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: 'すべて' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'すべて' }))
 
     vi.useRealTimers()
     await screen.findByText('すべての一覧')
@@ -310,7 +314,8 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: '月' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: '月' }))
 
     vi.useRealTimers()
     await screen.findByText('人気一位')
@@ -364,7 +369,8 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: '月' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: '月' }))
 
     vi.useRealTimers()
     await screen.findByText('最近の作品')
@@ -451,7 +457,8 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: '火' }))
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: '火' }))
 
     vi.useRealTimers()
     expect(await screen.findByText('火曜日の一覧がありません。')).toBeInTheDocument()
