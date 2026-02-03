@@ -487,6 +487,28 @@ describe('WorkPage state', () => {
     })
   })
 
+  it('URLのsortOrderがlatestの場合は投稿日で取得して表示する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+
+    renderWorkPageWithUrl(dataProvider, '/series/series-1/?sortOrder=latest')
+
+    await waitFor(() => {
+      expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'latest')
+    })
+    expect(await screen.findByText('並び順: 投稿日')).toBeInTheDocument()
+  })
+
   it('お気に入り操作で認証済みなら状態が更新される', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
