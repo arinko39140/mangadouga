@@ -627,4 +627,69 @@ describe('TopPage search results', () => {
     expect(within(listSection).queryByText('通常の動画')).not.toBeInTheDocument()
 
   })
+
+  it('検索結果は100件制限を解除し、過去100件セクションは100件に制限される', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const searchItems = Array.from({ length: 101 }, (_, index) => ({
+      id: `s${index + 1}`,
+      title: `検索対象の動画${index + 1}`,
+      popularityScore: 10,
+      seriesId: null,
+      publishedAt: '2026-01-10T10:00:00Z',
+    }))
+    const recentItems = Array.from({ length: 120 }, (_, index) => ({
+      id: `r${index + 1}`,
+      title: `過去の動画${index + 1}`,
+      popularityScore: 5,
+      seriesId: null,
+      publishedAt: '2026-01-18T10:00:00Z',
+      detailPath: null,
+      thumbnailUrl: null,
+    }))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: buildEmptyLists(),
+      }),
+      fetchAllItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: searchItems,
+      }),
+      fetchWeekdayItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { items: recentItems },
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: '検索' } })
+    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
+    })
+
+    const searchList = within(listSection).getByRole('list', {
+      name: '曜日別一覧のアイテム',
+    })
+    expect(within(searchList).getAllByRole('listitem')).toHaveLength(101)
+
+    const recentSection = screen.getByRole('region', { name: '過去100件一覧' })
+    await waitFor(() => {
+      expect(
+        within(recentSection).getByRole('list', { name: '過去100件のアイテム' })
+      ).toBeInTheDocument()
+    })
+    const recentList = within(recentSection).getByRole('list', {
+      name: '過去100件のアイテム',
+    })
+    expect(within(recentList).getAllByRole('listitem')).toHaveLength(100)
+  })
 })
