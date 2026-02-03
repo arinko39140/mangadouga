@@ -8,6 +8,7 @@ import {
   normalizeSortOrder,
 } from './sortOrderPolicy.js'
 import { supabase } from './supabaseClient.js'
+import { createTitleSearchController } from './titleSearchController.js'
 import { createWeekdayDataProvider } from './weekdayDataProvider.js'
 import './TopPage.css'
 
@@ -133,6 +134,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [, setSearchParams] = useSearchParams()
+  const searchController = useMemo(
+    () => createTitleSearchController({ dataProvider }),
+    [dataProvider]
+  )
+  const [searchState, setSearchState] = useState(searchController.state)
   const isAllSelected = selectedWeekday === 'all'
   const isAllRecent = recentWeekday === 'all'
   const selectedWeekdayLabel =
@@ -171,6 +177,29 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const handleSortChange = (nextSortOrder) => {
     setSortOrder(normalizeSortOrder(nextSortOrder))
   }
+  const handleSearchInputChange = (event) => {
+    searchController.setInput(event.target.value)
+    setSearchState({ ...searchController.state })
+  }
+  const runSearch = async () => {
+    const pending = searchController.applySearch({ dataProvider })
+    setSearchState({ ...searchController.state })
+    await pending
+    setSearchState({ ...searchController.state })
+  }
+  const handleSearchSubmit = (event) => {
+    event.preventDefault()
+    void runSearch()
+  }
+  const handleSearchKeyDown = (event) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    void runSearch()
+  }
+
+  useEffect(() => {
+    setSearchState(searchController.state)
+  }, [searchController])
 
   useEffect(() => {
     setSearchParams((params) => {
@@ -291,6 +320,23 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
           <p className="top-page__filter-summary">
             表示中: {selectedFilterLabel} / {selectedSortLabel}
           </p>
+          <form className="search top-page__search" onSubmit={handleSearchSubmit}>
+            <label htmlFor="top-page-search-input">タイトル検索</label>
+            <div className="top-page__search-controls">
+              <input
+                id="top-page-search-input"
+                name="top-page-search-input"
+                type="text"
+                value={searchState.inputValue}
+                onChange={handleSearchInputChange}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="タイトルで検索"
+              />
+              <button className="button button--ghost" type="submit">
+                検索
+              </button>
+            </div>
+          </form>
           {isLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : error ? (

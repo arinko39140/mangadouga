@@ -241,6 +241,27 @@
   color: rgba(44, 32, 50, 0.8);
 }
 
+.top-page__search {
+  margin-top: 0.75rem;
+}
+
+.top-page__search label {
+  font-weight: 600;
+  color: rgba(44, 32, 50, 0.85);
+}
+
+.top-page__search-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.top-page__search-controls input {
+  flex: 1;
+  min-width: 200px;
+}
+
 .sort-control {
   position: relative;
   display: inline-block;

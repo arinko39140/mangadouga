@@ -468,3 +468,43 @@ describe('TopPage layout', () => {
     expect(screen.queryByText('月の動画')).not.toBeInTheDocument()
   })
 })
+
+describe('TopPage search entry', () => {
+  it('検索入力と検索ボタンが連動し、検索実行が呼ばれる', async () => {
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: true, data: buildEmptyLists() }),
+      fetchAllItems: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: 'hero' } })
+    expect(input).toHaveValue('hero')
+
+    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+
+    await waitFor(() => {
+      expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('検索入力でEnterを押すと検索実行が呼ばれる', async () => {
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({ ok: true, data: buildEmptyLists() }),
+      fetchAllItems: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: 'hero' } })
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', charCode: 13 })
+
+    await waitFor(() => {
+      expect(dataProvider.fetchAllItems).toHaveBeenCalledTimes(1)
+    })
+  })
+})
