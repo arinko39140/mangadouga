@@ -13,7 +13,7 @@ const mapRowToItem = (row) => ({
   id: row.movie_id,
   title: row.movie_title,
   popularityScore: row.favorite_count,
-  thumbnailUrl: null,
+  thumbnailUrl: row.thumbnail_url ?? null,
   detailPath: row.url ?? '',
   publishedAt: row.update,
   weekday: row.weekday,
@@ -84,7 +84,7 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
     let query = supabaseClient
       .from('movie')
       .select(
-        'movie_id, movie_title, url, favorite_count, update, series_id, weekday'
+        'movie_id, movie_title, url, thumbnail_url, favorite_count, update, series_id, weekday'
       )
       .not('update', 'is', null)
 
@@ -139,7 +139,7 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
     const { data, error } = await supabaseClient
       .from('movie')
       .select(
-        'movie_id, movie_title, url, favorite_count, update, series_id, weekday'
+        'movie_id, movie_title, url, thumbnail_url, favorite_count, update, series_id, weekday'
       )
       .gte('update', thresholdIso)
       .order('favorite_count', { ascending: false })

@@ -49,6 +49,44 @@ const resolveTimestamp = (item) => {
 const resolvePopularity = (item) =>
   Number.isFinite(item?.popularityScore) ? item.popularityScore : 0
 
+const getYouTubeVideoId = (videoUrl) => {
+  if (!videoUrl) return null
+  let parsed
+  try {
+    parsed = new URL(videoUrl)
+  } catch {
+    return null
+  }
+
+  const hostname = parsed.hostname.replace(/^www\./, '')
+  const pathname = parsed.pathname
+
+  if (hostname === 'youtu.be') {
+    const id = pathname.split('/').filter(Boolean)[0]
+    return id || null
+  }
+
+  if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+    if (pathname === '/watch') {
+      return parsed.searchParams.get('v')
+    }
+    if (pathname.startsWith('/embed/')) {
+      return pathname.split('/').filter(Boolean)[1] ?? null
+    }
+    if (pathname.startsWith('/shorts/')) {
+      return pathname.split('/').filter(Boolean)[1] ?? null
+    }
+  }
+
+  return null
+}
+
+const resolveThumbnailUrl = (item) => {
+  if (item?.thumbnailUrl) return item.thumbnailUrl
+  const videoId = getYouTubeVideoId(item?.detailPath)
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+}
+
 const formatSortLabel = (sortOrder) => {
   if (sortOrder === 'favorite_asc') return '人気(少ない順)'
   if (sortOrder === 'latest') return '投稿日(新しい順)'
@@ -291,6 +329,14 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
           aria-label="過去100件一覧"
         >
           <h2>過去100件の作品</h2>
+          <div className="top-page__sort">
+            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
+            <SortControl
+              sortOrder={sortOrder}
+              onChange={handleSortChange}
+              label="過去100件の並び順"
+            />
+          </div>
           <div className="top-page__weekday" role="group" aria-label="過去100件の曜日">
             {WEEKDAYS.map((weekday) => (
               <button
@@ -309,9 +355,6 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
             ))}
           </div>
           <p>{recentListTitle}</p>
-          <p className="top-page__filter-summary">
-            並び順: {selectedSortLabel}
-          </p>
           {recentLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : recentError ? (
@@ -327,19 +370,36 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
               {recentListTitle}がありません。
             </p>
           ) : (
-            <ul className="top-page__list-items" aria-label="過去100件のアイテム">
+            <ul
+              className="top-page__list-items top-page__list-items--grid"
+              aria-label="過去100件のアイテム"
+            >
               {recentListItems.map((item) => (
                 <li key={item.id} className="top-page__work-item">
-                  {item.seriesId ? (
-                    <Link
-                      className="top-page__work-link"
-                      to={`/series/${item.seriesId}/`}
-                    >
-                      {item.title}
-                    </Link>
-                  ) : (
-                    <span className="top-page__work-title">{item.title}</span>
-                  )}
+                  <div className="top-page__work-card">
+                    <div className="top-page__work-thumb">
+                      {resolveThumbnailUrl(item) ? (
+                        <img
+                          src={resolveThumbnailUrl(item)}
+                          alt={`${item.title}のサムネイル`}
+                        />
+                      ) : (
+                        <span className="top-page__work-thumb-placeholder">
+                          サムネイルなし
+                        </span>
+                      )}
+                    </div>
+                    {item.seriesId ? (
+                      <Link
+                        className="top-page__work-link"
+                        to={`/series/${item.seriesId}/`}
+                      >
+                        {item.title}
+                      </Link>
+                    ) : (
+                      <span className="top-page__work-title">{item.title}</span>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

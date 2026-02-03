@@ -4,6 +4,7 @@ import { createAuthGate } from './authGate.js'
 import { createOshiListCatalogProvider } from './oshiListCatalogProvider.js'
 import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEvents.js'
 import { DEFAULT_SORT_ORDER, normalizeSortOrder } from './sortOrderPolicy.js'
+import SortControl from './SortControl.jsx'
 import { supabase } from './supabaseClient.js'
 import './OshiListsPage.css'
 
@@ -189,56 +190,14 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
       <h1>みんなの推しリスト</h1>
       <div className="oshi-lists__controls">
         <span className="oshi-lists__label">並び順:</span>
-        <div className="oshi-lists__toggle-group" role="group" aria-label="並び替え">
-          <button
-            type="button"
-            className={
-              normalizedSortOrder === 'popular'
-                ? 'oshi-lists__toggle is-active'
-                : 'oshi-lists__toggle'
-            }
-            aria-pressed={normalizedSortOrder === 'popular'}
-            onClick={() => setSortOrder('popular')}
-          >
-            人気
-          </button>
-          <button
-            type="button"
-            className={
-              normalizedSortOrder === 'favorite_asc'
-                ? 'oshi-lists__toggle is-active'
-                : 'oshi-lists__toggle'
-            }
-            aria-pressed={normalizedSortOrder === 'favorite_asc'}
-            onClick={() => setSortOrder('favorite_asc')}
-          >
-            人気(少ない順)
-          </button>
-          <button
-            type="button"
-            className={
-              normalizedSortOrder === 'latest'
-                ? 'oshi-lists__toggle is-active'
-                : 'oshi-lists__toggle'
-            }
-            aria-pressed={normalizedSortOrder === 'latest'}
-            onClick={() => setSortOrder('latest')}
-          >
-            投稿日(新しい順)
-          </button>
-          <button
-            type="button"
-            className={
-              normalizedSortOrder === 'oldest'
-                ? 'oshi-lists__toggle is-active'
-                : 'oshi-lists__toggle'
-            }
-            aria-pressed={normalizedSortOrder === 'oldest'}
-            onClick={() => setSortOrder('oldest')}
-          >
-            投稿日(古い順)
-          </button>
-        </div>
+        <SortControl
+          sortOrder={normalizedSortOrder}
+          onChange={setSortOrder}
+          options={[
+            { value: 'popular', label: '人気' },
+            { value: 'favorite_asc', label: '人気(少ない順)' },
+          ]}
+        />
       </div>
       {oshiError ? (
         <p className="oshi-lists__status oshi-lists__status--error">

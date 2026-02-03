@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { vi } from 'vitest'
 import WorkPage from './WorkPage.jsx'
@@ -254,10 +254,19 @@ describe('WorkPage state', () => {
 
     renderWorkPage(dataProvider, 'series-1')
 
-    expect(await screen.findByText('並び順: 人気')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '投稿日(新しい順)' }))
+    const sortSection = screen.getByRole('region', { name: '話数一覧' })
+    expect(
+      await within(sortSection).findByText('並び順: 人気', { selector: 'p' })
+    ).toBeInTheDocument()
+    fireEvent.click(
+      within(sortSection).getByRole('button', { name: '投稿日(新しい順)' })
+    )
 
-    expect(await screen.findByText('並び順: 投稿日(新しい順)')).toBeInTheDocument()
+    expect(
+      await within(sortSection).findByText('並び順: 投稿日(新しい順)', {
+        selector: 'p',
+      })
+    ).toBeInTheDocument()
   })
 
   it('話数一覧の更新で選択が失われた場合は先頭話数に切り替える', async () => {
@@ -390,7 +399,10 @@ describe('WorkPage state', () => {
 
     const selectedButton = await screen.findByRole('button', { name: '第1話' })
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('並び順: 投稿日(古い順)')).toBeInTheDocument()
+    const sortSection = screen.getByRole('region', { name: '話数一覧' })
+    expect(
+      within(sortSection).getByText('並び順: 投稿日(古い順)', { selector: 'p' })
+    ).toBeInTheDocument()
     expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
   })
 
@@ -427,7 +439,10 @@ describe('WorkPage state', () => {
 
     const popularButton = await screen.findByRole('button', { name: '人気' })
     expect(popularButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('並び順: 人気')).toBeInTheDocument()
+    const sortSection = screen.getByRole('region', { name: '話数一覧' })
+    expect(
+      within(sortSection).getByText('並び順: 人気', { selector: 'p' })
+    ).toBeInTheDocument()
   })
 
   it('並び順の変更でURLのsortOrderが同期される', async () => {
@@ -580,7 +595,12 @@ describe('WorkPage state', () => {
     await waitFor(() => {
       expect(dataProvider.fetchMovies).toHaveBeenCalledWith('series-1', 'latest')
     })
-    expect(await screen.findByText('並び順: 投稿日(新しい順)')).toBeInTheDocument()
+    const sortSection = screen.getByRole('region', { name: '話数一覧' })
+    expect(
+      await within(sortSection).findByText('並び順: 投稿日(新しい順)', {
+        selector: 'p',
+      })
+    ).toBeInTheDocument()
   })
 
   it('お気に入り操作で認証済みなら状態が更新される', async () => {

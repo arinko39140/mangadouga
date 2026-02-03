@@ -144,7 +144,10 @@ describe('TopPage layout', () => {
 
     renderTopPage({ dataProvider, showLocation: true })
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿日(新しい順)' }))
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    fireEvent.click(
+      within(listSection).getByRole('button', { name: '投稿日(新しい順)' })
+    )
 
     expect(screen.getByText('表示中: 火曜日 / 投稿日(新しい順)')).toBeInTheDocument()
     vi.useRealTimers()
