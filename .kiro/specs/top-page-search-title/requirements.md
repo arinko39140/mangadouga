@@ -18,11 +18,12 @@
 
 #### Acceptance Criteria
 1. When タイトル検索が開始されたとき, the Top Page Search shall 過去分を含む全一覧データのタイトルを検索対象とする
-2. The Top Page Search shall 検索クエリに部分一致するタイトルのみを検索結果として扱う
-3. The Top Page Search shall 大文字/小文字を区別せずに一致判定する
-4. The Top Page Search shall 全角/半角の違いを区別せずに一致判定する
-5. The Top Page Search shall 検索クエリの先頭/末尾の空白を無視し、連続する空白は1つとして扱う
-6. When ユーザーが検索クエリを更新して再検索を実行したとき, the Top Page Search shall 新しい検索クエリで結果を更新する
+2. 検索対象の全一覧データは、`update`が欠損しているデータを除外する
+3. The Top Page Search shall 検索クエリに部分一致するタイトルのみを検索結果として扱う
+4. The Top Page Search shall 大文字/小文字を区別せずに一致判定する
+5. The Top Page Search shall 全角/半角の違いを区別せずに一致判定する
+6. The Top Page Search shall 検索クエリの先頭/末尾の空白を無視し、連続する空白は1つとして扱う
+7. When ユーザーが検索クエリを更新して再検索を実行したとき, the Top Page Search shall 新しい検索クエリで結果を更新する
 
 ### Requirement 3: 結果表示と状態の明示
 **Objective:** As a 訪問者, I want 検索結果の状態が分かる, so that 次の行動を判断できる
