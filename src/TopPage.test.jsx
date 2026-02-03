@@ -628,6 +628,91 @@ describe('TopPage search flow', () => {
 })
 
 describe('TopPage search results', () => {
+  it('検索未適用時は通常一覧の100件制限が適用され、検索適用で検索結果に切り替わる', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
+
+    const weekdayItems = Array.from({ length: 120 }, (_, index) => ({
+      id: `w${index + 1}`,
+      title: `通常の動画${index + 1}`,
+      popularityScore: 10,
+      seriesId: null,
+      publishedAt: '2026-01-19T10:00:00Z',
+    }))
+    const searchItems = Array.from({ length: 101 }, (_, index) => ({
+      id: `s${index + 1}`,
+      title: `検索対象の動画${index + 1}`,
+      popularityScore: 10,
+      seriesId: null,
+      publishedAt: '2026-01-10T10:00:00Z',
+    }))
+    const recentItems = Array.from({ length: 120 }, (_, index) => ({
+      id: `r${index + 1}`,
+      title: `過去の動画${index + 1}`,
+      popularityScore: 5,
+      seriesId: null,
+      publishedAt: '2026-01-18T10:00:00Z',
+      detailPath: null,
+      thumbnailUrl: null,
+    }))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          { weekday: 'tue', items: weekdayItems },
+          { weekday: 'mon', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+      fetchAllItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: searchItems,
+      }),
+      fetchWeekdayItems: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { items: recentItems },
+      }),
+    }
+
+    renderTopPage({ dataProvider })
+
+    const listSection = screen.getByRole('region', { name: '曜日別一覧' })
+    vi.useRealTimers()
+    await waitFor(() => {
+      expect(within(listSection).getByText('通常の動画1')).toBeInTheDocument()
+    })
+
+    const initialList = within(listSection).getByRole('list', {
+      name: '曜日別一覧のアイテム',
+    })
+    expect(within(initialList).getAllByRole('listitem')).toHaveLength(100)
+
+    const input = within(listSection).getByRole('textbox', { name: 'タイトル検索' })
+    fireEvent.change(input, { target: { value: '検索' } })
+    fireEvent.click(within(listSection).getByRole('button', { name: '検索' }))
+
+    await waitFor(() => {
+      expect(within(listSection).getByText('検索対象の動画1')).toBeInTheDocument()
+    })
+
+    const searchList = within(listSection).getByRole('list', {
+      name: '曜日別一覧のアイテム',
+    })
+    expect(within(searchList).getAllByRole('listitem')).toHaveLength(101)
+    expect(within(listSection).queryByText('通常の動画1')).not.toBeInTheDocument()
+
+    const recentSection = screen.getByRole('region', { name: '過去100件一覧' })
+    const recentList = within(recentSection).getByRole('list', {
+      name: '過去100件のアイテム',
+    })
+    expect(within(recentList).getAllByRole('listitem')).toHaveLength(100)
+  })
+
   it('検索適用中は検索結果一覧に切り替わる', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-19T15:00:00Z'))
