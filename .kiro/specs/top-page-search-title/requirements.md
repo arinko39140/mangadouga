@@ -10,16 +10,19 @@
 
 #### Acceptance Criteria
 1. When ユーザーがトップページの検索入力に文字列を入力する, the Top Page Search shall 入力内容を検索クエリとして保持する
-2. When ユーザーが検索を実行する操作を行う, the Top Page Search shall 現在の検索クエリでタイトル検索を開始する
+2. When ユーザーが検索ボタンを押す or Enterキーを押す, the Top Page Search shall 現在の検索クエリでタイトル検索を開始する
 3. If 検索クエリが空のまま検索が実行された場合, the Top Page Search shall 検索未適用状態として扱う
 
 ### Requirement 2: タイトル一致判定
 **Objective:** As a 訪問者, I want タイトルで絞り込まれた結果を見られる, so that 該当する作品だけを確認できる
 
 #### Acceptance Criteria
-1. When タイトル検索が開始されたとき, the Top Page Search shall 対象ページの一覧データのタイトルを検索対象とする
-2. The Top Page Search shall 検索クエリに一致するタイトルのみを検索結果として扱う
-3. When ユーザーが検索クエリを更新して再検索を実行したとき, the Top Page Search shall 新しい検索クエリで結果を更新する
+1. When タイトル検索が開始されたとき, the Top Page Search shall 過去分を含む全一覧データのタイトルを検索対象とする
+2. The Top Page Search shall 検索クエリに部分一致するタイトルのみを検索結果として扱う
+3. The Top Page Search shall 大文字/小文字を区別せずに一致判定する
+4. The Top Page Search shall 全角/半角の違いを区別せずに一致判定する
+5. The Top Page Search shall 検索クエリの先頭/末尾の空白を無視し、連続する空白は1つとして扱う
+6. When ユーザーが検索クエリを更新して再検索を実行したとき, the Top Page Search shall 新しい検索クエリで結果を更新する
 
 ### Requirement 3: 結果表示と状態の明示
 **Objective:** As a 訪問者, I want 検索結果の状態が分かる, so that 次の行動を判断できる
@@ -28,3 +31,5 @@
 1. While 検索クエリが適用中である, the Top Page Search shall 検索結果一覧を表示する
 2. When 検索結果が0件の場合, the Top Page Search shall 該当する結果がないことを表示する
 3. When 検索未適用状態に戻ったとき, the Top Page Search shall 通常の一覧を表示する
+4. While 検索クエリが適用中である, the Top Page Search shall 検索結果一覧は過去100件制限を適用しない
+5. While 検索クエリが適用中である, the Top Page Search shall 過去100件の作品セクションは従来どおり表示し、100件制限を維持する
