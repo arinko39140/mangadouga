@@ -14,6 +14,8 @@
 
 ステップ7：weekday-filter-sort-quick-switch
 
+ステップ8：top-page-search-title
+
 supabase 1192Jmdw!-893
 
 EtmVyaKGnV4Cy69m
