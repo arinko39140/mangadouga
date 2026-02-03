@@ -11,7 +11,10 @@ const buildCatalogSupabaseMock = ({
   sessionUserId = 'user-1',
   sessionError = null,
 } = {}) => {
-  const listOrderMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listRangeMock = vi.fn().mockResolvedValue({ data: listRows, error: listError })
+  const listOrderMock = vi.fn()
+  const listOrderChain = { order: listOrderMock, range: listRangeMock }
+  listOrderMock.mockReturnValue(listOrderChain)
   const listEqMock = vi.fn().mockReturnValue({ order: listOrderMock })
   const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
 
@@ -48,6 +51,7 @@ const buildCatalogSupabaseMock = ({
       listSelectMock,
       listEqMock,
       listOrderMock,
+      listRangeMock,
       usersSelectMock,
       usersInMock,
       favoriteSelectMock,
@@ -102,7 +106,7 @@ const buildToggleSupabaseMock = ({
 }
 
 describe('OshiListCatalogProvider', () => {
-  it('お気に入り数の多い順で公開一覧を取得して整形する', async () => {
+  it('人気順で公開一覧を取得して整形する', async () => {
     const { client, calls } = buildCatalogSupabaseMock({
       listRows: [
         {
@@ -117,14 +121,18 @@ describe('OshiListCatalogProvider', () => {
     })
     const provider = createOshiListCatalogProvider(client)
 
-    const result = await provider.fetchCatalog({ sortOrder: 'favorite_desc' })
+    const result = await provider.fetchCatalog({ sortOrder: 'popular' })
 
     expect(calls.fromMock).toHaveBeenCalledWith('list')
     expect(calls.listSelectMock).toHaveBeenCalledWith(
       'list_id, user_id, favorite_count, can_display'
     )
     expect(calls.listEqMock).toHaveBeenCalledWith('can_display', true)
-    expect(calls.listOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: false })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
+      ascending: false,
+    })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
+    expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
     expect(calls.fromMock).toHaveBeenCalledWith('users')
     expect(calls.usersSelectMock).toHaveBeenCalledWith('user_id, name, icon_url')
     expect(calls.usersInMock).toHaveBeenCalledWith('user_id', ['user-1'])
@@ -148,13 +156,26 @@ describe('OshiListCatalogProvider', () => {
     })
   })
 
-  it('お気に入り数の少ない順で取得する', async () => {
+  it('未対応のソート指定はpopularへフォールバックする', async () => {
     const { client, calls } = buildCatalogSupabaseMock()
     const provider = createOshiListCatalogProvider(client)
 
     await provider.fetchCatalog({ sortOrder: 'favorite_asc' })
 
-    expect(calls.listOrderMock).toHaveBeenCalledWith('favorite_count', { ascending: true })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(1, 'favorite_count', {
+      ascending: false,
+    })
+    expect(calls.listOrderMock).toHaveBeenNthCalledWith(2, 'update', { ascending: false })
+    expect(calls.listRangeMock).toHaveBeenCalledWith(0, 49)
+  })
+
+  it('ページング指定で50件単位の範囲を指定する', async () => {
+    const { client, calls } = buildCatalogSupabaseMock()
+    const provider = createOshiListCatalogProvider(client)
+
+    await provider.fetchCatalog({ sortOrder: 'latest', page: 1 })
+
+    expect(calls.listRangeMock).toHaveBeenCalledWith(50, 99)
   })
 
   it('未認証時はauth_requiredとして返す', async () => {

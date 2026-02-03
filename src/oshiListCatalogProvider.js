@@ -35,8 +35,21 @@ const mapCatalogRow = (row, userName, iconUrl, viewerUserId) => ({
     String(row.user_id) === viewerUserId,
 })
 
+const normalizeSortOrder = (sortOrder) => {
+  if (sortOrder === 'popular') return 'popular'
+  if (sortOrder === 'latest') return 'popular'
+  if (sortOrder === 'favorite_desc' || sortOrder === 'favorite_asc') return 'popular'
+  return 'popular'
+}
+
+const resolvePageRange = (page, pageSize) => {
+  const safePage = Number.isInteger(page) && page >= 0 ? page : 0
+  const start = safePage * pageSize
+  return { start, end: start + pageSize - 1 }
+}
+
 export const createOshiListCatalogProvider = (supabaseClient) => ({
-  async fetchCatalog({ sortOrder }) {
+  async fetchCatalog({ sortOrder, page } = {}) {
     if (!supabaseClient || typeof supabaseClient.from !== 'function') {
       return { ok: false, error: 'not_configured' }
     }
@@ -47,12 +60,18 @@ export const createOshiListCatalogProvider = (supabaseClient) => ({
     }
     const userId = userResult.userId
 
-    const ascending = sortOrder === 'favorite_asc'
-    const { data: listData, error: listError } = await supabaseClient
+    const normalizedSortOrder = normalizeSortOrder(sortOrder)
+    const { start, end } = resolvePageRange(page, 50)
+    let query = supabaseClient
       .from('list')
       .select('list_id, user_id, favorite_count, can_display')
       .eq('can_display', true)
-      .order('favorite_count', { ascending })
+    if (normalizedSortOrder === 'popular') {
+      query = query.order('favorite_count', { ascending: false }).order('update', {
+        ascending: false,
+      })
+    }
+    const { data: listData, error: listError } = await query.range(start, end)
 
     if (listError) {
       return { ok: false, error: normalizeError(listError) }
