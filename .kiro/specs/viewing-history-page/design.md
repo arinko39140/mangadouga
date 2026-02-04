@@ -261,6 +261,11 @@ interface ViewingHistoryProvider {
 - 同一の「ユーザー操作」からの多重発火は抑制し、1回の操作につき履歴は1件のみ記録する
 - 操作単位は「遷移」「話数切替」「再生開始」の3種類とし、それぞれの操作は単独で1件に集約する
 - 明示操作のみ記録し、初回レンダリング時の自動選択・自動再生など暗黙挙動では記録しない
+- 明示操作の定義は以下の3つに限定する
+ - `navigateToMovie`を呼ぶクリック/タップ
+ - `EpisodeListPanel`でユーザーが話数を選択したとき
+ - `PlaybackPanel`で再生ボタンを押したとき
+- URLパラメータ（`selectedMovieId`）や初期表示による選択は記録しない
 
 **Dependencies**
 - Inbound: WorkPage, PlaybackPanel, navigateToMovie, TopPage — 記録トリガー (P0)
@@ -296,6 +301,7 @@ interface HistoryRecorder {
 - Validation: `WorkPage`の初期選択や自動再生などの暗黙トリガーは除外し、明示操作のみ`recordView`を呼ぶ
 - Risks: RLS設定不足の場合は`auth_required`相当で失敗する
  - Validation: 重複防止は`HistoryRecorder`内で中央抑止する（`movieId + source`単位で300-500msの抑止ウィンドウを持ち、同一操作の多重発火を必ず抑止する）
+ - Integration: `recordView`失敗時でも遷移は継続する（記録は非ブロッキング）
 
 #### navigateToMovie
 
@@ -310,6 +316,7 @@ interface HistoryRecorder {
 - `movieId`が不明な場合は`selectedMovieId`を付与しない
 - UI内の`/series/{id}/`リンクは原則すべて`navigateToMovie`に置き換える
 - `navigateToMovie`はユーザーの明示操作（クリック/タップ）時のみ呼び出す
+- `recordView`の成否にかかわらず遷移は継続する（未ログイン時は記録をスキップ）
 
 **Dependencies**
 - Inbound: TopPage, OshiListPage, OshiMyListPage, UserOshiSeriesPage, UserOshiSeriesPanel, HistoryPage (P0)
@@ -340,7 +347,7 @@ interface HistoryRecorder {
 - **list_movie**
   - `list_id` (bigint)
   - `movie_id` (uuid)
-  - `user_id` (string)
+  - `user_id` (uuid)
 
 **Consistency & Integrity**
 - 取得パスは`history.user_id`で絞り込み、`clicked_at`降順で限定する
