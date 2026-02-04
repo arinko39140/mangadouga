@@ -193,6 +193,8 @@ sequenceDiagram
 - 推し数は`movie.favorite_count`を表示に利用する
 - 推し判定は「デフォルトの1リストのみ」を対象とする
 - 推し状態は`list_movie`を参照し、ログインユーザーのデフォルト`list`（1件）に対象`movie_id`が存在するかで判定する
+- デフォルト`list`が存在しない場合は`ViewingHistoryProvider`で自動作成を試みる
+- `list`作成に失敗した場合でも履歴表示は継続し、`isOshi=false`としてフォールバックする
 - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
  - 推しバッジ表示はデフォルトリストのみの判定で統一する
 
@@ -240,6 +242,7 @@ interface ViewingHistoryProvider {
 
 **Implementation Notes**
 - Integration: `list`はユーザーごとにデフォルト1件のみ取得し、その`list_id`で`list_movie`を参照する
+- Integration: `list`が存在しない場合は`ViewingHistoryProvider`内でデフォルト`list`を作成し、作成失敗時は推し判定をスキップする
 - Integration: `history`取得後に`movie`と`list_movie`を`IN`条件で取得し、履歴順を保持して合成する
 - Validation: `limit`は1-30に正規化する
 - Risks: 既存データの`movie_id`が文字列の場合は移行で型変換が必要
