@@ -115,6 +115,7 @@ sequenceDiagram
   Supabase-->>ViewingHistoryProvider: movie and oshi data
   ViewingHistoryProvider-->>HistoryPage: history items
 ```
+- 未ログイン（AuthGateが`unauthenticated`）の場合はログイン画面へ誘導し、履歴一覧は表示しない。
 - 履歴が空の場合は空状態のみを表示し、一覧はレンダリングしない。
 
 ### Flow B: 履歴項目からの遷移
@@ -134,6 +135,7 @@ sequenceDiagram
   participant User
   participant WorkPage
   participant PlaybackPanel
+  participant navigateToMovie
   participant HistoryRecorder
   participant Supabase
   User->>WorkPage: Select episode
@@ -141,6 +143,9 @@ sequenceDiagram
   HistoryRecorder->>Supabase: insert history
   User->>PlaybackPanel: Press play
   PlaybackPanel->>HistoryRecorder: recordView
+  HistoryRecorder->>Supabase: insert history
+  User->>navigateToMovie: Click movie card (any page)
+  navigateToMovie->>HistoryRecorder: recordView
   HistoryRecorder->>Supabase: insert history
 ```
 
@@ -155,7 +160,8 @@ sequenceDiagram
 | UserPage | UI | マイページ導線に履歴リンク追加 | 6.1 | react-router-dom (P0) | State |
 | WorkPage | UI | 話数切替時に履歴記録を呼び出す | 4.1-4.2 | HistoryRecorder (P0) | State |
 | PlaybackPanel | UI | 再生ボタン押下で履歴記録 | 4.3-4.4 | HistoryRecorder (P0) | State |
-| TopPage | UI | 動画カード遷移時にselectedMovieIdを付与 | 4.1 | react-router-dom (P1) | State |
+| TopPage | UI | 動画カード遷移時にselectedMovieIdを付与 | 4.1 | navigateToMovie (P1) | State |
+| navigateToMovie | UI Utils | 動画カード遷移を共通化し、遷移時に履歴記録を行う | 4.1 | HistoryRecorder, react-router-dom (P0) | State |
 
 ### Data Layer
 
@@ -169,7 +175,9 @@ sequenceDiagram
 **Responsibilities & Constraints**
 - `history`を`clicked_at`降順で30件取得
 - `movie`と`list_movie`を参照してタイトル・サムネイル・推し数・推し状態を付与
-- 未ログイン時は`auth_required`扱いで空表示に遷移させる
+- 推し数は`movie.favorite_count`を表示に利用する
+- 推し状態は`list_movie`を参照し、ログインユーザーが対象`movie_id`を推し登録済みかで判定する
+- 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
 
 **Dependencies**
 - Inbound: HistoryPage — 取得結果の描画 (P0)
@@ -228,9 +236,10 @@ interface ViewingHistoryProvider {
 **Responsibilities & Constraints**
 - `clicked_at`を明示し、同一動画でも都度記録
 - 未ログイン時は書き込みしない
+- 任意ページからの動画カード遷移は`navigateToMovie`に集約して記録する
 
 **Dependencies**
-- Inbound: WorkPage, PlaybackPanel, TopPage — 記録トリガー (P0)
+- Inbound: WorkPage, PlaybackPanel, navigateToMovie, TopPage — 記録トリガー (P0)
 - Outbound: Supabase — `history`書き込み (P0)
 
 **Contracts**: Service [x] / API [ ] / Event [ ] / Batch [ ] / State [ ]
@@ -285,10 +294,12 @@ interface HistoryRecorder {
 - **list_movie**
   - `list_id` (bigint)
   - `movie_id` (uuid)
+  - `user_id` (string)
 
 **Consistency & Integrity**
 - 取得パスは`history.user_id`で絞り込み、`clicked_at`降順で限定する
 - `history`へのINSERTは`auth.uid()`一致を必須とする
+- 推し状態は`list_movie.user_id = auth.uid()`で判定する
 
 ### Physical Data Model
 - **Indexes**
@@ -305,7 +316,7 @@ interface HistoryRecorder {
 
 ### Error Strategy
 - `not_configured`: Supabase未設定時は画面に設定不足を通知
-- `auth_required`: ログイン誘導または空表示へ遷移
+- `auth_required`: ログイン画面へ誘導
 - `network`: リトライ可能な文言を表示
 - `unknown`: 汎用エラーとして扱う
 
