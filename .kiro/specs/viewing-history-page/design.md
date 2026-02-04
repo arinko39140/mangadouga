@@ -192,9 +192,8 @@ sequenceDiagram
 - `movie`と`list_movie`を参照してタイトル・サムネイル・推し数・推し状態を付与
 - 推し数は`movie.favorite_count`を表示に利用する
 - 推し判定は「デフォルトの1リストのみ」を対象とする
-- 推し状態は`list_movie`を参照し、ログインユーザーのデフォルト`list`（1件）に対象`movie_id`が存在するかで判定する
-- デフォルト`list`が存在しない場合は`ViewingHistoryProvider`で自動作成を試みる
-- `list`作成に失敗した場合でも履歴表示は継続し、`isOshi=false`としてフォールバックする
+- 推し状態は`list`から取得したデフォルト`list_id`を基準に`list_movie`を参照し、対象`movie_id`が存在するかで判定する
+- `list`作成はサインアップ時の初期化処理で行う前提とし、`ViewingHistoryProvider`では作成しない
 - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
  - 推しバッジ表示はデフォルトリストのみの判定で統一する
 
@@ -242,7 +241,6 @@ interface ViewingHistoryProvider {
 
 **Implementation Notes**
 - Integration: `list`はユーザーごとにデフォルト1件のみ取得し、その`list_id`で`list_movie`を参照する
-- Integration: `list`が存在しない場合は`ViewingHistoryProvider`内でデフォルト`list`を作成し、作成失敗時は推し判定をスキップする
 - Integration: `history`取得後に`movie`と`list_movie`を`IN`条件で取得し、履歴順を保持して合成する
 - Validation: `limit`は1-30に正規化する
 - Risks: 既存データの`movie_id`が文字列の場合は移行で型変換が必要
@@ -347,12 +345,11 @@ interface HistoryRecorder {
 - **list_movie**
   - `list_id` (bigint)
   - `movie_id` (uuid)
-  - `user_id` (uuid)
 
 **Consistency & Integrity**
 - 取得パスは`history.user_id`で絞り込み、`clicked_at`降順で限定する
 - `history`へのINSERTは`auth.uid()`一致を必須とする
-- 推し状態は`list_movie.user_id = auth.uid()`で判定する
+- 推し状態は`list`で取得したデフォルト`list_id`と`list_movie.list_id`の一致で判定する
 - `history.movie_id`は`movie.movie_id`と同じ`uuid`型に統一する
 
 ### Physical Data Model
