@@ -191,7 +191,7 @@ sequenceDiagram
 - `history`を`clicked_at`降順で30件取得
 - `movie`と`list_movie`を参照してタイトル・サムネイル・推し数・推し状態を付与
 - 推し数は`movie.favorite_count`を表示に利用する
-- 推し判定は「デフォルトの1リストのみ」を対象とする
+- 推し判定は「デフォルトの1リストのみ」を対象とする（仕様として固定）
 - 推し状態は`list`から取得したデフォルト`list_id`を基準に`list_movie`を参照し、対象`movie_id`が存在するかで判定する
 - `list`作成はDBトリガーで必ず行う前提とし、`ViewingHistoryProvider`では作成しない
  - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
@@ -256,7 +256,7 @@ interface ViewingHistoryProvider {
 - `clicked_at`を明示し、同一動画でも都度記録
 - 未ログイン時は書き込みしない
 - 任意ページからの動画カード遷移は`navigateToMovie`に集約して記録する
-- 同一の「ユーザー操作」からの多重発火は抑制し、1回の操作につき履歴は1件のみ記録する
+- 同一の「ユーザー操作」からの多重発火は`HistoryRecorder`で抑制し、1回の操作につき履歴は1件のみ記録する
 - 操作単位は「遷移」「話数切替」「再生開始」の3種類とし、それぞれの操作は単独で1件に集約する
 - 明示操作のみ記録し、初回レンダリング時の自動選択・自動再生など暗黙挙動では記録しない
 - 明示操作の定義は以下の3つに限定する
@@ -295,10 +295,9 @@ interface HistoryRecorder {
 
 **Implementation Notes**
 - Integration: 書き込み後の戻り値は最小化し、履歴IDは必須にしない
-- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId + operation`単位で300msの抑止ウィンドウを設け、同一操作の多重発火を抑止する）
+- Validation: 重複抑止は`HistoryRecorder`内で中央抑止する（`movieId + source`単位で300-500msの抑止ウィンドウを持ち、同一操作の多重発火を必ず抑止する）
 - Validation: `WorkPage`の初期選択や自動再生などの暗黙トリガーは除外し、明示操作のみ`recordView`を呼ぶ
 - Risks: RLS設定不足の場合は`auth_required`相当で失敗する
- - Validation: 重複防止は`HistoryRecorder`内で中央抑止する（`movieId + source`単位で300-500msの抑止ウィンドウを持ち、同一操作の多重発火を必ず抑止する）
  - Integration: `recordView`失敗時でも遷移は継続する（記録は非ブロッキング）
 
 #### navigateToMovie
