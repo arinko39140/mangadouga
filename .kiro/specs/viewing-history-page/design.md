@@ -10,6 +10,7 @@
 - ログイン済みユーザーの閲覧履歴30件を時系列で表示する
 - 履歴項目から該当話数ページへ遷移できる
 - 閲覧記録を指定タイミング（遷移・話数切替・再生開始）で残す
+ - 履歴は「1回の操作＝1件」として記録する
 
 ### Non-Goals
 - 履歴の削除や編集
@@ -193,6 +194,7 @@ sequenceDiagram
 - 推し判定は「デフォルトの1リストのみ」を対象とする
 - 推し状態は`list_movie`を参照し、ログインユーザーのデフォルト`list`（1件）に対象`movie_id`が存在するかで判定する
 - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
+ - 推しバッジ表示はデフォルトリストのみの判定で統一する
 
 **Dependencies**
 - Inbound: HistoryPage — 取得結果の描画 (P0)
@@ -253,7 +255,8 @@ interface ViewingHistoryProvider {
 - `clicked_at`を明示し、同一動画でも都度記録
 - 未ログイン時は書き込みしない
 - 任意ページからの動画カード遷移は`navigateToMovie`に集約して記録する
-- 同一操作に起因する重複発火のみ抑制し、`source`が異なる記録は別履歴として許容する
+- 同一の「ユーザー操作」からの多重発火は抑制し、1回の操作につき履歴は1件のみ記録する
+- 操作単位は「遷移」「話数切替」「再生開始」の3種類とし、それぞれの操作は単独で1件に集約する
 
 **Dependencies**
 - Inbound: WorkPage, PlaybackPanel, navigateToMovie, TopPage — 記録トリガー (P0)
@@ -285,7 +288,7 @@ interface HistoryRecorder {
 
 **Implementation Notes**
 - Integration: 書き込み後の戻り値は最小化し、履歴IDは必須にしない
-- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId + source`単位で300msの抑止ウィンドウを設け、同一`source`のみ抑止する。`source`が異なる場合は別履歴として記録する）
+- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId + operation`単位で300msの抑止ウィンドウを設け、同一操作の多重発火を抑止する）
 - Risks: RLS設定不足の場合は`auth_required`相当で失敗する
 
 #### navigateToMovie
