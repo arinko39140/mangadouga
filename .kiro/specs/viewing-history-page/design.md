@@ -178,7 +178,8 @@ sequenceDiagram
 - `history`を`clicked_at`降順で30件取得
 - `movie`と`list_movie`を参照してタイトル・サムネイル・推し数・推し状態を付与
 - 推し数は`movie.favorite_count`を表示に利用する
-- 推し状態は`list_movie`を参照し、ログインユーザーの`list`から`list_id`昇順で最初の1件を取得し、その`list_id`に対象`movie_id`が存在するかで判定する
+- ユーザーは`list`を1件 בלבד保持する前提とする
+- 推し状態は`list_movie`を参照し、ログインユーザーの`list`（1件）に対象`movie_id`が存在するかで判定する
 - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
 
 **Dependencies**
@@ -224,7 +225,7 @@ interface ViewingHistoryProvider {
 - 返却される履歴はログインユーザー本人の`user_id`に限定される
 
 **Implementation Notes**
-- Integration: `list`から`list_id`昇順で最初の1件を取得し、その`list_id`で`list_movie`を参照する
+- Integration: `list`はユーザーごとに1件のみ取得し、その`list_id`で`list_movie`を参照する
 - Integration: `history`取得後に`movie`と`list_movie`を`IN`条件で取得し、履歴順を保持して合成する
 - Validation: `limit`は1-30に正規化する
 - Risks: 既存データの`movie_id`が文字列の場合は移行で型変換が必要
@@ -240,6 +241,7 @@ interface ViewingHistoryProvider {
 - `clicked_at`を明示し、同一動画でも都度記録
 - 未ログイン時は書き込みしない
 - 任意ページからの動画カード遷移は`navigateToMovie`に集約して記録する
+- 1行動1レコードを保証するため、同一操作に起因する多重発火は抑制する
 
 **Dependencies**
 - Inbound: WorkPage, PlaybackPanel, navigateToMovie, TopPage — 記録トリガー (P0)
@@ -271,7 +273,7 @@ interface HistoryRecorder {
 
 **Implementation Notes**
 - Integration: 書き込み後の戻り値は最小化し、履歴IDは必須にしない
-- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId + source`単位で300msの抑止ウィンドウを設ける）
+- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId`単位で`source`に関係なく300msの抑止ウィンドウを設け、最初の1回のみ記録する）
 - Risks: RLS設定不足の場合は`auth_required`相当で失敗する
 
 ## Data Models
