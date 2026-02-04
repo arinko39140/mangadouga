@@ -190,8 +190,8 @@ sequenceDiagram
 - `history`を`clicked_at`降順で30件取得
 - `movie`と`list_movie`を参照してタイトル・サムネイル・推し数・推し状態を付与
 - 推し数は`movie.favorite_count`を表示に利用する
-- ユーザーは`list`を1件 בלבד保持する前提とする
-- 推し状態は`list_movie`を参照し、ログインユーザーの`list`（1件）に対象`movie_id`が存在するかで判定する
+- 推し判定は「デフォルトの1リストのみ」を対象とする
+- 推し状態は`list_movie`を参照し、ログインユーザーのデフォルト`list`（1件）に対象`movie_id`が存在するかで判定する
 - 未ログイン時は`auth_required`を返し、UI側でログイン画面へ誘導する
 
 **Dependencies**
@@ -237,7 +237,7 @@ interface ViewingHistoryProvider {
 - 返却される履歴はログインユーザー本人の`user_id`に限定される
 
 **Implementation Notes**
-- Integration: `list`はユーザーごとに1件のみ取得し、その`list_id`で`list_movie`を参照する
+- Integration: `list`はユーザーごとにデフォルト1件のみ取得し、その`list_id`で`list_movie`を参照する
 - Integration: `history`取得後に`movie`と`list_movie`を`IN`条件で取得し、履歴順を保持して合成する
 - Validation: `limit`は1-30に正規化する
 - Risks: 既存データの`movie_id`が文字列の場合は移行で型変換が必要
@@ -253,7 +253,7 @@ interface ViewingHistoryProvider {
 - `clicked_at`を明示し、同一動画でも都度記録
 - 未ログイン時は書き込みしない
 - 任意ページからの動画カード遷移は`navigateToMovie`に集約して記録する
-- 1行動1レコードを保証するため、同一操作に起因する多重発火は抑制する
+- 同一操作に起因する重複発火のみ抑制し、`source`が異なる記録は別履歴として許容する
 
 **Dependencies**
 - Inbound: WorkPage, PlaybackPanel, navigateToMovie, TopPage — 記録トリガー (P0)
