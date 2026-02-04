@@ -79,7 +79,13 @@ graph TB
   ViewingHistoryProvider --> Supabase
   WorkPage --> HistoryRecorder
   PlaybackPanel --> HistoryRecorder
-  TopPage --> HistoryRecorder
+  TopPage --> navigateToMovie
+  OshiListPage --> navigateToMovie
+  OshiMyListPage --> navigateToMovie
+  UserOshiSeriesPage --> navigateToMovie
+  UserOshiSeriesPanel --> navigateToMovie
+  HistoryPage --> navigateToMovie
+  navigateToMovie --> HistoryRecorder
   HistoryRecorder --> Supabase
   Supabase --> Database
 ```
@@ -123,11 +129,13 @@ sequenceDiagram
 sequenceDiagram
   participant User
   participant HistoryPage
+  participant navigateToMovie
   participant HistoryRecorder
   participant Router
   User->>HistoryPage: Select history item
-  HistoryPage->>HistoryRecorder: recordView (source: navigate)
-  HistoryPage->>Router: navigate series with selectedMovieId
+  HistoryPage->>navigateToMovie: navigate to movie (selectedMovieId)
+  navigateToMovie->>HistoryRecorder: recordView (source: navigate)
+  navigateToMovie->>Router: navigate series with selectedMovieId
   Router-->>User: Work page view
 ```
 
@@ -162,7 +170,11 @@ sequenceDiagram
 | UserPage | UI | マイページ導線に履歴リンク追加 | 6.1 | react-router-dom (P0) | State |
 | WorkPage | UI | 話数切替時に履歴記録を呼び出す | 4.1-4.2 | HistoryRecorder (P0) | State |
 | PlaybackPanel | UI | 再生ボタン押下で履歴記録 | 4.3-4.4 | HistoryRecorder (P0) | State |
-| TopPage | UI | 動画カード遷移時にselectedMovieIdを付与 | 4.1 | navigateToMovie (P1) | State |
+| TopPage | UI | 動画カード遷移を共通化し履歴記録を行う | 4.1 | navigateToMovie (P0) | State |
+| OshiListPage | UI | 動画カード遷移を共通化し履歴記録を行う | 4.1 | navigateToMovie (P0) | State |
+| OshiMyListPage | UI | 動画カード遷移を共通化し履歴記録を行う | 4.1 | navigateToMovie (P0) | State |
+| UserOshiSeriesPage | UI | 動画カード遷移を共通化し履歴記録を行う | 4.1 | navigateToMovie (P0) | State |
+| UserOshiSeriesPanel | UI | 動画カード遷移を共通化し履歴記録を行う | 4.1 | navigateToMovie (P0) | State |
 | navigateToMovie | UI Utils | 動画カード遷移を共通化し、遷移時に履歴記録を行う | 4.1 | HistoryRecorder, react-router-dom (P0) | State |
 
 ### Data Layer
@@ -273,8 +285,27 @@ interface HistoryRecorder {
 
 **Implementation Notes**
 - Integration: 書き込み後の戻り値は最小化し、履歴IDは必須にしない
-- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId`単位で`source`に関係なく300msの抑止ウィンドウを設け、最初の1回のみ記録する）
+- Validation: 同一操作内の二重発火はUI側で抑制する（例: `movieId + source`単位で300msの抑止ウィンドウを設け、同一`source`のみ抑止する。`source`が異なる場合は別履歴として記録する）
 - Risks: RLS設定不足の場合は`auth_required`相当で失敗する
+
+#### navigateToMovie
+
+| Field | Detail |
+| --- | --- |
+| Intent | 作品ページ遷移を共通化し、履歴記録を必ず行う |
+| Requirements | 4.1, 3.3, 3.4 |
+
+**Responsibilities & Constraints**
+- `recordView`を`source: 'navigate'`で必ず実行してから遷移する
+- `seriesId`と`movieId`がある場合は`/series/{seriesId}/?selectedMovieId={movieId}`で遷移する
+- `movieId`が不明な場合は`selectedMovieId`を付与しない
+- UI内の`/series/{id}/`リンクは原則すべて`navigateToMovie`に置き換える
+
+**Dependencies**
+- Inbound: TopPage, OshiListPage, OshiMyListPage, UserOshiSeriesPage, UserOshiSeriesPanel, HistoryPage (P0)
+- Outbound: HistoryRecorder, react-router-dom (P0)
+
+**Contracts**: Service [ ] / API [ ] / Event [ ] / Batch [ ] / State [x]
 
 ## Data Models
 
