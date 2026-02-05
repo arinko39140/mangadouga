@@ -714,7 +714,7 @@ function UserPage({
                 <>
                   <Link
                     to="/history/"
-                    className="button button--ghost user-page__history-link"
+                    className="user-page__tab user-page__tab--history"
                   >
                     閲覧履歴
                   </Link>

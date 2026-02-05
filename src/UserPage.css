@@ -64,11 +64,21 @@
   font-size: 0.85rem;
 }
 
-.user-page__history-link {
-  font-size: 0.85rem;
+.user-page__tab {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 99, 117, 0.25);
+  color: #2f2035;
+  background: #fff7f5;
+  font-weight: 600;
+}
+
+.user-page__tab:hover {
+  background: #f4eef9;
 }
 
 .user-profile-edit {
