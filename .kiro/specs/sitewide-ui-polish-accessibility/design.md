@@ -229,6 +229,7 @@ graph TB
 - Integration: 既存アニメーションを基準化し、reduce時の代替表現を明示する。
 - `prefers-reduced-motion` の適用場所: `src/index.css` に共通ルールを集約し、ページCSSはクラス/変数参照のみとする。
 - 適用方式: 共通クラス（例: `.motion-fade`, `.motion-rise`, `.motion-hover`）を定義し、各ページで参照する。
+- カード出現トリガー: `IntersectionObserver` を用いて `isInView` を判定し、`motion-appear` クラスを付与する。
 - Reduce時の具体抑制範囲（初回ロード）: `opacity` のみで段階表示し、`transform` の移動/拡大は無効化する。
 - Reduce時の具体抑制範囲（カード出現）: 出現アニメーションは無効化し、即時表示または `opacity` 150ms のみを許可する。
 - Reduce時の具体抑制範囲（ホバー）: `transform` や大きな `box-shadow` 変化は無効化し、色/下線など軽微な変化のみとする。
@@ -367,6 +368,41 @@ graph TB
 - まず共通トークンとフォーカス/モーション基準を定義する。
 - 重点ページから段階適用し、差分を縮小する。
 - `content/` への適用は次フェーズで検討する。
+
+### Selector Mapping (Priority Pages)
+重点ページの既存CSSセレクタを、共通トークン/共通クラスへ段階的に移行するための対応表を示す。
+
+#### TopPage
+| Existing Selector | Target Token / Class | Note |
+|------------------|----------------------|------|
+| `.top-page` | `--font-body`, `--color-surface` | ベースの本文/背景トークン参照 |
+| `.top-page h1` | `--font-display`, `--color-text-strong` | 見出しの階層を統一 |
+| `.nav` | `.nav-pattern` | ナビゲーション共通ルールへ寄せる |
+| `.card` | `.card-primary` | 主要カード表現へ統合 |
+| `.card:hover` | `.card-primary.is-hover` | ホバーの統一表現 |
+
+#### OshiListsPage
+| Existing Selector | Target Token / Class | Note |
+|------------------|----------------------|------|
+| `.oshi-lists` | `--font-body`, `--color-surface` | ベーストークン適用 |
+| `.oshi-lists h2` | `--font-heading`, `--color-text` | 見出し階層を統一 |
+| `.list-card` | `.card-primary` | 主要カードへ統合 |
+| `.list-card--sub` | `.card-secondary` | 補助カードへ統合 |
+
+#### WorkPage
+| Existing Selector | Target Token / Class | Note |
+|------------------|----------------------|------|
+| `.work-page` | `--font-body`, `--color-surface` | ベーストークン適用 |
+| `.work-title` | `--font-display`, `--color-text-strong` | タイトル強調 |
+| `.work-meta` | `--font-caption`, `--color-text-muted` | 補足階層 |
+| `.work-card` | `.card-primary` | 主要カードへ統合 |
+
+#### HistoryPage
+| Existing Selector | Target Token / Class | Note |
+|------------------|----------------------|------|
+| `.history-page` | `--font-body`, `--color-surface` | ベーストークン適用 |
+| `.history-item` | `.card-secondary` | 補助カード表現へ統合 |
+| `.history-date` | `--font-caption`, `--color-text-muted` | 補足階層 |
 
 ### Scope Definition (React pages only)
 対象ページは `src/AppRouter.jsx` のルート定義に一致し、以下を含む。`LoginPage` と NotFound など補助ページは対象外とする。
