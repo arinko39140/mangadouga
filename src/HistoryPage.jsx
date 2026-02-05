@@ -41,7 +41,7 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
 
       const status = await authGateInstance.getStatus()
       if (!isMounted) return
-      if (!status.ok) {
+      if (!status.ok || status.status?.isAuthenticated === false) {
         authGateInstance.redirectToLogin()
         setAuthRequired(true)
         setIsLoading(false)

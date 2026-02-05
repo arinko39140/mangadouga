@@ -41,6 +41,27 @@ describe('HistoryPage', () => {
     })
   })
 
+  it('認証状態がfalseならログインへ誘導し履歴取得しない', async () => {
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({
+        ok: true,
+        status: { isAuthenticated: false },
+      }),
+      redirectToLogin: vi.fn(),
+    }
+    const dataProvider = {
+      fetchHistory: vi.fn(),
+    }
+
+    renderHistoryPage({ authGate, dataProvider })
+
+    await waitFor(() => {
+      expect(authGate.redirectToLogin).toHaveBeenCalled()
+    })
+    expect(dataProvider.fetchHistory).not.toHaveBeenCalled()
+    expect(screen.queryByRole('list', { name: '閲覧履歴一覧' })).not.toBeInTheDocument()
+  })
+
   it('履歴がある場合は一覧を表示する', async () => {
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
