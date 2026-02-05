@@ -129,8 +129,8 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
               <article
                 className={
                   isFavorited
-                    ? 'oshi-lists__card card-primary'
-                    : 'oshi-lists__card card-primary is-inactive'
+                    ? 'oshi-lists__card card-primary card-interactive'
+                    : 'oshi-lists__card card-primary card-interactive is-inactive'
                 }
               >
                 <div className="oshi-lists__body">
@@ -164,7 +164,15 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                         </span>
                       )}
                     </h2>
-                    <span className="oshi-lists__chip">{isFavorited ? '済' : '推'}</span>
+                    <span
+                      className={
+                        isFavorited
+                          ? 'oshi-lists__chip state-badge state-badge--active'
+                          : 'oshi-lists__chip state-badge state-badge--inactive'
+                      }
+                    >
+                      {isFavorited ? '済' : '推'}
+                    </span>
                   </div>
                   <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
                   <div className="oshi-lists__actions">
@@ -211,7 +219,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
         />
       </div>
       {oshiError ? (
-        <p className="oshi-lists__status oshi-lists__status--error">
+        <p className="oshi-lists__status oshi-lists__status--error state-badge state-badge--warning">
           推し登録に失敗しました。
         </p>
       ) : null}

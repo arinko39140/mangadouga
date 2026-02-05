@@ -62,4 +62,13 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('.text-strong')
     expect(css).toContain('.media-text')
   })
+
+  it('defines state cues and interactive surface responses', () => {
+    expect(css).toContain('.state-badge')
+    expect(css).toContain('.state-badge--warning')
+    expect(css).toContain('.state-badge--inactive')
+    expect(css).toContain('.state-badge--active')
+    expect(css).toContain('.card-interactive')
+    expect(css).toContain('.card-interactive:focus-visible')
+  })
 })

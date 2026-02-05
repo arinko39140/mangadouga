@@ -357,7 +357,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           {isLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : error ? (
-            <p className="top-page__status top-page__status--error">
+            <p className="top-page__status top-page__status--error state-badge state-badge--warning">
               {error === 'not_configured'
                 ? 'Supabaseの設定が不足しています。'
                 : error === 'network'
@@ -423,7 +423,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           {searchState.status === 'loading' ? (
             <p className="top-page__status">検索中...</p>
           ) : searchState.status === 'error' ? (
-            <p className="top-page__status top-page__status--error">
+            <p className="top-page__status top-page__status--error state-badge state-badge--warning">
               {searchState.error === 'not_configured'
                 ? 'Supabaseの設定が不足しています。'
                 : searchState.error === 'network'
@@ -440,7 +440,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               >
                 {searchResults.map((item) => (
                   <li key={item.id} className="top-page__work-item">
-                    <div className="top-page__work-card">
+                    <div className="top-page__work-card card-interactive">
                       <div className="top-page__work-thumb">
                         {resolveThumbnailUrl(item) ? (
                           <img
@@ -518,7 +518,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           {recentLoading ? (
             <p className="top-page__status">読み込み中...</p>
           ) : recentError ? (
-            <p className="top-page__status top-page__status--error">
+            <p className="top-page__status top-page__status--error state-badge state-badge--warning">
               {recentError === 'not_configured'
                 ? 'Supabaseの設定が不足しています。'
                 : recentError === 'network'
@@ -536,7 +536,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             >
               {recentListItems.map((item) => (
                 <li key={item.id} className="top-page__work-item">
-                  <div className="top-page__work-card">
+                  <div className="top-page__work-card card-interactive">
                     <div className="top-page__work-thumb">
                       {resolveThumbnailUrl(item) ? (
                         <img

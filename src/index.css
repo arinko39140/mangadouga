@@ -103,6 +103,53 @@ a {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.state-badge--warning {
+  background: rgba(255, 183, 3, 0.18);
+  color: #8a5b00;
+  border-color: rgba(255, 183, 3, 0.5);
+}
+
+.state-badge--inactive {
+  background: rgba(43, 30, 27, 0.08);
+  color: var(--color-text-muted);
+  border-color: rgba(43, 30, 27, 0.12);
+}
+
+.state-badge--active {
+  background: rgba(255, 107, 107, 0.18);
+  color: var(--color-text-strong);
+  border-color: rgba(255, 107, 107, 0.45);
+}
+
+.card-interactive {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(43, 30, 27, 0.14);
+}
+
+.card-interactive:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
 /* Navigation pattern */
 .nav-pattern {
   background: var(--color-surface-elevated);

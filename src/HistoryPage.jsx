@@ -94,7 +94,7 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
       >
         {items.map((item) => (
           <li key={item.historyId} className="history-list__item">
-            <article className="history-card card-secondary">
+            <article className="history-card card-secondary card-interactive">
               <div className="history-card__thumb">
                 {item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt={item.title} />
@@ -108,7 +108,10 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
                 <div className="history-card__title-row">
                   <h2 className="history-card__title text-strong">{item.title}</h2>
                   {item.isOshi ? (
-                    <span className="history-card__oshi" aria-label="推しバッジ">
+                    <span
+                      className="history-card__oshi state-badge state-badge--active"
+                      aria-label="推しバッジ"
+                    >
                       推
                     </span>
                   ) : null}
