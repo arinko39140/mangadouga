@@ -52,6 +52,23 @@ a {
   color: inherit;
 }
 
+/* Focus ring policy */
+.app-shell__content > :not(.ui-scope-exclude)
+  :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible,
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
 /* Reactページのみを対象とした共通タイポグラフィ/階層スタイル */
 .app-shell__content > :not(.ui-scope-exclude) {
   font-family: var(--font-body);

@@ -167,10 +167,11 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form input:focus,
-.form textarea:focus,
-.search input:focus {
-  outline: none;
+.form input:focus-visible,
+.form textarea:focus-visible,
+.search input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
   border-color: #7f5c8f;
   box-shadow: 0 0 0 3px rgba(127, 92, 143, 0.2);
 }

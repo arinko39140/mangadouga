@@ -357,25 +357,84 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
         role="banner"
       >
         <h1>トップページ</h1>
-        <form className="search top-page__search" onSubmit={handleSearchSubmit}>
-          <label htmlFor="top-page-search-input">タイトル検索</label>
-          <div className="top-page__search-controls">
-            <input
-              id="top-page-search-input"
-              name="top-page-search-input"
-              type="text"
-              value={searchState.inputValue}
-              onChange={handleSearchInputChange}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="タイトルで検索"
-            />
-            <button className="button button--ghost" type="submit">
-              検索
-            </button>
-          </div>
-        </form>
       </header>
       <div className="top-page__grid">
+        <section
+          ref={searchMotion.ref}
+          className={buildMotionClassName(
+            'top-page__search-results top-page__list top-page__list--panel',
+            searchMotion
+          )}
+          aria-label="検索結果"
+        >
+          <div className="top-page__search-header">
+            <h2>検索結果</h2>
+            <form className="search top-page__search" onSubmit={handleSearchSubmit}>
+              <label htmlFor="top-page-search-input">タイトル検索</label>
+              <div className="top-page__search-controls">
+                <input
+                  id="top-page-search-input"
+                  name="top-page-search-input"
+                  type="text"
+                  value={searchState.inputValue}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="タイトルで検索"
+                />
+                <button className="button button--ghost" type="submit">
+                  検索
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="top-page__sort">
+            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
+            <SortControl
+              sortOrder={sortOrder}
+              onChange={handleSortChange}
+              label="検索結果の並び順"
+            />
+          </div>
+          {searchState.status === 'idle' ? (
+            <p className="top-page__status">
+              タイトル検索を実行すると結果が表示されます。
+            </p>
+          ) : (
+            <p className="top-page__filter-summary">
+              検索クエリ: {searchState.appliedQuery}
+            </p>
+          )}
+          {searchState.status === 'loading' ? (
+            <p className="top-page__status">検索中...</p>
+          ) : searchState.status === 'error' ? (
+            <p className="top-page__status top-page__status--error state-badge state-badge--warning">
+              {searchState.error === 'not_configured'
+                ? 'Supabaseの設定が不足しています。'
+                : searchState.error === 'network'
+                ? '通信エラーが発生しました。'
+                : '不明なエラーが発生しました。'}
+            </p>
+          ) : searchState.status === 'active' ? (
+            searchState.results.length === 0 ? (
+              <p className="top-page__status">該当する結果がありません。</p>
+            ) : (
+              <ul
+                className="top-page__list-items top-page__list-items--grid"
+                aria-label="検索結果のアイテム"
+              >
+                {searchResults.map((item) => (
+                  <li key={item.id} className="top-page__work-item">
+                    <TopPageWorkCard
+                      item={item}
+                      navigateToMovieHandler={navigateToMovieHandler}
+                      showMeta
+                    />
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+        </section>
         <section
           ref={playbackMotion.ref}
           className={buildMotionClassName('top-page__playback', playbackMotion)}
@@ -472,63 +531,6 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               ))}
             </ul>
           )}
-        </section>
-        <section
-          ref={searchMotion.ref}
-          className={buildMotionClassName(
-            'top-page__search-results top-page__list top-page__list--panel',
-            searchMotion
-          )}
-          aria-label="検索結果"
-        >
-          <h2>検索結果</h2>
-          <div className="top-page__sort">
-            <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
-            <SortControl
-              sortOrder={sortOrder}
-              onChange={handleSortChange}
-              label="検索結果の並び順"
-            />
-          </div>
-          {searchState.status === 'idle' ? (
-            <p className="top-page__status">
-              タイトル検索を実行すると結果が表示されます。
-            </p>
-          ) : (
-            <p className="top-page__filter-summary">
-              検索クエリ: {searchState.appliedQuery}
-            </p>
-          )}
-          {searchState.status === 'loading' ? (
-            <p className="top-page__status">検索中...</p>
-          ) : searchState.status === 'error' ? (
-            <p className="top-page__status top-page__status--error state-badge state-badge--warning">
-              {searchState.error === 'not_configured'
-                ? 'Supabaseの設定が不足しています。'
-                : searchState.error === 'network'
-                ? '通信エラーが発生しました。'
-                : '不明なエラーが発生しました。'}
-            </p>
-          ) : searchState.status === 'active' ? (
-            searchState.results.length === 0 ? (
-              <p className="top-page__status">該当する結果がありません。</p>
-            ) : (
-              <ul
-                className="top-page__list-items top-page__list-items--grid"
-                aria-label="検索結果のアイテム"
-              >
-                {searchResults.map((item) => (
-                  <li key={item.id} className="top-page__work-item">
-                    <TopPageWorkCard
-                      item={item}
-                      navigateToMovieHandler={navigateToMovieHandler}
-                      showMeta
-                    />
-                  </li>
-                ))}
-              </ul>
-            )
-          ) : null}
         </section>
         <section
           ref={recentMotion.ref}

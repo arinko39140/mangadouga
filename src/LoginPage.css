@@ -79,8 +79,9 @@
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-form__field input:focus {
-  outline: none;
+.login-form__field input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
   border-color: rgba(90, 70, 110, 0.5);
   box-shadow: 0 0 0 3px rgba(180, 148, 210, 0.25);
 }
