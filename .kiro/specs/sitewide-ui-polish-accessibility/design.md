@@ -59,7 +59,7 @@
 
 ### Existing Architecture Analysis
 - `src/index.css` が基本タイポ/背景/フォントを定義し、各ページCSSで色や影が分散している。
-- `src/App.css` と `src/LoginPage.css` に `outline: none` の記述があり、フォーカス可視性が不足している。
+- `src/App.css` に `outline: none` の記述があり、フォーカス可視性が不足している。
 - ページ単位でカード/ナビゲーション/ボタンのスタイルが個別定義されている。
 - `docs/data-update-flow.md` にデータ更新手順が存在し、CSV/JSON/Supabaseの範囲が整理されている。
 
@@ -115,7 +115,7 @@ graph TB
 | NavigationPatternLibrary | Style | ナビゲーションのレイアウト/階層/状態表現を統一 | 1.2, 3.5 | `src/TopPage.css` (P0) | State |
 | CardPatternLibrary | Style | カード/ボタン/バッジ/タグの共通ルールを整理 | 2.2, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 7.2, 7.3 | `src/App.css`, `src/OshiListsPage.css`, `src/HistoryPage.css` (P0) | State |
 | MotionPolicy | Style | アニメーション基準とreduce対応 | 4.1, 4.2, 4.3, 4.4, 4.5 | `src/App.css` (P0) | State |
-| FocusRingPolicy | Style | フォーカスリングとキーボード操作規則 | 2.3, 3.3, 6.1, 6.2, 6.3, 6.4, 6.5 | `src/App.css`, `src/LoginPage.css`, `src/TopPage.css` (P0) | State |
+| FocusRingPolicy | Style | フォーカスリングとキーボード操作規則 | 2.3, 3.3, 6.1, 6.2, 6.3, 6.4, 6.5 | `src/App.css`, `src/TopPage.css` (P0) | State |
 | DataUpdateGuide | Docs | CSV/JSON/Supabase更新フローの明文化 | 5.1, 5.2, 5.3, 5.4, 5.5 | `docs/data-update-flow.md` (P0) | Doc |
 
 ### Style Layer
@@ -231,6 +231,7 @@ graph TB
 - 適用方式: 共通クラス（例: `.motion-fade`, `.motion-rise`, `.motion-hover`）を定義し、各ページで参照する。
 - カード出現トリガー: `IntersectionObserver` を用いて `isInView` を判定し、`motion-appear` クラスを付与する。
 - 付与ロジックの責務: 共通Hook（例: `useInViewMotion`）に集約し、各ページ/カードはHookの返却値でクラス付与のみを行う。
+- Reduce時の適用条件: `useInViewMotion` 内で `prefers-reduced-motion` を参照し、reduce時は `motion-appear` を付与しない。
 - Reduce時の具体抑制範囲（初回ロード）: `opacity` のみで段階表示し、`transform` の移動/拡大は無効化する。
 - Reduce時の具体抑制範囲（カード出現）: 出現アニメーションは無効化し、即時表示または `opacity` 150ms のみを許可する。
 - Reduce時の具体抑制範囲（ホバー）: `transform` や大きな `box-shadow` 変化は無効化し、色/下線など軽微な変化のみとする。
@@ -263,7 +264,7 @@ graph TB
 
 **Implementation Notes**
 - Integration: `outline: none` を置換し、共通リング規則を全ページに適用する。
-- 監査範囲: 全ReactページのCSSと、`onClick` を持つ要素（JSX）を対象に監査する。
+- 監査範囲: 対象のReactページのCSSと、`onClick` を持つ要素（JSX）を対象に監査する。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: フォーカストラップは必須とし、モーダル内のフォーカス可能要素のみを循環させる。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: `Esc` で閉じる場合、閉じた後は起点要素にフォーカスを戻す。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: 背景要素は `aria-hidden` または `inert` 相当でフォーカス到達を遮断する。
@@ -272,6 +273,11 @@ graph TB
   - `onClick` を持つ要素を抽出し、`button`/`a`以外を是正対象にする。
   - フォーカス順に不要な要素（`disabled` や操作不能UI）が含まれる場合は除外する。
   - `role="button"` や `tabindex="0"` は原則例外扱いとし、やむを得ない場合のみ使用する。
+- 監査の優先順位と例外条件:
+  - 優先対象: TopPage / OshiListsPage / WorkPage / HistoryPage
+  - 次点: UserPage / UserOshiSeriesPage
+  - その他: OshiMyListPage / OshiFavoritesPage / OshiListPage
+  - 例外条件: 既存構造の制約で `button`/`a` へ置換できない場合のみ、`role="button"` と `tabindex="0"` を許容し、`aria-label` を必須とする。
 - Validation: フォーカスリングが背景と十分なコントラストを持つことを確認する。
 - Risks: モーダル導入時は、設計どおりのトラップとフォーカス復帰が機能するか追加で検証する。
 
