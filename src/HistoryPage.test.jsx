@@ -131,6 +131,41 @@ describe('HistoryPage', () => {
     })
   })
 
+  it('履歴項目がmovieIdなしでもseriesページへ遷移する', async () => {
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+    const dataProvider = {
+      fetchHistory: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            historyId: 2,
+            movieId: null,
+            seriesId: 'series-2',
+            title: 'シリーズのみ',
+            thumbnailUrl: null,
+            clickedAt: '2026-02-04T12:00:00Z',
+            favoriteCount: 0,
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+    const navigateToMovie = vi.fn()
+
+    renderHistoryPage({ authGate, dataProvider, navigateToMovie })
+
+    await screen.findByText('シリーズのみ')
+    fireEvent.click(screen.getByRole('link', { name: '話数ページへ' }))
+
+    expect(navigateToMovie).toHaveBeenCalledWith({
+      seriesId: 'series-2',
+      movieId: null,
+    })
+  })
+
   it('履歴がない場合は空状態とトップ導線を表示する', async () => {
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
