@@ -1,4 +1,5 @@
 import { normalizeSortOrder } from './sortOrderPolicy.js'
+import { resolveCurrentUserId } from './supabaseSession.js'
 
 export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DEFAULT_WEEKDAY_LIMIT = 100
@@ -9,7 +10,7 @@ const buildEmptyWeekdayLists = () =>
     items: [],
   }))
 
-const mapRowToItem = (row) => ({
+const mapRowToItem = (row, isOshi = false) => ({
   id: row.movie_id,
   title: row.movie_title,
   popularityScore: row.favorite_count,
@@ -18,6 +19,7 @@ const mapRowToItem = (row) => ({
   publishedAt: row.update,
   weekday: row.weekday,
   seriesId: row.series_id ?? null,
+  isOshi: Boolean(isOshi),
 })
 
 const resolveTimestamp = (item) => {
@@ -40,14 +42,14 @@ const sortItemsByPopularity = (items, direction = 'desc') => {
   return sorted
 }
 
-const normalizeWeekdayLists = (rows) => {
+const normalizeWeekdayLists = (rows, oshiSet = new Set()) => {
   const lists = buildEmptyWeekdayLists()
   const indexByWeekday = new Map(lists.map((list) => [list.weekday, list]))
 
   rows.forEach((row) => {
     const list = indexByWeekday.get(row.weekday)
     if (!list) return
-    list.items.push(mapRowToItem(row))
+    list.items.push(mapRowToItem(row, oshiSet.has(row.movie_id)))
   })
 
   return lists
@@ -68,6 +70,20 @@ const isNetworkError = (error) => {
   if (!error) return false
   const message = String(error.message ?? '')
   return message.includes('Failed to fetch') || message.includes('NetworkError')
+}
+
+const isAuthError = (error) => {
+  if (!error) return false
+  if (error.status === 401) return true
+  const code = String(error.code ?? '')
+  if (code === 'PGRST301') return true
+  const message = String(error.message ?? '')
+  return message.includes('JWT') || message.includes('auth') || message.includes('Authentication')
+}
+
+const normalizeError = (error) => {
+  if (isAuthError(error)) return 'auth_required'
+  return isNetworkError(error) ? 'network' : 'unknown'
 }
 
 export const createWeekdayDataProvider = (supabaseClient) => ({
@@ -94,9 +110,38 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       }
     }
 
+    const rows = (data ?? []).filter((row) => row.update != null)
+    const movieIds = rows.map((row) => row.movie_id).filter(Boolean)
+    let oshiSet = new Set()
+
+    if (movieIds.length > 0) {
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (userResult.ok) {
+        const { data: listRows, error: listError } = await supabaseClient
+          .from('list')
+          .select('list_id')
+          .eq('user_id', userResult.userId)
+          .order('list_id', { ascending: true })
+          .limit(1)
+        const listId = listError ? null : listRows?.[0]?.list_id ?? null
+
+        if (listId) {
+          const { data: listMovieRows, error: listMovieError } = await supabaseClient
+            .from('list_movie')
+            .select('movie_id')
+            .eq('list_id', listId)
+            .in('movie_id', movieIds)
+
+          if (!listMovieError) {
+            oshiSet = new Set((listMovieRows ?? []).map((row) => row.movie_id))
+          }
+        }
+      }
+    }
+
     return {
       ok: true,
-      data: (data ?? []).filter((row) => row.update != null).map(mapRowToItem),
+      data: rows.map((row) => mapRowToItem(row, oshiSet.has(row.movie_id))),
     }
   },
   async fetchWeekdayItems({ weekday, sortOrder, limit } = {}) {
@@ -131,9 +176,36 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       }
     }
 
-    const fetchedItems = (data ?? [])
-      .filter((row) => row.update != null)
-      .map(mapRowToItem)
+    const fetchedRows = (data ?? []).filter((row) => row.update != null)
+    const movieIds = fetchedRows.map((row) => row.movie_id).filter(Boolean)
+    let oshiSet = new Set()
+
+    if (movieIds.length > 0) {
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (userResult.ok) {
+        const { data: listRows, error: listError } = await supabaseClient
+          .from('list')
+          .select('list_id')
+          .eq('user_id', userResult.userId)
+          .order('list_id', { ascending: true })
+          .limit(1)
+        const listId = listError ? null : listRows?.[0]?.list_id ?? null
+
+        if (listId) {
+          const { data: listMovieRows, error: listMovieError } = await supabaseClient
+            .from('list_movie')
+            .select('movie_id')
+            .eq('list_id', listId)
+            .in('movie_id', movieIds)
+
+          if (!listMovieError) {
+            oshiSet = new Set((listMovieRows ?? []).map((row) => row.movie_id))
+          }
+        }
+      }
+    }
+
+    const fetchedItems = fetchedRows.map((row) => mapRowToItem(row, oshiSet.has(row.movie_id)))
     const items = (() => {
       if (resolvedSortOrder === 'favorite_asc') {
         return sortItemsByPopularity(fetchedItems, 'asc')
@@ -179,11 +251,107 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       }
     }
 
+    const filteredRows = (data ?? []).filter((row) =>
+      isWithinWeekRange(row.update, thresholdMs)
+    )
+    const movieIds = filteredRows.map((row) => row.movie_id).filter(Boolean)
+    let oshiSet = new Set()
+
+    if (movieIds.length > 0) {
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (userResult.ok) {
+        const { data: listRows, error: listError } = await supabaseClient
+          .from('list')
+          .select('list_id')
+          .eq('user_id', userResult.userId)
+          .order('list_id', { ascending: true })
+          .limit(1)
+        const listId = listError ? null : listRows?.[0]?.list_id ?? null
+
+        if (listId) {
+          const { data: listMovieRows, error: listMovieError } = await supabaseClient
+            .from('list_movie')
+            .select('movie_id')
+            .eq('list_id', listId)
+            .in('movie_id', movieIds)
+
+          if (!listMovieError) {
+            oshiSet = new Set((listMovieRows ?? []).map((row) => row.movie_id))
+          }
+        }
+      }
+    }
+
     return {
       ok: true,
-      data: normalizeWeekdayLists(
-        (data ?? []).filter((row) => isWithinWeekRange(row.update, thresholdMs))
-      ),
+      data: normalizeWeekdayLists(filteredRows, oshiSet),
     }
+  },
+
+  async toggleMovieOshi(movieId) {
+    if (typeof movieId !== 'string' || movieId.trim() === '') {
+      return { ok: false, error: 'invalid_input' }
+    }
+    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const userResult = await resolveCurrentUserId(supabaseClient)
+    if (!userResult.ok) {
+      return { ok: false, error: userResult.error }
+    }
+
+    const { data: listRows, error: listError } = await supabaseClient
+      .from('list')
+      .select('list_id')
+      .eq('user_id', userResult.userId)
+      .order('list_id', { ascending: true })
+      .limit(1)
+
+    if (listError) {
+      return { ok: false, error: normalizeError(listError) }
+    }
+
+    const listId = listRows?.[0]?.list_id ?? null
+    if (!listId) {
+      return { ok: false, error: 'not_configured' }
+    }
+
+    const { data, error } = await supabaseClient
+      .from('list_movie')
+      .select('list_id, movie_id')
+      .eq('list_id', listId)
+      .eq('movie_id', movieId)
+      .limit(1)
+
+    if (error) {
+      return { ok: false, error: normalizeError(error) }
+    }
+
+    const exists = (data ?? []).length > 0
+
+    if (exists) {
+      const { error: deleteError } = await supabaseClient
+        .from('list_movie')
+        .delete()
+        .eq('list_id', listId)
+        .eq('movie_id', movieId)
+
+      if (deleteError) {
+        return { ok: false, error: normalizeError(deleteError) }
+      }
+
+      return { ok: true, data: { isOshi: false } }
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from('list_movie')
+      .insert({ list_id: listId, movie_id: movieId })
+
+    if (insertError) {
+      return { ok: false, error: normalizeError(insertError) }
+    }
+
+    return { ok: true, data: { isOshi: true } }
   },
 })

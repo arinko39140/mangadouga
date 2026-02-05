@@ -92,6 +92,12 @@ export const createTitleSearchController = ({
     applySearch(options = {}) {
       return applySearch(options)
     },
+    updateCachedItem(movieId, patch = {}) {
+      if (!cachedItems) return
+      cachedItems = cachedItems.map((item) =>
+        item?.id === movieId ? { ...item, ...patch } : item
+      )
+    },
     clearSearch,
   }
 }

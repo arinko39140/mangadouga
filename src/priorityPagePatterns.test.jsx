@@ -83,7 +83,7 @@ describe('重点ページのカード/ナビ/レイアウト整合性', () => {
 
     const weekdayList = await screen.findByRole('list', { name: '曜日別一覧のアイテム' })
     expect(weekdayList).toHaveClass('card-collection')
-    expect(weekdayList).toHaveClass('card-collection--list')
+    expect(weekdayList).toHaveClass('card-collection--grid')
 
     const recentList = await screen.findByRole('list', { name: '過去100件のアイテム' })
     expect(recentList).toHaveClass('card-collection')

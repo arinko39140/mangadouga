@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { createAuthGate } from './authGate.js'
 import { createHistoryRecorder } from './historyRecorder.js'
 import { createNavigateToMovie } from './navigateToMovie.js'
 import PlaybackPanel from './PlaybackPanel.jsx'
@@ -9,6 +10,7 @@ import {
   SORT_ORDER_QUERY_KEY,
   normalizeSortOrder,
 } from './sortOrderPolicy.js'
+import { publishOshiListUpdated } from './oshiListEvents.js'
 import { supabase } from './supabaseClient.js'
 import { createTitleSearchController } from './titleSearchController.js'
 import { createWeekdayDataProvider } from './weekdayDataProvider.js'
@@ -109,8 +111,15 @@ const buildMotionClassName = (baseClassName, motionState) => {
   return `${baseClassName} motion-appear${motionState.isInView ? ' is-inview' : ''}`
 }
 
-const TopPageWorkCard = ({ item, navigateToMovieHandler, showMeta }) => {
+const TopPageWorkCard = ({
+  item,
+  navigateToMovieHandler,
+  showMeta,
+  onToggleOshi,
+  isUpdating,
+}) => {
   const motion = useInViewMotion()
+  const isOshi = Boolean(item?.isOshi)
   const className = buildMotionClassName(
     'top-page__work-card card-primary card-interactive motion-hover',
     motion
@@ -127,27 +136,40 @@ const TopPageWorkCard = ({ item, navigateToMovieHandler, showMeta }) => {
           </span>
         )}
       </div>
-      {item.seriesId ? (
-        <Link
-          className="top-page__work-link text-strong"
-          to={
-            item.id
-              ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
-              : `/series/${item.seriesId}/`
-          }
-          onClick={(event) => {
-            event.preventDefault()
-            navigateToMovieHandler({
-              seriesId: item.seriesId,
-              movieId: item.id,
-            })
-          }}
+      <div className="top-page__work-title-row">
+        {item.seriesId ? (
+          <Link
+            className="top-page__work-link text-strong"
+            to={
+              item.id
+                ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                : `/series/${item.seriesId}/`
+            }
+            onClick={(event) => {
+              event.preventDefault()
+              navigateToMovieHandler({
+                seriesId: item.seriesId,
+                movieId: item.id,
+              })
+            }}
+          >
+            {item.title}
+          </Link>
+        ) : (
+          <span className="top-page__work-title text-strong">{item.title}</span>
+        )}
+        <button
+          type="button"
+          className={`top-page__oshi-badge state-badge ${
+            isOshi ? 'state-badge--active' : 'state-badge--inactive'
+          }`}
+          aria-pressed={isOshi}
+          disabled={isUpdating}
+          onClick={() => onToggleOshi?.(item.id)}
         >
-          {item.title}
-        </Link>
-      ) : (
-        <span className="top-page__work-title text-strong">{item.title}</span>
-      )}
+          {isOshi ? '済' : '推'}
+        </button>
+      </div>
       {showMeta ? (
         <p className="top-page__work-meta text-muted">
           投稿日: {formatPublishedDate(item)}
@@ -203,11 +225,15 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
   const [recentError, setRecentError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [oshiUpdatingIds, setOshiUpdatingIds] = useState([])
   const [, setSearchParams] = useSearchParams()
   const navigateToMovieHandler = useMemo(() => {
     if (typeof navigateToMovie === 'function') return navigateToMovie
     return createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder })
   }, [navigate, navigateToMovie])
+  const authGateInstance = useMemo(() => {
+    return createAuthGate({ supabaseClient: supabase, navigate })
+  }, [navigate])
   const searchController = useMemo(
     () => createTitleSearchController({ dataProvider }),
     [dataProvider]
@@ -249,8 +275,55 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
         id: selectedList[0].id,
         title: selectedList[0].title,
         videoUrl: selectedList[0].detailPath ?? null,
+        isOshi: Boolean(selectedList[0]?.isOshi),
       }
     : null
+
+  const updateOshiState = (movieId, nextOshi) => {
+    setWeekdayLists((prev) =>
+      prev.map((list) => ({
+        ...list,
+        items: list.items.map((item) =>
+          item.id === movieId ? { ...item, isOshi: nextOshi } : item
+        ),
+      }))
+    )
+    setRecentItems((prev) =>
+      prev.map((item) => (item.id === movieId ? { ...item, isOshi: nextOshi } : item))
+    )
+    setSearchState((prev) => ({
+      ...prev,
+      results: prev.results.map((item) =>
+        item.id === movieId ? { ...item, isOshi: nextOshi } : item
+      ),
+    }))
+    if (typeof searchController.updateCachedItem === 'function') {
+      searchController.updateCachedItem(movieId, { isOshi: nextOshi })
+    }
+  }
+
+  const handleOshiToggle = async (movieId) => {
+    if (!movieId || typeof dataProvider.toggleMovieOshi !== 'function') return
+
+    const status = await authGateInstance.getStatus()
+    if (!status.ok) {
+      authGateInstance.redirectToLogin('oshi')
+      return
+    }
+
+    setOshiUpdatingIds((prev) => (prev.includes(movieId) ? prev : [...prev, movieId]))
+    try {
+      const result = await dataProvider.toggleMovieOshi(movieId)
+      if (result.ok) {
+        updateOshiState(movieId, result.data.isOshi)
+        publishOshiListUpdated()
+      } else if (result.error === 'auth_required') {
+        authGateInstance.redirectToLogin('oshi')
+      }
+    } finally {
+      setOshiUpdatingIds((prev) => prev.filter((id) => id !== movieId))
+    }
+  }
   const handleSortChange = (nextSortOrder) => {
     setSortOrder(normalizeSortOrder(nextSortOrder))
   }
@@ -428,6 +501,8 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                       item={item}
                       navigateToMovieHandler={navigateToMovieHandler}
                       showMeta
+                      onToggleOshi={handleOshiToggle}
+                      isUpdating={oshiUpdatingIds.includes(item.id)}
                     />
                   </li>
                 ))}
@@ -445,7 +520,20 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           {isLoading ? (
             <p className="top-page__status">再生準備中...</p>
           ) : featuredEpisode ? (
-            <PlaybackPanel episode={featuredEpisode} isLoading={false} />
+            <div className="top-page__playback-player">
+              <PlaybackPanel episode={featuredEpisode} isLoading={false} />
+              <button
+                type="button"
+                className={`top-page__oshi-badge top-page__oshi-badge--overlay state-badge ${
+                  featuredEpisode.isOshi ? 'state-badge--active' : 'state-badge--inactive'
+                }`}
+                aria-pressed={featuredEpisode.isOshi}
+                disabled={oshiUpdatingIds.includes(featuredEpisode.id)}
+                onClick={() => handleOshiToggle(featuredEpisode.id)}
+              >
+                {featuredEpisode.isOshi ? '済' : '推'}
+              </button>
+            </div>
           ) : (
             <p className="top-page__status">再生できる動画がありません。</p>
           )}
@@ -480,8 +568,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           className={buildMotionClassName('top-page__link top-page__link--cta', linkMotion)}
           aria-label="推しリスト導線"
         >
-          <h2>推しリスト導線</h2>
-          <p>みんなの推しリスト一覧への入口です。</p>
+          <h2>推しリスト</h2>
           <Link className="top-page__link-action" to="/oshi-lists/catalog/">
             みんなの推しリスト一覧へ
           </Link>
@@ -518,32 +605,18 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             </p>
           ) : (
             <ul
-              className="top-page__list-items card-collection card-collection--list"
+              className="top-page__list-items top-page__list-items--grid card-collection card-collection--grid"
               aria-label="曜日別一覧のアイテム"
             >
               {selectedList.map((item) => (
                 <li key={item.id} className="top-page__work-item">
-                  {item.seriesId ? (
-                    <Link
-                      className="top-page__work-link"
-                      to={
-                        item.id
-                          ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
-                          : `/series/${item.seriesId}/`
-                      }
-                      onClick={(event) => {
-                        event.preventDefault()
-                        navigateToMovieHandler({
-                          seriesId: item.seriesId,
-                          movieId: item.id,
-                        })
-                      }}
-                    >
-                      {item.title}
-                    </Link>
-                  ) : (
-                    <span className="top-page__work-title">{item.title}</span>
-                  )}
+                  <TopPageWorkCard
+                    item={item}
+                    navigateToMovieHandler={navigateToMovieHandler}
+                    showMeta={false}
+                    onToggleOshi={handleOshiToggle}
+                    isUpdating={oshiUpdatingIds.includes(item.id)}
+                  />
                 </li>
               ))}
             </ul>
@@ -609,6 +682,8 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                     item={item}
                     navigateToMovieHandler={navigateToMovieHandler}
                     showMeta={false}
+                    onToggleOshi={handleOshiToggle}
+                    isUpdating={oshiUpdatingIds.includes(item.id)}
                   />
                 </li>
               ))}
