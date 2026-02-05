@@ -59,7 +59,7 @@
 
 ### Existing Architecture Analysis
 - `src/index.css` が基本タイポ/背景/フォントを定義し、各ページCSSで色や影が分散している。
-- `src/App.css` は現状未インポートのため、共通ルールは `src/index.css` を単一ソースとして集約する必要がある。
+- `src/App.css` は現状未インポートのため、共通ルールのSSOTは **`src/index.css` に一本化** する（`src/App.css` は共通ルールの定義先にしない）。
 - `LoginPage`（対象外）には `outline: none` が残っているため、今後の共通ポリシーで上書きが必要。
 - ページ単位でカード/ナビゲーション/ボタンのスタイルが個別定義されている。
 - `docs/data-update-flow.md` にデータ更新手順が存在し、CSV/JSON/Supabaseの範囲が整理されている。
@@ -243,7 +243,7 @@ graph TB
 - Concurrency strategy: 非同期更新なし
 
 **Implementation Notes**
-- Integration: `src/App.css` とページCSSで共通のカード規則を定義する。
+- Integration: 共通のカード規則は **`src/index.css` をSSOT** とし、ページCSSは参照に寄せる。
 - Validation: 重要情報の強調が色以外の視覚手がかりを持つことを確認する。
 - Risks: 既存カードの余白/影が不統一な場合、優先ページから順に適用する。
 
@@ -278,7 +278,8 @@ graph TB
   - 実装: `@media (prefers-reduced-motion: reduce)` で共通上書きを定義し、例外クラスのみ個別許可する
 - 適用方式: 共通クラス（例: `.motion-fade`, `.motion-rise`, `.motion-hover`）を定義し、各ページで参照する。
 - カード出現トリガー: `IntersectionObserver` を用いて `isInView` を判定し、`motion-appear` クラスを付与する。
-- 付与ロジックの責務: 共通Hook（例: `useInViewMotion`）に集約し、各ページ/カードはHookの返却値でクラス付与のみを行う。
+- 付与ロジックの責務: 共通Hook（`src/hooks/useInViewMotion.js`）に集約し、各ページ/カードはHookの返却値でクラス付与のみを行う。
+- 導入責務: 重点ページの主要カード/リストのルート要素（コンポーネント側）で `motion-appear` と `is-inview` の付与を行う。ページCSS側ではアニメーション定義のみを持ち、付与ロジックは持たない。
 - Reduce時の適用条件: `useInViewMotion` 内で `prefers-reduced-motion` を参照し、reduce時は `motion-appear` を付与しない。
 - Reduce時の具体抑制範囲（初回ロード）: `opacity` のみで段階表示し、`transform` の移動/拡大は無効化する。
 - Reduce時の具体抑制範囲（カード出現）: 出現アニメーションは無効化し、即時表示または `opacity` 150ms のみを許可する。
@@ -294,7 +295,7 @@ graph TB
   - 上記対象要素には `.motion-appear` を付与し、`useInViewMotion` の `isInView` に応じて `is-inview` を追加する。
   - ホバーは `.motion-hover` を付与した要素に限定し、ホバー対象はカード/ボタンのみとする。
 - 既存アニメーションの整理:
-  - `src/App.css` の `floatIn` / `fadeUp` は共通クラスへ移行し、`src/index.css` に集約する（App.cssは未使用のため移行で重複を除去）。
+  - `src/App.css` に存在する `floatIn` / `fadeUp` は共通クラスへ移行し、**`src/index.css` に集約** する（`src/App.css` は共通ルールの定義先にしない）。
 - Validation: reduce時は動きの量を最小化し、視認性を優先する。
 - Risks: 重要度の高い動作と非必須動作の線引きが曖昧になる可能性がある。
 
