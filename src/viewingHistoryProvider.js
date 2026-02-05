@@ -6,6 +6,26 @@ const normalizeLimit = (limit) => {
   return Math.floor(parsed)
 }
 
+const isNetworkError = (error) => {
+  if (!error) return false
+  const message = String(error.message ?? '')
+  return message.includes('Failed to fetch') || message.includes('NetworkError')
+}
+
+const isAuthError = (error) => {
+  if (!error) return false
+  if (error.status === 401) return true
+  const code = String(error.code ?? '')
+  if (code === 'PGRST301') return true
+  const message = String(error.message ?? '')
+  return message.includes('JWT') || message.includes('auth') || message.includes('Authentication')
+}
+
+const normalizeError = (error) => {
+  if (isAuthError(error)) return 'auth_required'
+  return isNetworkError(error) ? 'network' : 'unknown'
+}
+
 const mapMovieRow = (movie) => ({
   movieId: movie.movie_id,
   seriesId: movie.series_id ?? null,
@@ -55,7 +75,7 @@ export const createViewingHistoryProvider = (supabaseClient) => {
         .limit(limit)
 
       if (historyError) {
-        return { ok: false, error: 'unknown' }
+        return { ok: false, error: normalizeError(historyError) }
       }
 
       const movieIds = (historyRows ?? [])
@@ -72,7 +92,7 @@ export const createViewingHistoryProvider = (supabaseClient) => {
         .in('movie_id', movieIds)
 
       if (movieError) {
-        return { ok: false, error: 'unknown' }
+        return { ok: false, error: normalizeError(movieError) }
       }
 
       const { data: listRows, error: listError } = await supabaseClient
@@ -83,7 +103,7 @@ export const createViewingHistoryProvider = (supabaseClient) => {
         .limit(1)
 
       if (listError) {
-        return { ok: false, error: 'unknown' }
+        return { ok: false, error: normalizeError(listError) }
       }
 
       const listId = listRows?.[0]?.list_id ?? null
@@ -97,7 +117,7 @@ export const createViewingHistoryProvider = (supabaseClient) => {
           .in('movie_id', movieIds)
 
         if (error) {
-          return { ok: false, error: 'unknown' }
+          return { ok: false, error: normalizeError(error) }
         }
         listMovieRows = data ?? []
       }

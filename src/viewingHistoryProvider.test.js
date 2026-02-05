@@ -173,4 +173,64 @@ describe('ViewingHistoryProvider', () => {
 
     expect(result).toEqual({ ok: true, data: [] })
   })
+
+  it('Supabase未設定時はnot_configuredを返す', async () => {
+    const provider = createViewingHistoryProvider(null)
+
+    const result = await provider.fetchHistory()
+
+    expect(result).toEqual({ ok: false, error: 'not_configured' })
+  })
+
+  it('未ログイン時はauth_requiredを返す', async () => {
+    const { client } = buildHistorySupabaseMock({ sessionUserId: null })
+    const provider = createViewingHistoryProvider(client)
+
+    const result = await provider.fetchHistory()
+
+    expect(result).toEqual({ ok: false, error: 'auth_required' })
+  })
+
+  it('通信エラー時はnetworkを返す', async () => {
+    const historyError = { message: 'Failed to fetch' }
+    const { client } = buildHistorySupabaseMock({ historyError })
+    const provider = createViewingHistoryProvider(client)
+
+    const result = await provider.fetchHistory()
+
+    expect(result).toEqual({ ok: false, error: 'network' })
+  })
+
+  it('認証エラー時はauth_requiredを返す', async () => {
+    const listError = { code: 'PGRST301' }
+    const { client } = buildHistorySupabaseMock({
+      historyRows: [{ history_id: 1, movie_id: 'movie-1', clicked_at: '2026-02-03T10:00:00Z' }],
+      movieRows: [
+        {
+          movie_id: 'movie-1',
+          series_id: 'series-1',
+          movie_title: '動画1',
+          thumbnail_url: null,
+          favorite_count: 0,
+        },
+      ],
+      listError,
+    })
+    const provider = createViewingHistoryProvider(client)
+
+    const result = await provider.fetchHistory()
+
+    expect(result).toEqual({ ok: false, error: 'auth_required' })
+  })
+
+  it('limit指定を1-30に正規化する', async () => {
+    const { client, calls } = buildHistorySupabaseMock()
+    const provider = createViewingHistoryProvider(client)
+
+    await provider.fetchHistory({ limit: 50 })
+    await provider.fetchHistory({ limit: 0 })
+
+    expect(calls.historyLimitMock).toHaveBeenCalledWith(30)
+    expect(calls.historyLimitMock).toHaveBeenCalledWith(1)
+  })
 })
