@@ -12,7 +12,10 @@ function EpisodeListItem({ episode, isSelected = false, onSelect, onToggleOshi }
   return (
     <div
       ref={motion.ref}
-      className={buildMotionClassName('work-page__episode-card', motion)}
+      className={buildMotionClassName(
+        'work-page__episode-card card-primary card-interactive motion-hover',
+        motion
+      )}
     >
       <button
         type="button"

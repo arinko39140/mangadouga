@@ -20,7 +20,10 @@ function EpisodeListPanel({
       ) : episodes.length === 0 ? (
         <p className="work-page__status">話数が存在しません。</p>
       ) : (
-        <ul className="work-page__episode-list" aria-label="話数一覧のアイテム">
+        <ul
+          className="work-page__episode-list card-collection card-collection--list"
+          aria-label="話数一覧のアイテム"
+        >
           {episodes.map((episode) => {
             const isSelected = episode.id === selectedMovieId
             return (

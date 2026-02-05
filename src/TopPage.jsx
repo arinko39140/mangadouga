@@ -112,7 +112,7 @@ const buildMotionClassName = (baseClassName, motionState) => {
 const TopPageWorkCard = ({ item, navigateToMovieHandler, showMeta }) => {
   const motion = useInViewMotion()
   const className = buildMotionClassName(
-    'top-page__work-card card-interactive motion-hover',
+    'top-page__work-card card-primary card-interactive motion-hover',
     motion
   )
 
@@ -419,7 +419,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               <p className="top-page__status">該当する結果がありません。</p>
             ) : (
               <ul
-                className="top-page__list-items top-page__list-items--grid"
+                className="top-page__list-items top-page__list-items--grid card-collection card-collection--grid"
                 aria-label="検索結果のアイテム"
               >
                 {searchResults.map((item) => (
@@ -517,7 +517,10 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               {selectedFilterLabel}の一覧がありません。
             </p>
           ) : (
-            <ul className="top-page__list-items" aria-label="曜日別一覧のアイテム">
+            <ul
+              className="top-page__list-items card-collection card-collection--list"
+              aria-label="曜日別一覧のアイテム"
+            >
               {selectedList.map((item) => (
                 <li key={item.id} className="top-page__work-item">
                   {item.seriesId ? (
@@ -597,7 +600,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             </p>
           ) : (
             <ul
-              className="top-page__list-items top-page__list-items--grid"
+              className="top-page__list-items top-page__list-items--grid card-collection card-collection--grid"
               aria-label="過去100件のアイテム"
             >
               {recentListItems.map((item) => (
