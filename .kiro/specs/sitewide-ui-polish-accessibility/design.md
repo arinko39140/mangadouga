@@ -131,6 +131,25 @@ graph TB
 - コントラスト基準（AA相当）を満たす配色セットを定義する。
 - 対象範囲はReactページのみであることを明文化する。
 
+**Minimum Token Set（最小トークン定義）**
+| Token | 用途 | 最小基準/備考 |
+| --- | --- | --- |
+| `--color-text` | 本文テキスト | 4.5:1 以上（本文） |
+| `--color-text-strong` | 見出し/重要情報 | 3:1 以上（大きい文字） |
+| `--color-text-muted` | 補足/メタ情報 | 4.5:1 以上（本文相当） |
+| `--color-surface` | ページ背景 | 既定テーマの基調色 |
+| `--color-surface-elevated` | カード背景 | 画像/装飾上でも可読性確保 |
+| `--color-accent` | 強調/アクティブ | 色以外の手がかりと併用 |
+| `--focus-ring-color` | フォーカスリング | 3:1 以上 |
+| `--focus-ring-width` | フォーカスリング太さ | 2px 以上 |
+| `--shadow-card` | カード影 | 可読性を損なわない範囲 |
+| `--radius-card` | カード角丸 | 一貫した角丸基準 |
+| `--space-2`, `--space-3`, `--space-4` | 余白スケール | 主要間隔の共通化 |
+| `--font-body` | 本文フォント | 可読性優先 |
+| `--font-heading` | 見出しフォント | 階層の明確化 |
+| `--font-display` | 強調見出し | タイトル/重要情報 |
+| `--font-caption` | 補足テキスト | 小さめ・可読性維持 |
+
 **Dependencies**
 - Inbound: 各ページCSS — トークン参照 (P0)
 - Outbound: なし
@@ -363,7 +382,12 @@ graph TB
   - アイコン/非テキスト要素: 3:1 以上
   - フォーカスリング: 3:1 以上
 - 測定方法: 主要ページで画面キャプチャを取得し、コントラスト計測ツールで記録する。
-- 記録場所: 画面QAチェックリストに測定値と対象を記載する。
+- 記録場所: 本設計書内の「Contrast Measurement Log」セクションに測定値と対象を記載する。
+
+### Contrast Measurement Log（記録フォーマット）
+| Page | Element | Foreground/Background | Ratio | Tool | Date | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| TopPage | `h1` | `#000/#fff` | `7.0:1` | WebAIM | 2026-02-05 | 例 |
 
 ## Security Considerations
 - 認証/権限を変更しないため、セキュリティ影響は限定的。
