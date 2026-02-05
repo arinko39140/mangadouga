@@ -179,6 +179,12 @@ graph TB
 - Validation: reduce時の代替表現（フェードのみ/移動停止）を明示。
 - Risks: 必須動作と非必須動作の線引きが曖昧だと不整合が出る。
 
+**Animation Trigger Policy（カード出現/初回ロード）**
+- 実装方式: Intersection Observer で要素可視化を検知し、`is-visible` を付与する。
+- 初回ロード: ページ単位で `data-animate-once` を付与し、初回のみ再生する。
+- 命名規約: `is-visible`（可視化）、`is-animated-once`（初回限定）を標準とする。
+- reduce時: `@media (prefers-reduced-motion: reduce)` で移動・拡大を停止し、必要に応じてフェードのみ許可する（または完全停止）。
+
 #### FocusRingPolicy
 | Field | Detail |
 |-------|--------|
@@ -214,6 +220,10 @@ graph TB
 - `Esc` でモーダルを閉じる（既存仕様がある場合はそれに準拠）。
 - モーダルを閉じたら、開く前にフォーカスがあった要素に戻す。
 - 背景要素は `aria-hidden="true"` または `inert` 相当でフォーカス不可にする。
+
+**Modal Scope Note（現状）**
+- 現時点のコードベースに明確なモーダル実装は存在しない。
+- 今後モーダルを追加する場合は、上記 Focus Contract を標準仕様として適用する。
 
 #### ContentStyleBridge
 | Field | Detail |
