@@ -204,6 +204,40 @@ describe('UserPage', () => {
     })
   })
 
+  it('マイページなら閲覧履歴へのリンクを表示する', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '美咲', iconUrl: null, links: [] },
+      }),
+    }
+    const listProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { listId: 'list-1', status: 'public', favoriteCount: 0, isFavorited: false },
+      }),
+      toggleFavorite: vi.fn(),
+    }
+    const seriesProvider = {
+      fetchSeriesSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { items: [] },
+      }),
+    }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
+
+    const historyLink = await screen.findByRole('link', { name: '閲覧履歴' })
+    expect(historyLink).toHaveAttribute('href', '/history/')
+  })
+
   it('ユーザー情報取得後に外部リンクと推し作品の取得を開始する', async () => {
     const listDeferred = createDeferred()
     const seriesDeferred = createDeferred()

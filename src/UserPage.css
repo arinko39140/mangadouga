@@ -64,6 +64,13 @@
   font-size: 0.85rem;
 }
 
+.user-page__history-link {
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .user-profile-edit {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 20px;

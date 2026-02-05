@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
@@ -711,13 +711,21 @@ function UserPage({
             isLoading={profileLoading}
             actions={
               isOwner ? (
-                <button
-                  type="button"
-                  className="button button--ghost user-page__edit-button"
-                  onClick={() => setIsEditingProfile(true)}
-                >
-                  プロフィール編集
-                </button>
+                <>
+                  <Link
+                    to="/history/"
+                    className="button button--ghost user-page__history-link"
+                  >
+                    閲覧履歴
+                  </Link>
+                  <button
+                    type="button"
+                    className="button button--ghost user-page__edit-button"
+                    onClick={() => setIsEditingProfile(true)}
+                  >
+                    プロフィール編集
+                  </button>
+                </>
               ) : null
             }
           />
