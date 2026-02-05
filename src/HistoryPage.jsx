@@ -100,6 +100,14 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider }) {
                     </span>
                   ) : null}
                 </div>
+                {item.seriesId ? (
+                  <Link
+                    className="history-card__link"
+                    to={`/series/${item.seriesId}/?selectedMovieId=${item.movieId}`}
+                  >
+                    話数ページへ
+                  </Link>
+                ) : null}
                 <p className="history-card__meta">最終閲覧: {item.clickedAt}</p>
                 <p className="history-card__meta">推し数: {item.favoriteCount ?? 0}</p>
               </div>

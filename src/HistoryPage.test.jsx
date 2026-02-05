@@ -67,6 +67,8 @@ describe('HistoryPage', () => {
     expect(screen.getByText('最終閲覧: 2026-02-04T10:00:00Z')).toBeInTheDocument()
     expect(screen.getByText('推し数: 12')).toBeInTheDocument()
     expect(screen.getByLabelText('推しバッジ')).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: '話数ページへ' })
+    expect(link).toHaveAttribute('href', '/series/series-1/?selectedMovieId=movie-1')
   })
 
   it('履歴がない場合は空状態とトップ導線を表示する', async () => {
