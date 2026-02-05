@@ -38,7 +38,7 @@ const OshiListCard = ({ item, isUpdating, isOwner, onToggle }) => {
                   {item.iconUrl ? (
                     <img src={item.iconUrl} alt="" aria-hidden="true" />
                   ) : (
-                    <span className="oshi-lists__avatar-placeholder">?</span>
+                    <span className="oshi-lists__avatar-placeholder media-text">?</span>
                   )}
                 </span>
                 <span className="oshi-lists__title-name text-strong">
@@ -51,7 +51,7 @@ const OshiListCard = ({ item, isUpdating, isOwner, onToggle }) => {
                   {item.iconUrl ? (
                     <img src={item.iconUrl} alt="" aria-hidden="true" />
                   ) : (
-                    <span className="oshi-lists__avatar-placeholder">?</span>
+                    <span className="oshi-lists__avatar-placeholder media-text">?</span>
                   )}
                 </span>
                 <span className="oshi-lists__title-name text-strong">
