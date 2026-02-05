@@ -247,6 +247,10 @@ graph TB
 **Implementation Notes**
 - Integration: 既存アニメーションを基準化し、reduce時の代替表現を明示する。
 - `prefers-reduced-motion` の適用場所: `src/index.css` に共通ルールを集約し、ページCSSはクラス/変数参照のみとする。
+- 既存アニメーション監査: 既存CSS内の `animation` / `transition` を棚卸しし、以下の方針で整理する。
+  - 原則: reduce時は全アニメーション/トランジションを無効化（継続時間を最小化）
+  - 例外: 視認性のための通知・状態変化のみ許容し、`opacity` のみ使用する
+  - 実装: `@media (prefers-reduced-motion: reduce)` で共通上書きを定義し、例外クラスのみ個別許可する
 - 適用方式: 共通クラス（例: `.motion-fade`, `.motion-rise`, `.motion-hover`）を定義し、各ページで参照する。
 - カード出現トリガー: `IntersectionObserver` を用いて `isInView` を判定し、`motion-appear` クラスを付与する。
 - 付与ロジックの責務: 共通Hook（例: `useInViewMotion`）に集約し、各ページ/カードはHookの返却値でクラス付与のみを行う。
@@ -295,6 +299,12 @@ graph TB
 **Implementation Notes**
 - Integration: `outline: none` を置換し、共通リング規則を全ページに適用する。
 - 監査範囲: 対象のReactページのCSSと、`onClick` を持つ要素（JSX）を対象に監査する。
+- 主要操作の定義（キーボード到達性の基準）:
+  - ナビゲーション（グローバル/ページ内）
+  - カード選択/詳細遷移
+  - お気に入り/推し切替
+  - ソート/フィルタ/表示切替
+  - ページ内の主要CTA（再試行/保存/キャンセルなど）
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: フォーカストラップは必須とし、モーダル内のフォーカス可能要素のみを循環させる。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: `Esc` で閉じる場合、閉じた後は起点要素にフォーカスを戻す。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: 背景要素は `aria-hidden` または `inert` 相当でフォーカス到達を遮断する。
@@ -303,6 +313,9 @@ graph TB
   - `onClick` を持つ要素を抽出し、`button`/`a`以外を是正対象にする。
   - フォーカス順に不要な要素（`disabled` や操作不能UI）が含まれる場合は除外する。
   - `role="button"` や `tabindex="0"` は原則例外扱いとし、やむを得ない場合のみ使用する。
+- 監査成果物（ハイブリッド方式）:
+  - 共通チェックリスト: フォーカス可視化/順序/セマンティクス/例外条件の確認項目
+  - 重点ページの到達要素一覧: TopPage / OshiListsPage / WorkPage / HistoryPage の「主要操作」到達対象を列挙
 - 監査の優先順位と例外条件:
   - 優先対象: TopPage / OshiListsPage / WorkPage / HistoryPage
   - 次点: UserPage / UserOshiSeriesPage
