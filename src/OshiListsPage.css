@@ -5,7 +5,7 @@
 
 .oshi-lists h1 {
   margin: 0;
-  color: #2a1e2f;
+  color: var(--color-text-strong);
 }
 
 .oshi-lists__controls {
@@ -127,7 +127,7 @@
 .oshi-lists__title {
   margin: 0;
   font-size: 1.1rem;
-  color: #2a1e2f;
+  color: var(--color-text-strong);
 }
 
 .oshi-lists__user {
@@ -178,7 +178,7 @@
 
 .oshi-lists__meta {
   margin: 0;
-  color: #6a596b;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 

@@ -57,4 +57,9 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('.card-collection--grid')
     expect(css).toContain('.card-collection--list')
   })
+
+  it('defines emphasis and media text helpers', () => {
+    expect(css).toContain('.text-strong')
+    expect(css).toContain('.media-text')
+  })
 })

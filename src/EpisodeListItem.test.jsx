@@ -20,7 +20,9 @@ describe('EpisodeListItem', () => {
       'src',
       '/thumb.png'
     )
-    expect(screen.getByText('第1話')).toBeInTheDocument()
+    const title = screen.getByText('第1話')
+    expect(title).toBeInTheDocument()
+    expect(title).toHaveClass('text-strong')
     expect(screen.getByText('公開日: 2026-01-01T00:00:00Z')).toBeInTheDocument()
   })
 
@@ -37,7 +39,9 @@ describe('EpisodeListItem', () => {
       />
     )
 
-    expect(screen.getByText('サムネイルなし')).toBeInTheDocument()
+    const placeholder = screen.getByText('サムネイルなし')
+    expect(placeholder).toBeInTheDocument()
+    expect(placeholder).toHaveClass('media-text')
   })
 
   it('公開日が未設定の場合は未設定であることを表示する', () => {

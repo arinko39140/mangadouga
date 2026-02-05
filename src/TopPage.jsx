@@ -448,14 +448,14 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                             alt={`${item.title}のサムネイル`}
                           />
                         ) : (
-                          <span className="top-page__work-thumb-placeholder">
+                          <span className="top-page__work-thumb-placeholder media-text">
                             サムネイルなし
                           </span>
                         )}
                       </div>
                       {item.seriesId ? (
                         <Link
-                          className="top-page__work-link"
+                          className="top-page__work-link text-strong"
                           to={
                             item.id
                               ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
@@ -472,9 +472,9 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                           {item.title}
                         </Link>
                       ) : (
-                        <span className="top-page__work-title">{item.title}</span>
+                        <span className="top-page__work-title text-strong">{item.title}</span>
                       )}
-                      <p className="top-page__work-meta">
+                      <p className="top-page__work-meta text-muted">
                         投稿日: {formatPublishedDate(item)}
                       </p>
                     </div>
@@ -544,19 +544,19 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                           alt={`${item.title}のサムネイル`}
                         />
                       ) : (
-                        <span className="top-page__work-thumb-placeholder">
-                          サムネイルなし
-                        </span>
-                      )}
-                    </div>
-                    {item.seriesId ? (
-                      <Link
-                        className="top-page__work-link"
-                        to={
-                          item.id
-                            ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
-                            : `/series/${item.seriesId}/`
-                        }
+                      <span className="top-page__work-thumb-placeholder media-text">
+                        サムネイルなし
+                      </span>
+                    )}
+                  </div>
+                  {item.seriesId ? (
+                    <Link
+                      className="top-page__work-link text-strong"
+                      to={
+                        item.id
+                          ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                          : `/series/${item.seriesId}/`
+                      }
                         onClick={(event) => {
                           event.preventDefault()
                           navigateToMovieHandler({
@@ -568,11 +568,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                         {item.title}
                       </Link>
                     ) : (
-                      <span className="top-page__work-title">{item.title}</span>
-                    )}
-                  </div>
-                </li>
-              ))}
+                    <span className="top-page__work-title text-strong">{item.title}</span>
+                  )}
+                </div>
+              </li>
+            ))}
             </ul>
           )}
         </section>

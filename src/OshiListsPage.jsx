@@ -135,7 +135,7 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
               >
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
-                    <h2 className="oshi-lists__title">
+                    <h2 className="oshi-lists__title text-strong">
                       {canLinkToUser ? (
                         <Link className="oshi-lists__user" to={`/users/${item.userId}/`}>
                           <span className="oshi-lists__avatar" aria-hidden="true">
@@ -145,7 +145,9 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                               <span className="oshi-lists__avatar-placeholder">?</span>
                             )}
                           </span>
-                          <span className="oshi-lists__title-name">{item.name}</span>
+                          <span className="oshi-lists__title-name text-strong">
+                            {item.name}
+                          </span>
                         </Link>
                       ) : (
                         <span className="oshi-lists__user">
@@ -156,7 +158,9 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
                               <span className="oshi-lists__avatar-placeholder">?</span>
                             )}
                           </span>
-                          <span className="oshi-lists__title-name">{item.name}</span>
+                          <span className="oshi-lists__title-name text-strong">
+                            {item.name}
+                          </span>
                         </span>
                       )}
                     </h2>

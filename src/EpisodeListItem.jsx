@@ -21,11 +21,13 @@ function EpisodeListItem({
           {episode.thumbnailUrl ? (
             <img src={episode.thumbnailUrl} alt={`${episode.title}のサムネイル`} />
           ) : (
-            <span className="work-page__episode-thumb-placeholder">サムネイルなし</span>
+            <span className="work-page__episode-thumb-placeholder media-text">
+              サムネイルなし
+            </span>
           )}
         </div>
         <div className="work-page__episode-meta">
-          <p className="work-page__episode-title">{episode.title}</p>
+          <p className="work-page__episode-title text-strong">{episode.title}</p>
           <p className="work-page__episode-date">公開日: {publishedLabel}</p>
         </div>
       </button>

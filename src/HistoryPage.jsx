@@ -99,12 +99,14 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
                 {item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt={item.title} />
                 ) : (
-                  <span className="history-card__thumb-placeholder">サムネイル準備中</span>
+                  <span className="history-card__thumb-placeholder media-text">
+                    サムネイル準備中
+                  </span>
                 )}
               </div>
               <div className="history-card__body">
                 <div className="history-card__title-row">
-                  <h2 className="history-card__title">{item.title}</h2>
+                  <h2 className="history-card__title text-strong">{item.title}</h2>
                   {item.isOshi ? (
                     <span className="history-card__oshi" aria-label="推しバッジ">
                       推
@@ -130,7 +132,7 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
                     作品ページへ
                   </Link>
                 ) : null}
-                <p className="history-card__meta">最終閲覧: {item.clickedAt}</p>
+                <p className="history-card__meta text-muted">最終閲覧: {item.clickedAt}</p>
               </div>
             </article>
           </li>

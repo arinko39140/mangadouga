@@ -145,13 +145,13 @@
 .top-page__work-link,
 .top-page__work-title {
   font-weight: 600;
-  color: rgba(44, 32, 50, 0.9);
+  color: var(--color-text-strong);
 }
 
 .top-page__work-meta {
   margin: 0;
   font-size: 0.85rem;
-  color: rgba(44, 32, 50, 0.65);
+  color: var(--color-text-muted);
 }
 
 .top-page__work-card {
@@ -179,7 +179,7 @@
 
 .top-page__work-thumb-placeholder {
   font-size: 0.85rem;
-  color: rgba(44, 32, 50, 0.65);
+  color: #fff;
 }
 
 .top-page__work-link {
