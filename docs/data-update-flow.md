@@ -20,6 +20,9 @@
 | `user_series.csv` | ユーザーとシリーズの関連 | `user_id`, `series_id`, `can_display` |
 | `users.csv` | ユーザー情報 | `user_id`, `name`, `X_url`, `youtube_url`, `other_url` |
 
+## データ一覧（JSON）
+現時点で `src/` から参照される JSON は確認できない。追加・導入した場合は本ドキュメントに追記する。
+
 ## データ一覧（Supabase）
 | テーブル | 用途 | 反映先（画面） |
 | --- | --- | --- |
@@ -31,6 +34,26 @@
 | `user_list` | ユーザーの推し登録 | お気に入り/マイリスト
 | `user_series` | ユーザーのシリーズ登録 | シリーズ表示
 | `history` | 視聴履歴 | 履歴ページ
+
+## 画面/プロバイダ対応表（Supabase）
+| 画面 | 主なプロバイダ/ロジック | 参照/更新テーブル |
+| --- | --- | --- |
+| TopPage | `createWeekdayDataProvider` | `movie` |
+| OshiListsPage | `createOshiListCatalogProvider` | `list`, `users`, `user_list` |
+| OshiListPage | `createOshiListPageProvider` | `list`, `users`, `list_movie`, `user_list`, `movie` |
+| OshiMyListPage | `createOshiListDataProvider` | `list`, `list_movie`, `movie` |
+| OshiFavoritesPage | `createOshiFavoritesProvider` | `list`, `users`, `user_list` |
+| UserPage | `createUserPageProvider`, `createUserOshiListProvider`, `createUserSeriesProvider`, `createOshiFavoritesProvider` | `users`, `list`, `list_movie`, `user_list`, `user_series`, `series`, `movie` |
+| UserOshiSeriesPage | `createUserSeriesProvider`, `createProfileVisibilityProvider` | `user_series`, `series`, `profile_visibility` |
+| HistoryPage | `createViewingHistoryProvider` | `history`, `movie`, `list`, `list_movie` |
+| WorkPage | `createWorkPageDataProvider` | `series`, `movie`, `list_movie`, `user_series`, `list` |
+
+## 更新スクリプト対応表（Supabase）
+| スクリプト | 主な対象テーブル | 目的 |
+| --- | --- | --- |
+| `scripts/seed-oshi-list-data.mjs` | `users`, `list`, `movie`, `list_movie`, `user_list` | 参考データの投入 |
+| `scripts/sync-users-and-lists.mjs` | `users`, `list`, `user_list` | 参照整合の補完（ユーザー/リスト） |
+| `scripts/update-recent-movie-titles.mjs` | `movie` | 直近作品タイトルの更新 |
 
 ## 更新手順（Supabase）
 1. `.env.local` に `VITE_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` を設定する。

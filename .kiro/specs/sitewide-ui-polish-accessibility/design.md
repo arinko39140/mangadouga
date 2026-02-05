@@ -59,7 +59,7 @@
 
 ### Existing Architecture Analysis
 - `src/index.css` が基本タイポ/背景/フォントを定義し、各ページCSSで色や影が分散している。
-- `src/App.css` に `outline: none` の記述があり、フォーカス可視性が不足している。
+- `src/App.css` に `outline: none` の記述があるが、現状は未インポートのため影響は限定的。`LoginPage`（対象外）には `outline: none` が残っているため、今後の共通ポリシーで上書きが必要。
 - ページ単位でカード/ナビゲーション/ボタンのスタイルが個別定義されている。
 - `docs/data-update-flow.md` にデータ更新手順が存在し、CSV/JSON/Supabaseの範囲が整理されている。
 
@@ -255,6 +255,17 @@ graph TB
 - Reduce時の具体抑制範囲（カード出現）: 出現アニメーションは無効化し、即時表示または `opacity` 150ms のみを許可する。
 - Reduce時の具体抑制範囲（ホバー）: `transform` や大きな `box-shadow` 変化は無効化し、色/下線など軽微な変化のみとする。
 - Reduce時の具体抑制範囲（例外）: 重要通知の視認性確保のため、`opacity` 以外の動きは使用しない。
+- 初回ロードの適用対象（共通）: `AppShell` 内の `.app-shell__content` を初回ロードの起点とし、全ページのルート要素に `.motion-load` を付与する（ページ単位での個別付与は避ける）。
+- カード出現の適用対象（重点ページ）:
+  - TopPage: `.top-page__nav`, `.top-page__list`, `.top-page__link`, `.top-page__playback`, `.top-page__work-card`
+  - OshiListsPage: `.oshi-lists__card`
+  - WorkPage: 作品エピソード/リストのカード要素（`EpisodeListItem` のルート）
+  - HistoryPage: `.history-card`
+- 付与ルール:
+  - 上記対象要素には `.motion-appear` を付与し、`useInViewMotion` の `isInView` に応じて `is-inview` を追加する。
+  - ホバーは `.motion-hover` を付与した要素に限定し、ホバー対象はカード/ボタンのみとする。
+- 既存アニメーションの整理:
+  - `src/App.css` の `floatIn` / `fadeUp` は共通クラスへ移行し、`src/index.css` に集約する（App.cssは未使用のため移行で重複を除去）。
 - Validation: reduce時は動きの量を最小化し、視認性を優先する。
 - Risks: 重要度の高い動作と非必須動作の線引きが曖昧になる可能性がある。
 
@@ -325,6 +336,10 @@ graph TB
 - Integration: `docs/data-update-flow.md` を単一の参照元として維持し、SSOTはSupabaseである旨を明文化する。
 - Validation: 更新後チェックリストを常に最新化する。
 - Risks: データ経路の変更が反映されないとドキュメントが形骸化する。
+- Data Mapping: `docs/data-update-flow.md` に以下を明記する。
+  - CSV/JSON/DB の対象一覧と反映先（画面/プロバイダ）
+  - 更新スクリプトごとの対象テーブル
+  - 更新後チェック項目と代表的な失敗例
 - Update Responsibility:
   - 更新担当者: CSV/JSONやデータ内容の更新時に、手順・チェックリスト・注意点を更新する。
   - 開発者: Supabaseスキーマ/スクリプト/反映先の変更時に、データ一覧・反映先・更新トリガーを更新する。
