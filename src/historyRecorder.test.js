@@ -21,6 +21,9 @@ const buildRecorderSupabaseMock = ({ sessionUserId = 'user-1', sessionError = nu
 
 describe('HistoryRecorder', () => {
   it('明示操作ごとに履歴を1件記録する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-05T09:00:00Z'))
+
     const { client, calls } = buildRecorderSupabaseMock()
     const recorder = createHistoryRecorder(client)
 
@@ -29,6 +32,9 @@ describe('HistoryRecorder', () => {
       clickedAt: '2026-02-05T09:00:00Z',
       source: 'navigate',
     })
+
+    vi.advanceTimersByTime(600)
+
     const second = await recorder.recordView({
       movieId: 'movie-1',
       clickedAt: '2026-02-05T09:01:00Z',
@@ -50,6 +56,8 @@ describe('HistoryRecorder', () => {
 
     expect(first).toEqual({ ok: true, data: { historyId: 11 } })
     expect(second).toEqual({ ok: true, data: { historyId: 11 } })
+
+    vi.useRealTimers()
   })
 
   it('未ログイン時はauth_requiredを返し、記録しない', async () => {
@@ -64,5 +72,38 @@ describe('HistoryRecorder', () => {
 
     expect(result).toEqual({ ok: false, error: 'auth_required' })
     expect(calls.insertMock).not.toHaveBeenCalled()
+  })
+
+  it('同一movieIdとsourceの連続発火は抑止ウィンドウ内で記録しない', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-05T09:00:00Z'))
+
+    const { client, calls } = buildRecorderSupabaseMock()
+    const recorder = createHistoryRecorder(client)
+
+    await recorder.recordView({
+      movieId: 'movie-1',
+      clickedAt: '2026-02-05T09:00:00Z',
+      source: 'play',
+    })
+
+    vi.advanceTimersByTime(200)
+
+    await recorder.recordView({
+      movieId: 'movie-1',
+      clickedAt: '2026-02-05T09:00:00Z',
+      source: 'play',
+    })
+
+    vi.advanceTimersByTime(401)
+
+    await recorder.recordView({
+      movieId: 'movie-1',
+      clickedAt: '2026-02-05T09:00:00Z',
+      source: 'play',
+    })
+
+    expect(calls.insertMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
   })
 })

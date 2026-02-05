@@ -20,32 +20,47 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
-export const createHistoryRecorder = (supabaseClient) => ({
-  async recordView(input) {
-    const movieId = typeof input?.movieId === 'string' ? input.movieId.trim() : ''
-    const clickedAt = typeof input?.clickedAt === 'string' ? input.clickedAt.trim() : ''
+const SUPPRESS_WINDOW_MS = 400
 
-    if (!movieId || !clickedAt) {
-      return { ok: false, error: 'invalid_input' }
-    }
+export const createHistoryRecorder = (supabaseClient) => {
+  const lastRecords = new Map()
 
-    if (!supabaseClient || typeof supabaseClient.from !== 'function') {
-      return { ok: false, error: 'not_configured' }
-    }
+  return {
+    async recordView(input) {
+      const movieId = typeof input?.movieId === 'string' ? input.movieId.trim() : ''
+      const clickedAt = typeof input?.clickedAt === 'string' ? input.clickedAt.trim() : ''
+      const source = typeof input?.source === 'string' ? input.source : ''
 
-    const userResult = await resolveCurrentUserId(supabaseClient)
-    if (!userResult.ok) {
-      return { ok: false, error: userResult.error }
-    }
+      if (!movieId || !clickedAt) {
+        return { ok: false, error: 'invalid_input' }
+      }
 
-    const { data, error } = await supabaseClient
-      .from('history')
-      .insert({ user_id: userResult.userId, movie_id: movieId, clicked_at: clickedAt })
+      if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+        return { ok: false, error: 'not_configured' }
+      }
 
-    if (error) {
-      return { ok: false, error: normalizeError(error) }
-    }
+      const userResult = await resolveCurrentUserId(supabaseClient)
+      if (!userResult.ok) {
+        return { ok: false, error: userResult.error }
+      }
 
-    return { ok: true, data: { historyId: data?.[0]?.history_id } }
-  },
-})
+      const key = `${movieId}:${source}`
+      const now = Date.now()
+      const lastRecord = lastRecords.get(key)
+      if (typeof lastRecord === 'number' && now - lastRecord < SUPPRESS_WINDOW_MS) {
+        return { ok: true, data: { historyId: undefined } }
+      }
+      lastRecords.set(key, now)
+
+      const { data, error } = await supabaseClient
+        .from('history')
+        .insert({ user_id: userResult.userId, movie_id: movieId, clicked_at: clickedAt })
+
+      if (error) {
+        return { ok: false, error: normalizeError(error) }
+      }
+
+      return { ok: true, data: { historyId: data?.[0]?.history_id } }
+    },
+  }
+}
