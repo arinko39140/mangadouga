@@ -262,22 +262,25 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate, navigateTo
     if (items.length === 0) {
       return <p>推し作品がありません。</p>
     }
+    const listClassName = `oshi-lists__items oshi-lists__items--${viewMode} card-collection ${
+      viewMode === 'grid' ? 'card-collection--grid' : 'card-collection--list'
+    }`
+
     return (
-      <ul
-        className={`oshi-lists__items oshi-lists__items--${viewMode}`}
-        aria-label="推し作品一覧"
-      >
+      <ul className={listClassName} aria-label="推し作品一覧">
         {items.map((item) => {
           const thumbnailUrl = resolveThumbnailUrl(item)
           const isUpdating = oshiMovieUpdatingIds.includes(item.id)
           return (
             <li key={item.id} className="oshi-lists__item">
-              <article className="oshi-lists__card">
+              <article className="oshi-lists__card card-primary card-interactive motion-hover">
                 <div className="oshi-lists__thumb">
                   {thumbnailUrl ? (
                     <img src={thumbnailUrl} alt={`${item.title}のサムネイル`} />
                   ) : (
-                    <span className="oshi-lists__thumb-placeholder">サムネイル準備中</span>
+                    <span className="oshi-lists__thumb-placeholder media-text">
+                      サムネイル準備中
+                    </span>
                   )}
                 </div>
                 <div className="oshi-lists__body">

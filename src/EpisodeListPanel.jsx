@@ -21,7 +21,7 @@ function EpisodeListPanel({
         <p className="work-page__status">話数が存在しません。</p>
       ) : (
         <ul
-          className="work-page__episode-list card-collection card-collection--list"
+          className="work-page__episode-list card-collection card-collection--grid"
           aria-label="話数一覧のアイテム"
         >
           {episodes.map((episode) => {

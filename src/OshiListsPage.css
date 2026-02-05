@@ -57,6 +57,10 @@
   gap: var(--space-4);
 }
 
+.oshi-lists__items--grid.card-collection--grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .oshi-lists__items--list {
   grid-template-columns: 1fr;
 }

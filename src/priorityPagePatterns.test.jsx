@@ -184,7 +184,7 @@ describe('重点ページのカード/ナビ/レイアウト整合性', () => {
 
     const episodeList = await screen.findByRole('list', { name: '話数一覧のアイテム' })
     expect(episodeList).toHaveClass('card-collection')
-    expect(episodeList).toHaveClass('card-collection--list')
+    expect(episodeList).toHaveClass('card-collection--grid')
 
     const episodeCard = screen.getByText('話数カード').closest('.work-page__episode-card')
     expect(episodeCard).toHaveClass('card-primary')

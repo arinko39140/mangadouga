@@ -30,3 +30,7 @@
   font-weight: 600;
   text-decoration: underline;
 }
+
+.work-page__episode-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
