@@ -59,7 +59,8 @@
 
 ### Existing Architecture Analysis
 - `src/index.css` が基本タイポ/背景/フォントを定義し、各ページCSSで色や影が分散している。
-- `src/App.css` に `outline: none` の記述があるが、現状は未インポートのため影響は限定的。`LoginPage`（対象外）には `outline: none` が残っているため、今後の共通ポリシーで上書きが必要。
+- `src/App.css` は現状未インポートのため、共通ルールは `src/index.css` を単一ソースとして集約する必要がある。
+- `LoginPage`（対象外）には `outline: none` が残っているため、今後の共通ポリシーで上書きが必要。
 - ページ単位でカード/ナビゲーション/ボタンのスタイルが個別定義されている。
 - `docs/data-update-flow.md` にデータ更新手順が存在し、CSV/JSON/Supabaseの範囲が整理されている。
 
@@ -112,10 +113,10 @@ graph TB
 | Component | Domain/Layer | Intent | Req Coverage | Key Dependencies (P0/P1) | Contracts |
 |-----------|--------------|--------|--------------|--------------------------|-----------|
 | UiTokenSheet | Style | 色/タイポ/余白/影の共通トークンを提供 | 1.1, 1.3, 1.4, 1.5, 2.1, 2.3, 2.5, 3.5, 7.1, 7.4 | `src/index.css` (P0) | State |
-| NavigationPatternLibrary | Style | ナビゲーションのレイアウト/階層/状態表現を統一 | 1.2, 3.5 | `src/TopPage.css` (P0) | State |
-| CardPatternLibrary | Style | カード/ボタン/バッジ/タグの共通ルールを整理 | 2.2, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 7.2, 7.3 | `src/App.css`, `src/OshiListsPage.css`, `src/HistoryPage.css` (P0) | State |
-| MotionPolicy | Style | アニメーション基準とreduce対応 | 4.1, 4.2, 4.3, 4.4, 4.5 | `src/App.css` (P0) | State |
-| FocusRingPolicy | Style | フォーカスリングとキーボード操作規則 | 2.3, 3.3, 6.1, 6.2, 6.3, 6.4, 6.5 | `src/App.css`, `src/TopPage.css` (P0) | State |
+| NavigationPatternLibrary | Style | ナビゲーションのレイアウト/階層/状態表現を統一 | 1.2, 3.5 | `src/index.css`, `src/TopPage.css` (P0) | State |
+| CardPatternLibrary | Style | カード/ボタン/バッジ/タグの共通ルールを整理 | 2.2, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 7.2, 7.3 | `src/index.css`, 各ページCSS (P0) | State |
+| MotionPolicy | Style | アニメーション基準とreduce対応 | 4.1, 4.2, 4.3, 4.4, 4.5 | `src/index.css`, 各ページCSS (P0) | State |
+| FocusRingPolicy | Style | フォーカスリングとキーボード操作規則 | 2.3, 3.3, 6.1, 6.2, 6.3, 6.4, 6.5 | `src/index.css`, `src/TopPage.css` (P0) | State |
 | DataUpdateGuide | Docs | CSV/JSON/Supabase更新フローの明文化 | 5.1, 5.2, 5.3, 5.4, 5.5 | `docs/data-update-flow.md` (P0) | Doc |
 
 ### Style Layer
@@ -168,10 +169,10 @@ graph TB
 | `--space-2` | `8px` | 余白スケール |
 | `--space-3` | `12px` | 余白スケール |
 | `--space-4` | `16px` | 余白スケール |
-| `--font-body` | `Inter` | 本文 |
-| `--font-heading` | `M PLUS Rounded 1c` | 見出し |
-| `--font-display` | `M PLUS Rounded 1c` | 強調見出し |
-| `--font-caption` | `Inter` | 補足 |
+| `--font-body` | `Zen Kaku Gothic New` | 本文 |
+| `--font-heading` | `Playfair Display` | 見出し |
+| `--font-display` | `Playfair Display` | 強調見出し |
+| `--font-caption` | `Zen Kaku Gothic New` | 補足 |
 
 **Dependencies**
 - Inbound: 各ページCSS — トークン参照 (P0)
@@ -186,7 +187,8 @@ graph TB
 - Concurrency strategy: 非同期更新なし
 
 **Implementation Notes**
-- Integration: `src/index.css` をトークンの単一ソースとし、ページCSSは参照に寄せる。
+- Integration: `src/index.css` をトークンと共通ルール（カード/ナビ/フォーカス/モーション）の単一ソースとし、ページCSSは参照に寄せる。`src/main.jsx` で `src/index.css` を読み込むことを前提とする。
+- Font loading: `src/index.css` にフォント読み込み（`@import` または `@font-face`）とフォールバックスタックを定義し、全ページで一貫させる。
 - Validation: 本文/見出し/補足/ボタンラベル/フォーカスリングのコントラストを測定対象に含める。
 - Risks: `content/` とのトーン差異が残るため、別フェーズで橋渡しを検討する。
 
