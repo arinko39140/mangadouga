@@ -88,10 +88,13 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
       )
     }
     return (
-      <ul className="history-list" aria-label="閲覧履歴一覧">
+      <ul
+        className="history-list card-collection card-collection--grid"
+        aria-label="閲覧履歴一覧"
+      >
         {items.map((item) => (
           <li key={item.historyId} className="history-list__item">
-            <article className="history-card">
+            <article className="history-card card-secondary">
               <div className="history-card__thumb">
                 {item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt={item.title} />

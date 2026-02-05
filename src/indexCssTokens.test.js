@@ -49,4 +49,12 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('.nav-pattern__item')
     expect(css).toContain('.nav-pattern__item.is-active')
   })
+
+  it('defines shared card patterns and collection layouts', () => {
+    expect(css).toContain('.card-primary')
+    expect(css).toContain('.card-secondary')
+    expect(css).toContain('.card-collection')
+    expect(css).toContain('.card-collection--grid')
+    expect(css).toContain('.card-collection--list')
+  })
 })

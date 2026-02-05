@@ -51,12 +51,10 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 1.2rem;
 }
 
 .oshi-lists__items--grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .oshi-lists__items--list {
@@ -64,12 +62,8 @@
 }
 
 .oshi-lists__card {
-  background: #fffaf6;
-  border-radius: 20px;
-  border: 1px solid rgba(140, 110, 120, 0.16);
   display: grid;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(43, 27, 57, 0.08);
 }
 
 .oshi-lists__card.is-inactive {
@@ -254,24 +248,12 @@
   border: 1px solid rgba(141, 44, 36, 0.2);
 }
 
-@media (max-width: 1024px) {
-  .oshi-lists__items--grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 840px) {
-  .oshi-lists__items--grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 720px) {
   .oshi-lists__items--list .oshi-lists__card {
     grid-template-columns: 1fr;
   }
 
   .oshi-lists__items--grid {
-    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 }

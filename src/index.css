@@ -138,3 +138,53 @@ a {
   border-color: rgba(255, 107, 107, 0.55);
   color: var(--color-text-strong);
 }
+
+/* Card patterns */
+.card-primary,
+.card-secondary {
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(43, 30, 27, 0.12);
+  box-shadow: var(--shadow-card);
+  background: var(--color-surface-elevated);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.card-primary {
+  padding: var(--space-4);
+}
+
+.card-secondary {
+  padding: var(--space-3);
+  border-color: rgba(43, 30, 27, 0.08);
+  box-shadow: 0 10px 20px rgba(43, 30, 27, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.card-collection {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.card-collection--grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card-collection--list {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 900px) {
+  .card-collection--grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .card-collection--grid {
+    grid-template-columns: 1fr;
+  }
+}
