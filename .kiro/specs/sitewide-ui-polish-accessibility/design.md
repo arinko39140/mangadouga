@@ -230,6 +230,7 @@ graph TB
 - `prefers-reduced-motion` の適用場所: `src/index.css` に共通ルールを集約し、ページCSSはクラス/変数参照のみとする。
 - 適用方式: 共通クラス（例: `.motion-fade`, `.motion-rise`, `.motion-hover`）を定義し、各ページで参照する。
 - カード出現トリガー: `IntersectionObserver` を用いて `isInView` を判定し、`motion-appear` クラスを付与する。
+- 付与ロジックの責務: 共通Hook（例: `useInViewMotion`）に集約し、各ページ/カードはHookの返却値でクラス付与のみを行う。
 - Reduce時の具体抑制範囲（初回ロード）: `opacity` のみで段階表示し、`transform` の移動/拡大は無効化する。
 - Reduce時の具体抑制範囲（カード出現）: 出現アニメーションは無効化し、即時表示または `opacity` 150ms のみを許可する。
 - Reduce時の具体抑制範囲（ホバー）: `transform` や大きな `box-shadow` 変化は無効化し、色/下線など軽微な変化のみとする。
@@ -262,6 +263,7 @@ graph TB
 
 **Implementation Notes**
 - Integration: `outline: none` を置換し、共通リング規則を全ページに適用する。
+- 監査範囲: 全ReactページのCSSと、`onClick` を持つ要素（JSX）を対象に監査する。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: フォーカストラップは必須とし、モーダル内のフォーカス可能要素のみを循環させる。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: `Esc` で閉じる場合、閉じた後は起点要素にフォーカスを戻す。
 - モーダル/ポップアップ導入時のフォーカストラップ仕様: 背景要素は `aria-hidden` または `inert` 相当でフォーカス到達を遮断する。
