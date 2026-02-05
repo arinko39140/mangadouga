@@ -327,17 +327,17 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             <p className="top-page__status">再生できる動画がありません。</p>
           )}
         </section>
-        <nav className="top-page__nav" aria-label="曜日ナビゲーション">
-          <h2>曜日ナビゲーション</h2>
-          <div className="top-page__weekday">
+        <nav className="top-page__nav nav-pattern" aria-label="曜日ナビゲーション">
+          <h2 className="nav-pattern__title">曜日ナビゲーション</h2>
+          <div className="top-page__weekday nav-pattern__items">
             {WEEKDAYS.map((weekday) => (
               <button
                 key={weekday.key}
                 type="button"
                 className={
                   weekday.key === selectedWeekday
-                    ? 'top-page__weekday-button is-selected'
-                    : 'top-page__weekday-button'
+                    ? 'top-page__weekday-button nav-pattern__item is-selected is-active'
+                    : 'top-page__weekday-button nav-pattern__item'
                 }
                 aria-pressed={weekday.key === selectedWeekday}
                 onClick={() => setSelectedWeekday(weekday.key)}

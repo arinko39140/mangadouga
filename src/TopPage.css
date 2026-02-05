@@ -31,7 +31,6 @@
     'recent recent';
 }
 
-.top-page__nav,
 .top-page__list,
 .top-page__link {
   background: rgba(255, 255, 255, 0.7);
@@ -217,19 +216,10 @@
 }
 
 .top-page__weekday {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.4rem;
   margin-bottom: 0.75rem;
 }
 
 .top-page__weekday-button {
-  border: 1px solid rgba(90, 70, 110, 0.2);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
-  padding: 0.4rem 0;
-  font-weight: 600;
-  cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

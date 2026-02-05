@@ -52,6 +52,22 @@ describe('TopPage layout', () => {
     expect(selected).toBeTruthy()
   })
 
+  it('曜日ナビゲーションが共通ナビゲーションパターンで構成される', () => {
+    renderTopPage()
+
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    expect(nav).toHaveClass('nav-pattern')
+
+    const buttons = within(nav).getAllByRole('button')
+    buttons.forEach((button) => {
+      expect(button).toHaveClass('nav-pattern__item')
+    })
+
+    const activeButton = buttons.find((button) => button.getAttribute('aria-pressed') === 'true')
+    expect(activeButton).toBeTruthy()
+    expect(activeButton).toHaveClass('is-active')
+  })
+
   it('曜日一覧枠と推しリスト導線が見た目で区別できる', () => {
     renderTopPage()
 

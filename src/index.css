@@ -84,3 +84,57 @@ a {
 .app-shell__content > :not(.ui-scope-exclude) .text-muted {
   color: var(--color-text-muted);
 }
+
+/* Navigation pattern */
+.nav-pattern {
+  background: var(--color-surface-elevated);
+  border: 1px solid rgba(43, 30, 27, 0.12);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.nav-pattern__title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--color-text-strong);
+}
+
+.nav-pattern__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.nav-pattern__item {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.95rem;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.nav-pattern__item:hover {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.nav-pattern__item:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+.nav-pattern__item.is-active {
+  background: rgba(255, 107, 107, 0.18);
+  border-color: rgba(255, 107, 107, 0.55);
+  color: var(--color-text-strong);
+}

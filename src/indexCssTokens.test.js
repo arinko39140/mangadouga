@@ -42,4 +42,11 @@ describe('index.css UI tokens', () => {
     expect(css).toMatch(/font-family:\s*var\(--font-display\)/)
     expect(css).toMatch(/font-family:\s*var\(--font-caption\)/)
   })
+
+  it('defines shared navigation pattern styles', () => {
+    expect(css).toContain('.nav-pattern')
+    expect(css).toContain('.nav-pattern__items')
+    expect(css).toContain('.nav-pattern__item')
+    expect(css).toContain('.nav-pattern__item.is-active')
+  })
 })
