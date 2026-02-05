@@ -106,4 +106,29 @@ describe('HistoryRecorder', () => {
     expect(calls.insertMock).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
   })
+
+  it('同一movieIdでもsourceが異なる場合は抑止せず記録する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-05T09:00:00Z'))
+
+    const { client, calls } = buildRecorderSupabaseMock()
+    const recorder = createHistoryRecorder(client)
+
+    await recorder.recordView({
+      movieId: 'movie-1',
+      clickedAt: '2026-02-05T09:00:00Z',
+      source: 'navigate',
+    })
+
+    vi.advanceTimersByTime(200)
+
+    await recorder.recordView({
+      movieId: 'movie-1',
+      clickedAt: '2026-02-05T09:00:00Z',
+      source: 'play',
+    })
+
+    expect(calls.insertMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
 })
