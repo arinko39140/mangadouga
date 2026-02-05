@@ -71,4 +71,12 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('.card-interactive')
     expect(css).toContain('.card-interactive:focus-visible')
   })
+
+  it('defines shared motion load rules with reduced-motion overrides', () => {
+    expect(css).toContain('.motion-load')
+    expect(css).toContain('.motion-load > *')
+    expect(css).toContain('@keyframes motion-fade-up')
+    expect(css).toContain('@keyframes motion-fade-in')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+  })
 })

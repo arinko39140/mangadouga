@@ -141,7 +141,7 @@ function AppShell({ children }) {
         </Link>
         <AuthStatus />
       </header>
-      <div className="app-shell__content">{children}</div>
+      <div className="app-shell__content motion-load">{children}</div>
     </div>
   )
 }
