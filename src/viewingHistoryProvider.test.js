@@ -174,6 +174,32 @@ describe('ViewingHistoryProvider', () => {
     expect(result).toEqual({ ok: true, data: [] })
   })
 
+  it('履歴が30件を超える場合は30件に制限して返す', async () => {
+    const historyRows = Array.from({ length: 31 }, (_, index) => ({
+      history_id: 200 - index,
+      movie_id: `movie-${index + 1}`,
+      clicked_at: `2026-02-${String(31 - index).padStart(2, '0')}T10:00:00Z`,
+    }))
+    const movieRows = [...historyRows]
+      .map((row) => ({
+        movie_id: row.movie_id,
+        series_id: `series-${row.movie_id}`,
+        movie_title: `動画${row.movie_id}`,
+        thumbnail_url: null,
+        favorite_count: 0,
+      }))
+      .reverse()
+    const { client } = buildHistorySupabaseMock({ historyRows, movieRows })
+    const provider = createViewingHistoryProvider(client)
+
+    const result = await provider.fetchHistory()
+
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(30)
+    expect(result.data[0].historyId).toBe(historyRows[0].history_id)
+    expect(result.data[29].historyId).toBe(historyRows[29].history_id)
+  })
+
   it('Supabase未設定時はnot_configuredを返す', async () => {
     const provider = createViewingHistoryProvider(null)
 

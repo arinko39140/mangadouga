@@ -142,7 +142,7 @@ export const createViewingHistoryProvider = (supabaseClient) => {
         })
         .filter(Boolean)
 
-      return { ok: true, data: normalized }
+      return { ok: true, data: normalized.slice(0, limit) }
     },
   }
 }
