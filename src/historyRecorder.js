@@ -54,7 +54,11 @@ export const createHistoryRecorder = (supabaseClient) => {
 
       const { data, error } = await supabaseClient
         .from('history')
-        .insert({ user_id: userResult.userId, movie_id: movieId, clicked_at: clickedAt })
+        .upsert(
+          { user_id: userResult.userId, movie_id: movieId, clicked_at: clickedAt },
+          { onConflict: 'user_id,movie_id' }
+        )
+        .select('history_id')
 
       if (error) {
         return { ok: false, error: normalizeError(error) }

@@ -112,13 +112,3 @@
 .user-oshi-series__action:hover {
   background: #eadff2;
 }
-
-.user-oshi-series__action--primary {
-  color: #fff;
-  background: #4b2f5f;
-  border-color: #4b2f5f;
-}
-
-.user-oshi-series__action--primary:hover {
-  background: #3c244d;
-}

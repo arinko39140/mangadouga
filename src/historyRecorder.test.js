@@ -7,15 +7,16 @@ const buildRecorderSupabaseMock = ({ sessionUserId = 'user-1', sessionError = nu
     error: sessionError,
   })
 
-  const insertMock = vi.fn().mockResolvedValue({ data: [{ history_id: 11 }], error: null })
+  const selectMock = vi.fn().mockResolvedValue({ data: [{ history_id: 11 }], error: null })
+  const upsertMock = vi.fn().mockReturnValue({ select: selectMock })
   const fromMock = vi.fn((table) => {
-    if (table === 'history') return { insert: insertMock }
+    if (table === 'history') return { upsert: upsertMock }
     return {}
   })
 
   return {
     client: { from: fromMock, auth: { getSession: getSessionMock } },
-    calls: { fromMock, insertMock, getSessionMock },
+    calls: { fromMock, upsertMock, selectMock, getSessionMock },
   }
 }
 
@@ -42,17 +43,26 @@ describe('HistoryRecorder', () => {
     })
 
     expect(calls.fromMock).toHaveBeenCalledWith('history')
-    expect(calls.insertMock).toHaveBeenCalledTimes(2)
-    expect(calls.insertMock).toHaveBeenNthCalledWith(1, {
-      user_id: 'user-1',
-      movie_id: 'movie-1',
-      clicked_at: '2026-02-05T09:00:00Z',
-    })
-    expect(calls.insertMock).toHaveBeenNthCalledWith(2, {
-      user_id: 'user-1',
-      movie_id: 'movie-1',
-      clicked_at: '2026-02-05T09:01:00Z',
-    })
+    expect(calls.upsertMock).toHaveBeenCalledTimes(2)
+    expect(calls.upsertMock).toHaveBeenNthCalledWith(
+      1,
+      {
+        user_id: 'user-1',
+        movie_id: 'movie-1',
+        clicked_at: '2026-02-05T09:00:00Z',
+      },
+      { onConflict: 'user_id,movie_id' }
+    )
+    expect(calls.upsertMock).toHaveBeenNthCalledWith(
+      2,
+      {
+        user_id: 'user-1',
+        movie_id: 'movie-1',
+        clicked_at: '2026-02-05T09:01:00Z',
+      },
+      { onConflict: 'user_id,movie_id' }
+    )
+    expect(calls.selectMock).toHaveBeenCalledTimes(2)
 
     expect(first).toEqual({ ok: true, data: { historyId: 11 } })
     expect(second).toEqual({ ok: true, data: { historyId: 11 } })
@@ -71,7 +81,7 @@ describe('HistoryRecorder', () => {
     })
 
     expect(result).toEqual({ ok: false, error: 'auth_required' })
-    expect(calls.insertMock).not.toHaveBeenCalled()
+    expect(calls.upsertMock).not.toHaveBeenCalled()
   })
 
   it('同一movieIdとsourceの連続発火は抑止ウィンドウ内で記録しない', async () => {
@@ -103,7 +113,7 @@ describe('HistoryRecorder', () => {
       source: 'play',
     })
 
-    expect(calls.insertMock).toHaveBeenCalledTimes(2)
+    expect(calls.upsertMock).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
   })
 
@@ -128,7 +138,7 @@ describe('HistoryRecorder', () => {
       source: 'play',
     })
 
-    expect(calls.insertMock).toHaveBeenCalledTimes(2)
+    expect(calls.upsertMock).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
   })
 })

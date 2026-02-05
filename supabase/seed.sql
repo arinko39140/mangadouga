@@ -36,7 +36,11 @@ values
   ('1', '1')
 on conflict do nothing;
 
-insert into public.history (history_id, user_id, movie_id, clicked_at)
-values
-  (1, '1', '1', to_timestamp('2025/1/8/12:12', 'YYYY/MM/DD/HH24:MI'))
+insert into public.history (user_id, movie_id, clicked_at)
+select
+  gen_random_uuid(),
+  movie_id,
+  to_timestamp('2025/1/8/12:12', 'YYYY/MM/DD/HH24:MI')
+from public.movie
+limit 1
 on conflict do nothing;

@@ -59,13 +59,6 @@ function UserOshiSeriesPanel({
               {item.seriesId ? (
                 <div className="user-oshi-series__actions">
                   <Link
-                    className="user-oshi-series__action user-oshi-series__action--primary"
-                    to={`/series/${item.seriesId}/`}
-                    onClick={(event) => handleNavigate(event, item.seriesId)}
-                  >
-                    再生する
-                  </Link>
-                  <Link
                     className="user-oshi-series__action"
                     to={`/series/${item.seriesId}/`}
                     onClick={(event) => handleNavigate(event, item.seriesId)}
