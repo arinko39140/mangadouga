@@ -34,3 +34,78 @@
 .work-page__episode-list {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+
+.work-page__episode-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  display: grid;
+  gap: 0.5rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.work-page__episode-button.is-selected {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+.work-page__episode-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: calc(var(--radius-card) - 6px);
+  overflow: hidden;
+  background: rgba(255, 122, 89, 0.1);
+  display: grid;
+  place-items: center;
+}
+
+.work-page__episode-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.work-page__episode-thumb-placeholder {
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.work-page__episode-meta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.work-page__episode-title,
+.work-page__episode-date {
+  margin: 0;
+}
+
+.work-page__oshi-button {
+  border: 1px solid rgba(255, 122, 89, 0.35);
+  border-radius: 999px;
+  background: #fff;
+  color: #7a4a3a;
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.work-page__oshi-button.is-registered {
+  background: linear-gradient(135deg, #ff7a59, #ffb000);
+  color: #fffdfb;
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(255, 122, 89, 0.28);
+}
+
+.work-page__oshi-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
