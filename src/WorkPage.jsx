@@ -128,6 +128,16 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorde
     })
   }
 
+  const handlePlay = async (episode) => {
+    const movieId = episode?.id
+    if (!movieId || typeof historyRecorderInstance?.recordView !== 'function') return
+    await historyRecorderInstance.recordView({
+      movieId,
+      clickedAt: new Date().toISOString(),
+      source: 'play',
+    })
+  }
+
   useEffect(() => {
     const requestedSortOrder = searchParams.get(SORT_ORDER_QUERY_KEY)
     const requestedMovieId = searchParams.get('selectedMovieId')
@@ -232,7 +242,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorde
         />
       </header>
       <section className="work-page__playback" aria-label="再生領域">
-        <PlaybackPanel episode={selectedMovie} isLoading={loading.episodes} />
+        <PlaybackPanel
+          episode={selectedMovie}
+          isLoading={loading.episodes}
+          onPlay={handlePlay}
+        />
       </section>
       <section className="work-page__episodes" aria-label="話数一覧">
         <p className="work-page__sort">並び順: {formatSortLabel(sortOrder)}</p>

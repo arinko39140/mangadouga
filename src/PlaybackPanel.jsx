@@ -36,7 +36,7 @@ const buildYouTubeEmbedUrl = (videoUrl) => {
   return null
 }
 
-function PlaybackPanel({ episode, isLoading }) {
+function PlaybackPanel({ episode, isLoading, onPlay }) {
   if (isLoading) {
     return <p className="work-page__status">再生準備中...</p>
   }
@@ -69,6 +69,15 @@ function PlaybackPanel({ episode, isLoading }) {
 
   return (
     <div className="work-page__player">
+      {typeof onPlay === 'function' ? (
+        <button
+          type="button"
+          className="work-page__play-button"
+          onClick={() => onPlay(episode)}
+        >
+          再生する
+        </button>
+      ) : null}
       <iframe
         title={`再生中: ${episode.title}`}
         src={embedUrl}

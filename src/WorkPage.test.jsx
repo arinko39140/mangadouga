@@ -196,6 +196,50 @@ describe('WorkPage state', () => {
 
   })
 
+  it('再生ボタン押下で履歴を記録する', async () => {
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: 'https://www.youtube.com/watch?v=abc123',
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+    const historyRecorder = {
+      recordView: vi.fn().mockResolvedValue({ ok: true, data: { historyId: 1 } }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', null, historyRecorder)
+
+    const playButton = await screen.findByRole('button', { name: '再生する' })
+    fireEvent.click(playButton)
+
+    await waitFor(() => {
+      expect(historyRecorder.recordView).toHaveBeenCalledWith(
+        expect.objectContaining({
+          movieId: 'movie-latest',
+          source: 'play',
+        })
+      )
+    })
+  })
+
   it('初期ソート順は人気で取得される', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
