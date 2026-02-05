@@ -5,6 +5,7 @@ import { createHistoryRecorder } from './historyRecorder.js'
 import { createNavigateToMovie } from './navigateToMovie.js'
 import { supabase } from './supabaseClient.js'
 import { createViewingHistoryProvider } from './viewingHistoryProvider.js'
+import './HistoryPage.css'
 
 const defaultDataProvider = createViewingHistoryProvider(supabase)
 const defaultHistoryRecorder = createHistoryRecorder(supabase)
@@ -123,11 +124,10 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
                       })
                     }}
                   >
-                    話数ページへ
+                    作品ページへ
                   </Link>
                 ) : null}
                 <p className="history-card__meta">最終閲覧: {item.clickedAt}</p>
-                <p className="history-card__meta">推し数: {item.favoriteCount ?? 0}</p>
               </div>
             </article>
           </li>

@@ -90,9 +90,9 @@ describe('HistoryPage', () => {
     expect(await screen.findByText('サンプル動画')).toBeInTheDocument()
     expect(screen.getByAltText('サンプル動画')).toBeInTheDocument()
     expect(screen.getByText('最終閲覧: 2026-02-04T10:00:00Z')).toBeInTheDocument()
-    expect(screen.getByText('推し数: 12')).toBeInTheDocument()
+    expect(screen.queryByText('推し数: 12')).not.toBeInTheDocument()
     expect(screen.getByLabelText('推しバッジ')).toBeInTheDocument()
-    const link = screen.getByRole('link', { name: '話数ページへ' })
+    const link = screen.getByRole('link', { name: '作品ページへ' })
     expect(link).toHaveAttribute('href', '/series/series-1/?selectedMovieId=movie-1')
   })
 
@@ -123,7 +123,7 @@ describe('HistoryPage', () => {
     renderHistoryPage({ authGate, dataProvider, navigateToMovie })
 
     await screen.findByText('サンプル動画')
-    fireEvent.click(screen.getByRole('link', { name: '話数ページへ' }))
+    fireEvent.click(screen.getByRole('link', { name: '作品ページへ' }))
 
     expect(navigateToMovie).toHaveBeenCalledWith({
       seriesId: 'series-1',
@@ -158,7 +158,7 @@ describe('HistoryPage', () => {
     renderHistoryPage({ authGate, dataProvider, navigateToMovie })
 
     await screen.findByText('シリーズのみ')
-    fireEvent.click(screen.getByRole('link', { name: '話数ページへ' }))
+    fireEvent.click(screen.getByRole('link', { name: '作品ページへ' }))
 
     expect(navigateToMovie).toHaveBeenCalledWith({
       seriesId: 'series-2',
