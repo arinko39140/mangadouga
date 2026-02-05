@@ -72,8 +72,8 @@ describe('低視力向けの視認性と状態表現', () => {
 
     renderTopPage(dataProvider)
 
-    const topPlaceholder = await screen.findByText('サムネイルなし')
-    expect(topPlaceholder).toHaveClass('media-text')
+    const topPlaceholders = await screen.findAllByText('サムネイルなし')
+    expect(topPlaceholders[0]).toHaveClass('media-text')
 
     const authGate = {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
