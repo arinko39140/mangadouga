@@ -4,25 +4,37 @@ import { vi } from 'vitest'
 import WorkPage from './WorkPage.jsx'
 import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 
-const renderWorkPage = (dataProvider, seriesId = 'series-1', authGate) =>
+const renderWorkPage = (dataProvider, seriesId = 'series-1', authGate, historyRecorder) =>
   render(
     <MemoryRouter initialEntries={[`/series/${seriesId}/`]}>
       <Routes>
         <Route
           path="/series/:seriesId/"
-          element={<WorkPage dataProvider={dataProvider} authGate={authGate} />}
+          element={
+            <WorkPage
+              dataProvider={dataProvider}
+              authGate={authGate}
+              historyRecorder={historyRecorder}
+            />
+          }
         />
       </Routes>
     </MemoryRouter>
   )
 
-const renderWorkPageWithUrl = (dataProvider, url, authGate) =>
+const renderWorkPageWithUrl = (dataProvider, url, authGate, historyRecorder) =>
   render(
     <MemoryRouter initialEntries={[url]}>
       <Routes>
         <Route
           path="/series/:seriesId/"
-          element={<WorkPage dataProvider={dataProvider} authGate={authGate} />}
+          element={
+            <WorkPage
+              dataProvider={dataProvider}
+              authGate={authGate}
+              historyRecorder={historyRecorder}
+            />
+          }
         />
       </Routes>
     </MemoryRouter>
@@ -116,6 +128,72 @@ describe('WorkPage state', () => {
 
     expect(oldButton).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByTitle('再生中: 第1話')).toBeInTheDocument()
+  })
+
+  it('話数選択の明示操作で履歴を記録する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-05T10:00:00Z'))
+
+    const dataProvider = {
+      fetchSeriesOverview: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'series-1',
+          title: 'テスト作品',
+          favoriteCount: 0,
+          isFavorited: false,
+        },
+      }),
+      fetchMovies: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-latest',
+            title: '最新話',
+            thumbnailUrl: null,
+            publishedAt: '2026-01-01T00:00:00Z',
+            videoUrl: 'https://youtu.be/latest',
+            isOshi: false,
+          },
+          {
+            id: 'movie-old',
+            title: '第1話',
+            thumbnailUrl: null,
+            publishedAt: '2025-12-01T00:00:00Z',
+            videoUrl: 'https://youtu.be/old',
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+    const historyRecorder = {
+      recordView: vi.fn().mockResolvedValue({ ok: true, data: { historyId: 1 } }),
+    }
+
+    renderWorkPage(dataProvider, 'series-1', null, historyRecorder)
+
+    vi.useRealTimers()
+    const latestButton = await screen.findByRole('button', { name: '最新話' })
+    expect(historyRecorder.recordView).not.toHaveBeenCalled()
+
+    const oldButton = await screen.findByRole('button', { name: '第1話' })
+    fireEvent.click(oldButton)
+
+    expect(historyRecorder.recordView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        movieId: 'movie-old',
+        source: 'select',
+      })
+    )
+
+    fireEvent.click(latestButton)
+    expect(historyRecorder.recordView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        movieId: 'movie-latest',
+        source: 'select',
+      })
+    )
+
   })
 
   it('初期ソート順は人気で取得される', async () => {

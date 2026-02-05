@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
+import { createHistoryRecorder } from './historyRecorder.js'
 import EpisodeListPanel from './EpisodeListPanel.jsx'
 import FavoriteStarButton from './FavoriteStarButton.jsx'
 import PlaybackPanel from './PlaybackPanel.jsx'
@@ -21,6 +22,7 @@ import './WorkPage.css'
 const defaultDataProvider = supabase
   ? createWorkPageDataProvider(supabase)
   : createMockWorkPageDataProvider()
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 
 const formatSortLabel = (sortOrder) => {
   if (sortOrder === 'favorite_asc') return '人気(少ない順)'
@@ -29,7 +31,7 @@ const formatSortLabel = (sortOrder) => {
   return '人気'
 }
 
-function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
+function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorder }) {
   const { seriesId } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -63,6 +65,10 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
       }),
     })
   }, [authGate, navigate, seriesId, selectedMovieId, sortOrder])
+  const historyRecorderInstance = useMemo(() => {
+    if (historyRecorder) return historyRecorder
+    return defaultHistoryRecorder
+  }, [historyRecorder])
 
   const handleFavoriteToggle = async () => {
     if (!seriesId || typeof dataProvider.toggleSeriesFavorite !== 'function') return
@@ -110,6 +116,16 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
     } else {
       setOshiError('failed')
     }
+  }
+
+  const handleSelectEpisode = async (movieId) => {
+    setSelectedMovieId(movieId)
+    if (!movieId || typeof historyRecorderInstance?.recordView !== 'function') return
+    await historyRecorderInstance.recordView({
+      movieId,
+      clickedAt: new Date().toISOString(),
+      source: 'select',
+    })
   }
 
   useEffect(() => {
@@ -234,7 +250,7 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         <EpisodeListPanel
           episodes={episodes}
           selectedMovieId={selectedMovieId}
-          onSelectEpisode={setSelectedMovieId}
+          onSelectEpisode={handleSelectEpisode}
           onToggleOshi={handleOshiToggle}
           isLoading={loading.episodes}
           error={error.episodes}
