@@ -7,6 +7,8 @@ import UserOshiFavoritesPanel from './UserOshiFavoritesPanel.jsx'
 import UserOshiListPanel from './UserOshiListPanel.jsx'
 import UserOshiSections from './UserOshiSections.jsx'
 import UserOshiSeriesPanel from './UserOshiSeriesPanel.jsx'
+import { createHistoryRecorder } from './historyRecorder.js'
+import { createNavigateToMovie } from './navigateToMovie.js'
 import { createOshiFavoritesProvider } from './oshiFavoritesProvider.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
@@ -21,6 +23,7 @@ const defaultProfileProvider = createUserPageProvider(supabase)
 const defaultListProvider = createUserOshiListProvider(supabase)
 const defaultSeriesProvider = createUserSeriesProvider(supabase)
 const defaultFavoritesProvider = createOshiFavoritesProvider(supabase)
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 const ICON_BUCKET = 'user-icons'
 const ICON_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/apng']
 const MAX_ICON_BYTES = 3 * 1024 * 1024
@@ -106,6 +109,10 @@ function UserPage({
 }) {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const navigateToMovieHandler = useMemo(
+    () => createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder }),
+    [navigate]
+  )
   const [profile, setProfile] = useState(null)
   const [profileError, setProfileError] = useState(null)
   const [profileLoading, setProfileLoading] = useState(true)
@@ -675,6 +682,7 @@ function UserPage({
       isLoading={seriesLoading}
       error={seriesError}
       userId={userId}
+      navigateToMovie={navigateToMovieHandler}
     />
   )
   const favoritesPanel = (

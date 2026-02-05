@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
+import { createHistoryRecorder } from './historyRecorder.js'
+import { createNavigateToMovie } from './navigateToMovie.js'
 import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEvents.js'
 import { createOshiListPageProvider } from './oshiListPageProvider.js'
 import { supabase } from './supabaseClient.js'
 import './OshiListsPage.css'
 
 const defaultDataProvider = createOshiListPageProvider(supabase)
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 const VIEW_MODES = [
   { id: 'list', label: 'リスト' },
   { id: 'grid', label: 'グリッド' },
@@ -53,7 +56,7 @@ const resolveThumbnailUrl = (item) => {
   return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
 }
 
-function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
+function OshiListPage({ dataProvider = defaultDataProvider, authGate, navigateToMovie }) {
   const { listId } = useParams()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
@@ -73,6 +76,10 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
   }, [authGate, navigate])
+  const navigateToMovieHandler = useMemo(() => {
+    if (typeof navigateToMovie === 'function') return navigateToMovie
+    return createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder })
+  }, [navigate, navigateToMovie])
 
   useEffect(() => {
     let isMounted = true
@@ -292,7 +299,21 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate }) {
                   </div>
                   <div className="oshi-lists__actions">
                     {item.seriesId ? (
-                      <Link className="oshi-lists__link" to={`/series/${item.seriesId}/`}>
+                      <Link
+                        className="oshi-lists__link"
+                        to={
+                          item.id
+                            ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                            : `/series/${item.seriesId}/`
+                        }
+                        onClick={(event) => {
+                          event.preventDefault()
+                          navigateToMovieHandler({
+                            seriesId: item.seriesId,
+                            movieId: item.id,
+                          })
+                        }}
+                      >
                         作品ページへ
                       </Link>
                     ) : null}

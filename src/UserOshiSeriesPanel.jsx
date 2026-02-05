@@ -7,8 +7,14 @@ function UserOshiSeriesPanel({
   error = null,
   userId = null,
   visibility = 'public',
+  navigateToMovie,
 }) {
   const isPrivate = visibility === 'private'
+  const handleNavigate = (event, seriesId) => {
+    if (!seriesId || typeof navigateToMovie !== 'function') return
+    event.preventDefault()
+    navigateToMovie({ seriesId })
+  }
   const renderContent = () => {
     if (isLoading) {
       return <p className="user-oshi-series__status">推し作品を読み込み中...</p>
@@ -37,6 +43,7 @@ function UserOshiSeriesPanel({
                   <Link
                     className="user-oshi-series__title-link"
                     to={`/series/${item.seriesId}/`}
+                    onClick={(event) => handleNavigate(event, item.seriesId)}
                   >
                     {item.title}
                   </Link>
@@ -54,12 +61,14 @@ function UserOshiSeriesPanel({
                   <Link
                     className="user-oshi-series__action user-oshi-series__action--primary"
                     to={`/series/${item.seriesId}/`}
+                    onClick={(event) => handleNavigate(event, item.seriesId)}
                   >
                     再生する
                   </Link>
                   <Link
                     className="user-oshi-series__action"
                     to={`/series/${item.seriesId}/`}
+                    onClick={(event) => handleNavigate(event, item.seriesId)}
                   >
                     作品ページへ
                   </Link>

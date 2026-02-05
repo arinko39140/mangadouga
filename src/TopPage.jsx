@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { createHistoryRecorder } from './historyRecorder.js'
+import { createNavigateToMovie } from './navigateToMovie.js'
 import PlaybackPanel from './PlaybackPanel.jsx'
 import SortControl from './SortControl.jsx'
 import {
@@ -122,6 +124,7 @@ const sortItems = (items, sortOrder) => {
 }
 
 const defaultWeekdayDataProvider = createWeekdayDataProvider(supabase)
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 
 const buildEmptyWeekdayLists = () =>
   WEEKDAYS.map((weekday) => ({
@@ -129,7 +132,8 @@ const buildEmptyWeekdayLists = () =>
     items: [],
   }))
 
-function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
+function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie }) {
+  const navigate = useNavigate()
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
   const [recentWeekday, setRecentWeekday] = useState('all')
   const [sortOrder, setSortOrder] = useState(DEFAULT_SORT_ORDER)
@@ -140,6 +144,10 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [, setSearchParams] = useSearchParams()
+  const navigateToMovieHandler = useMemo(() => {
+    if (typeof navigateToMovie === 'function') return navigateToMovie
+    return createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder })
+  }, [navigate, navigateToMovie])
   const searchController = useMemo(
     () => createTitleSearchController({ dataProvider }),
     [dataProvider]
@@ -367,7 +375,18 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
                   {item.seriesId ? (
                     <Link
                       className="top-page__work-link"
-                      to={`/series/${item.seriesId}/`}
+                      to={
+                        item.id
+                          ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                          : `/series/${item.seriesId}/`
+                      }
+                      onClick={(event) => {
+                        event.preventDefault()
+                        navigateToMovieHandler({
+                          seriesId: item.seriesId,
+                          movieId: item.id,
+                        })
+                      }}
                     >
                       {item.title}
                     </Link>
@@ -437,7 +456,18 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
                       {item.seriesId ? (
                         <Link
                           className="top-page__work-link"
-                          to={`/series/${item.seriesId}/`}
+                          to={
+                            item.id
+                              ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                              : `/series/${item.seriesId}/`
+                          }
+                          onClick={(event) => {
+                            event.preventDefault()
+                            navigateToMovieHandler({
+                              seriesId: item.seriesId,
+                              movieId: item.id,
+                            })
+                          }}
                         >
                           {item.title}
                         </Link>
@@ -522,7 +552,18 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider }) {
                     {item.seriesId ? (
                       <Link
                         className="top-page__work-link"
-                        to={`/series/${item.seriesId}/`}
+                        to={
+                          item.id
+                            ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+                            : `/series/${item.seriesId}/`
+                        }
+                        onClick={(event) => {
+                          event.preventDefault()
+                          navigateToMovieHandler({
+                            seriesId: item.seriesId,
+                            movieId: item.id,
+                          })
+                        }}
                       >
                         {item.title}
                       </Link>

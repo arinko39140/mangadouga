@@ -334,8 +334,54 @@ describe('TopPage layout', () => {
     expect(items[1]).toHaveTextContent('人気二位')
     expect(screen.getByRole('link', { name: '人気一位' })).toHaveAttribute(
       'href',
-      '/series/series-1/'
+      '/series/series-1/?selectedMovieId=m1'
     )
+  })
+
+  it('曜日別一覧の動画カードをクリックすると共通導線で遷移する', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-20T12:00:00Z'))
+
+    const dataProvider = {
+      fetchWeekdayLists: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            weekday: 'mon',
+            items: [
+              {
+                id: 'm1',
+                title: '人気一位',
+                popularityScore: 200,
+                seriesId: 'series-1',
+                publishedAt: '2026-01-19T10:00:00Z',
+              },
+            ],
+          },
+          { weekday: 'tue', items: [] },
+          { weekday: 'wed', items: [] },
+          { weekday: 'thu', items: [] },
+          { weekday: 'fri', items: [] },
+          { weekday: 'sat', items: [] },
+          { weekday: 'sun', items: [] },
+        ],
+      }),
+    }
+    const navigateToMovie = vi.fn()
+
+    renderTopPage({ dataProvider, navigateToMovie })
+
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    fireEvent.click(within(nav).getByRole('button', { name: '月' }))
+
+    vi.useRealTimers()
+    await screen.findByText('人気一位')
+    fireEvent.click(screen.getByRole('link', { name: '人気一位' }))
+
+    expect(navigateToMovie).toHaveBeenCalledWith({
+      seriesId: 'series-1',
+      movieId: 'm1',
+    })
   })
 
   it('過去1週間より前のアイテムは曜日別一覧に表示しない', async () => {

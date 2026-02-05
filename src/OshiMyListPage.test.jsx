@@ -4,10 +4,14 @@ import { vi } from 'vitest'
 import OshiMyListPage from './OshiMyListPage.jsx'
 import { OSHI_LIST_UPDATED_EVENT } from './oshiListEvents.js'
 
-const renderOshiMyListPage = (dataProvider, authGate) =>
+const renderOshiMyListPage = (dataProvider, authGate, navigateToMovie) =>
   render(
     <MemoryRouter>
-      <OshiMyListPage dataProvider={dataProvider} authGate={authGate} />
+      <OshiMyListPage
+        dataProvider={dataProvider}
+        authGate={authGate}
+        navigateToMovie={navigateToMovie}
+      />
     </MemoryRouter>
   )
 
@@ -100,9 +104,45 @@ describe('OshiMyListPage', () => {
     expect(list).toHaveClass('oshi-lists__items--grid')
     expect(screen.getByRole('link', { name: '作品ページへ' })).toHaveAttribute(
       'href',
-      '/series/series-1/'
+      '/series/series-1/?selectedMovieId=movie-1'
     )
     expect(screen.getByRole('button', { name: '済' })).toBeInTheDocument()
+  })
+
+  it('作品リンクのクリックで共通導線が呼び出される', async () => {
+    const dataProvider = {
+      fetchOshiList: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            id: 'movie-1',
+            title: '推し動画',
+            thumbnailUrl: '/thumb.png',
+            seriesId: 'series-1',
+            isOshi: true,
+          },
+        ],
+      }),
+      fetchFavoriteCount: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { favoriteCount: 1 },
+      }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+    const navigateToMovie = vi.fn()
+
+    renderOshiMyListPage(dataProvider, authGate, navigateToMovie)
+
+    await screen.findByText('推し動画')
+    fireEvent.click(screen.getByRole('link', { name: '作品ページへ' }))
+
+    expect(navigateToMovie).toHaveBeenCalledWith({
+      seriesId: 'series-1',
+      movieId: 'movie-1',
+    })
   })
 
   it('表示形式を切り替えても一覧を維持する', async () => {

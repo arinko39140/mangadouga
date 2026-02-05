@@ -1,12 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import HistoryPage from './HistoryPage.jsx'
 
-const renderHistoryPage = ({ authGate, dataProvider } = {}) =>
+const renderHistoryPage = ({ authGate, dataProvider, navigateToMovie } = {}) =>
   render(
     <MemoryRouter>
-      <HistoryPage authGate={authGate} dataProvider={dataProvider} />
+      <HistoryPage
+        authGate={authGate}
+        dataProvider={dataProvider}
+        navigateToMovie={navigateToMovie}
+      />
     </MemoryRouter>
   )
 
@@ -69,6 +73,41 @@ describe('HistoryPage', () => {
     expect(screen.getByLabelText('推しバッジ')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: '話数ページへ' })
     expect(link).toHaveAttribute('href', '/series/series-1/?selectedMovieId=movie-1')
+  })
+
+  it('履歴リンククリックで共通導線が呼び出される', async () => {
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+    const dataProvider = {
+      fetchHistory: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            historyId: 1,
+            movieId: 'movie-1',
+            seriesId: 'series-1',
+            title: 'サンプル動画',
+            thumbnailUrl: null,
+            clickedAt: '2026-02-04T10:00:00Z',
+            favoriteCount: 12,
+            isOshi: false,
+          },
+        ],
+      }),
+    }
+    const navigateToMovie = vi.fn()
+
+    renderHistoryPage({ authGate, dataProvider, navigateToMovie })
+
+    await screen.findByText('サンプル動画')
+    fireEvent.click(screen.getByRole('link', { name: '話数ページへ' }))
+
+    expect(navigateToMovie).toHaveBeenCalledWith({
+      seriesId: 'series-1',
+      movieId: 'movie-1',
+    })
   })
 
   it('履歴がない場合は空状態とトップ導線を表示する', async () => {

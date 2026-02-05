@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
 import UserInfoPanel from './UserInfoPanel.jsx'
+import { createHistoryRecorder } from './historyRecorder.js'
+import { createNavigateToMovie } from './navigateToMovie.js'
 import { createProfileVisibilityProvider } from './profileVisibilityProvider.js'
 import { resolveCurrentUserId } from './supabaseSession.js'
 import { supabase } from './supabaseClient.js'
@@ -14,6 +16,7 @@ import './UserOshiSeriesPage.css'
 const defaultProfileProvider = createUserPageProvider(supabase)
 const defaultSeriesProvider = createUserSeriesProvider(supabase)
 const defaultVisibilityProvider = createProfileVisibilityProvider(supabase)
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 
 const normalizeVisibility = (value) => (value === 'public' ? 'public' : 'private')
 const viewModes = [
@@ -30,6 +33,7 @@ function UserOshiSeriesPage({
   seriesProvider = defaultSeriesProvider,
   visibilityProvider = defaultVisibilityProvider,
   authGate,
+  navigateToMovie,
 }) {
   const { userId } = useParams()
   const navigate = useNavigate()
@@ -52,6 +56,10 @@ function UserOshiSeriesPage({
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
   }, [authGate, navigate])
+  const navigateToMovieHandler = useMemo(() => {
+    if (typeof navigateToMovie === 'function') return navigateToMovie
+    return createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder })
+  }, [navigate, navigateToMovie])
 
   useEffect(() => {
     let isMounted = true
@@ -333,7 +341,15 @@ function UserOshiSeriesPage({
               <div className="user-series-list__body">
                 <h2 className="user-series-list__title">
                   {item.seriesId ? (
-                    <Link to={`/series/${item.seriesId}/`}>{item.title}</Link>
+                    <Link
+                      to={`/series/${item.seriesId}/`}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        navigateToMovieHandler({ seriesId: item.seriesId })
+                      }}
+                    >
+                      {item.title}
+                    </Link>
                   ) : (
                     item.title
                   )}
@@ -345,7 +361,14 @@ function UserOshiSeriesPage({
                 ) : null}
                 {item.seriesId ? (
                   <div className="user-series-list__actions">
-                    <Link className="user-series-list__link" to={`/series/${item.seriesId}/`}>
+                    <Link
+                      className="user-series-list__link"
+                      to={`/series/${item.seriesId}/`}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        navigateToMovieHandler({ seriesId: item.seriesId })
+                      }}
+                    >
                       作品ページへ
                     </Link>
                     <button

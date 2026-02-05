@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
+import { createHistoryRecorder } from './historyRecorder.js'
+import { createNavigateToMovie } from './navigateToMovie.js'
 import { supabase } from './supabaseClient.js'
 import { createViewingHistoryProvider } from './viewingHistoryProvider.js'
 
 const defaultDataProvider = createViewingHistoryProvider(supabase)
+const defaultHistoryRecorder = createHistoryRecorder(supabase)
 
-function HistoryPage({ authGate, dataProvider = defaultDataProvider }) {
+function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToMovie }) {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [errorType, setErrorType] = useState(null)
@@ -16,6 +19,10 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider }) {
     if (authGate) return authGate
     return createAuthGate({ supabaseClient: supabase, navigate })
   }, [authGate, navigate])
+  const navigateToMovieHandler = useMemo(() => {
+    if (typeof navigateToMovie === 'function') return navigateToMovie
+    return createNavigateToMovie({ navigate, historyRecorder: defaultHistoryRecorder })
+  }, [navigate, navigateToMovie])
 
   useEffect(() => {
     let isMounted = true
@@ -103,7 +110,18 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider }) {
                 {item.seriesId ? (
                   <Link
                     className="history-card__link"
-                    to={`/series/${item.seriesId}/?selectedMovieId=${item.movieId}`}
+                    to={
+                      item.movieId
+                        ? `/series/${item.seriesId}/?selectedMovieId=${item.movieId}`
+                        : `/series/${item.seriesId}/`
+                    }
+                    onClick={(event) => {
+                      event.preventDefault()
+                      navigateToMovieHandler({
+                        seriesId: item.seriesId,
+                        movieId: item.movieId,
+                      })
+                    }}
                   >
                     話数ページへ
                   </Link>

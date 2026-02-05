@@ -176,9 +176,17 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
         if (!isMounted) return
         if (result.ok) {
           setEpisodes(result.data)
+          setSelectedMovieId((current) => {
+            if (result.data.length === 0) return null
+            if (current && result.data.some((episode) => episode.id === current)) {
+              return current
+            }
+            return result.data[0].id
+          })
         } else {
           setError((prev) => ({ ...prev, episodes: result.error }))
           setEpisodes([])
+          setSelectedMovieId(null)
         }
       })
       .finally(() => {
@@ -191,19 +199,6 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate }) {
     }
   }, [dataProvider, seriesId, sortOrder])
 
-  useEffect(() => {
-    if (episodes.length === 0) {
-      setSelectedMovieId(null)
-      return
-    }
-
-    setSelectedMovieId((current) => {
-      if (current && episodes.some((episode) => episode.id === current)) {
-        return current
-      }
-      return episodes[0].id
-    })
-  }, [episodes])
 
   return (
     <main className="work-page">
