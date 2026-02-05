@@ -3,10 +3,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import HistoryPage from './HistoryPage.jsx'
 
-const renderHistoryPage = (authGate) =>
+const renderHistoryPage = ({ authGate, dataProvider } = {}) =>
   render(
     <MemoryRouter>
-      <HistoryPage authGate={authGate} />
+      <HistoryPage authGate={authGate} dataProvider={dataProvider} />
     </MemoryRouter>
   )
 
@@ -16,7 +16,7 @@ describe('HistoryPage', () => {
       getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
       redirectToLogin: vi.fn(),
     }
-    renderHistoryPage(authGate)
+    renderHistoryPage({ authGate })
 
     expect(screen.getByRole('heading', { name: '閲覧履歴' })).toBeInTheDocument()
     expect(screen.getByText('読み込み中です。')).toBeInTheDocument()
@@ -30,10 +30,58 @@ describe('HistoryPage', () => {
       getStatus: vi.fn().mockResolvedValue({ ok: false, error: { type: 'auth_required' } }),
       redirectToLogin: vi.fn(),
     }
-    renderHistoryPage(authGate)
+    renderHistoryPage({ authGate })
 
     await waitFor(() => {
       expect(authGate.redirectToLogin).toHaveBeenCalled()
     })
+  })
+
+  it('履歴がある場合は一覧を表示する', async () => {
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+    const dataProvider = {
+      fetchHistory: vi.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            historyId: 1,
+            movieId: 'movie-1',
+            seriesId: 'series-1',
+            title: 'サンプル動画',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+            clickedAt: '2026-02-04T10:00:00Z',
+            favoriteCount: 12,
+            isOshi: true,
+          },
+        ],
+      }),
+    }
+
+    renderHistoryPage({ authGate, dataProvider })
+
+    expect(await screen.findByText('サンプル動画')).toBeInTheDocument()
+    expect(screen.getByAltText('サンプル動画')).toBeInTheDocument()
+    expect(screen.getByText('最終閲覧: 2026-02-04T10:00:00Z')).toBeInTheDocument()
+    expect(screen.getByText('推し数: 12')).toBeInTheDocument()
+    expect(screen.getByLabelText('推しバッジ')).toBeInTheDocument()
+  })
+
+  it('履歴がない場合は空状態とトップ導線を表示する', async () => {
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+    const dataProvider = {
+      fetchHistory: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+
+    renderHistoryPage({ authGate, dataProvider })
+
+    expect(await screen.findByText('閲覧履歴がありません。')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'トップページへ戻る' })).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: '閲覧履歴一覧' })).not.toBeInTheDocument()
   })
 })
