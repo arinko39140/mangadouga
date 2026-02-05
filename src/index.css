@@ -1,11 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;600;700&display=swap');
 
 :root {
-  font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
-  line-height: 1.6;
-  font-weight: 400;
-  color: #2c2032;
-  background-color: #f8f2ef;
+  --color-text: #2b1e1b;
+  --color-text-strong: #1f1412;
+  --color-text-muted: #6a5c57;
+  --color-surface: #fff7e8;
+  --color-surface-elevated: #ffffff;
+  --color-accent: #ff6b6b;
+  --color-accent-secondary: #4ecdc4;
+  --color-warning: #ffb703;
+  --focus-ring-color: #2e6bff;
+  --focus-ring-width: 2px;
+  --shadow-card: 0 12px 24px rgba(43, 30, 27, 0.12);
+  --radius-card: 16px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-heading: 'Playfair Display', 'Times New Roman', serif;
+  --font-display: 'Playfair Display', 'Times New Roman', serif;
+  --font-caption: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -35,4 +49,38 @@ body {
 
 a {
   color: inherit;
+}
+
+/* Reactページのみを対象とした共通タイポグラフィ/階層スタイル */
+.app-shell__content > :not(.ui-scope-exclude) {
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+}
+
+.app-shell__content > :not(.ui-scope-exclude) h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-text-strong);
+  letter-spacing: 0.02em;
+}
+
+.app-shell__content > :not(.ui-scope-exclude) h2,
+.app-shell__content > :not(.ui-scope-exclude) h3,
+.app-shell__content > :not(.ui-scope-exclude) h4 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.app-shell__content > :not(.ui-scope-exclude) .text-caption,
+.app-shell__content > :not(.ui-scope-exclude) small {
+  font-family: var(--font-caption);
+  color: var(--color-text-muted);
+}
+
+.app-shell__content > :not(.ui-scope-exclude) .text-muted {
+  color: var(--color-text-muted);
 }

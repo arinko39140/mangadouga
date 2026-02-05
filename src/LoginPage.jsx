@@ -90,7 +90,7 @@ function LoginPage() {
   }
 
   return (
-    <main className="login-page">
+    <main className="login-page ui-scope-exclude">
       <section className="login-card" aria-label="ログインフォーム">
         <div className="login-card__header">
           <p className="login-card__eyebrow">Manga Douga</p>
