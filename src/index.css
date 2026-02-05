@@ -200,6 +200,26 @@ a {
   }
 }
 
+/* Motion policy: appear in view */
+.motion-appear {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  will-change: opacity, transform;
+}
+
+.motion-appear.is-inview {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-appear {
+    transform: none;
+    transition: opacity 0.15s ease;
+  }
+}
+
 /* Navigation pattern */
 .nav-pattern {
   background: var(--color-surface-elevated);

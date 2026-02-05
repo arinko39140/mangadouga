@@ -12,6 +12,7 @@ import {
 import { supabase } from './supabaseClient.js'
 import { createTitleSearchController } from './titleSearchController.js'
 import { createWeekdayDataProvider } from './weekdayDataProvider.js'
+import { useInViewMotion } from './hooks/useInViewMotion.js'
 import './TopPage.css'
 
 const WEEKDAYS = [
@@ -103,6 +104,59 @@ const formatPublishedDate = (item) => {
   return new Date(timestamp).toLocaleDateString('ja-JP')
 }
 
+const buildMotionClassName = (baseClassName, motionState) => {
+  if (motionState.shouldReduceMotion) return baseClassName
+  return `${baseClassName} motion-appear${motionState.isInView ? ' is-inview' : ''}`
+}
+
+const TopPageWorkCard = ({ item, navigateToMovieHandler, showMeta }) => {
+  const motion = useInViewMotion()
+  const className = buildMotionClassName(
+    'top-page__work-card card-interactive',
+    motion
+  )
+
+  return (
+    <div ref={motion.ref} className={className}>
+      <div className="top-page__work-thumb">
+        {resolveThumbnailUrl(item) ? (
+          <img src={resolveThumbnailUrl(item)} alt={`${item.title}のサムネイル`} />
+        ) : (
+          <span className="top-page__work-thumb-placeholder media-text">
+            サムネイルなし
+          </span>
+        )}
+      </div>
+      {item.seriesId ? (
+        <Link
+          className="top-page__work-link text-strong"
+          to={
+            item.id
+              ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
+              : `/series/${item.seriesId}/`
+          }
+          onClick={(event) => {
+            event.preventDefault()
+            navigateToMovieHandler({
+              seriesId: item.seriesId,
+              movieId: item.id,
+            })
+          }}
+        >
+          {item.title}
+        </Link>
+      ) : (
+        <span className="top-page__work-title text-strong">{item.title}</span>
+      )}
+      {showMeta ? (
+        <p className="top-page__work-meta text-muted">
+          投稿日: {formatPublishedDate(item)}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 const sortItems = (items, sortOrder) => {
   const sorted = [...items]
   sorted.sort((a, b) => {
@@ -134,6 +188,12 @@ const buildEmptyWeekdayLists = () =>
 
 function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie }) {
   const navigate = useNavigate()
+  const playbackMotion = useInViewMotion()
+  const navMotion = useInViewMotion()
+  const listMotion = useInViewMotion()
+  const searchMotion = useInViewMotion()
+  const recentMotion = useInViewMotion()
+  const linkMotion = useInViewMotion()
   const [selectedWeekday, setSelectedWeekday] = useState(getJstWeekdayKey)
   const [recentWeekday, setRecentWeekday] = useState('all')
   const [sortOrder, setSortOrder] = useState(DEFAULT_SORT_ORDER)
@@ -316,7 +376,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
         </form>
       </header>
       <div className="top-page__grid">
-        <section className="top-page__playback" aria-label="動画再生">
+        <section
+          ref={playbackMotion.ref}
+          className={buildMotionClassName('top-page__playback', playbackMotion)}
+          aria-label="動画再生"
+        >
           <h2>ピックアップ動画</h2>
           <p>{playbackLabel}</p>
           {isLoading ? (
@@ -327,7 +391,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             <p className="top-page__status">再生できる動画がありません。</p>
           )}
         </section>
-        <nav className="top-page__nav nav-pattern" aria-label="曜日ナビゲーション">
+        <nav
+          ref={navMotion.ref}
+          className={buildMotionClassName('top-page__nav nav-pattern', navMotion)}
+          aria-label="曜日ナビゲーション"
+        >
           <h2 className="nav-pattern__title">曜日ナビゲーション</h2>
           <div className="top-page__weekday nav-pattern__items">
             {WEEKDAYS.map((weekday) => (
@@ -348,7 +416,14 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           </div>
           <p>曜日を選ぶと一覧が切り替わります。</p>
         </nav>
-        <section className="top-page__list top-page__list--panel" aria-label="曜日別一覧">
+        <section
+          ref={listMotion.ref}
+          className={buildMotionClassName(
+            'top-page__list top-page__list--panel',
+            listMotion
+          )}
+          aria-label="曜日別一覧"
+        >
           <h2>曜日別一覧</h2>
           <p>{listTitle}</p>
           <p className="top-page__filter-summary">
@@ -399,7 +474,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           )}
         </section>
         <section
-          className="top-page__search-results top-page__list top-page__list--panel"
+          ref={searchMotion.ref}
+          className={buildMotionClassName(
+            'top-page__search-results top-page__list top-page__list--panel',
+            searchMotion
+          )}
           aria-label="検索結果"
         >
           <h2>検索結果</h2>
@@ -440,44 +519,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               >
                 {searchResults.map((item) => (
                   <li key={item.id} className="top-page__work-item">
-                    <div className="top-page__work-card card-interactive">
-                      <div className="top-page__work-thumb">
-                        {resolveThumbnailUrl(item) ? (
-                          <img
-                            src={resolveThumbnailUrl(item)}
-                            alt={`${item.title}のサムネイル`}
-                          />
-                        ) : (
-                          <span className="top-page__work-thumb-placeholder media-text">
-                            サムネイルなし
-                          </span>
-                        )}
-                      </div>
-                      {item.seriesId ? (
-                        <Link
-                          className="top-page__work-link text-strong"
-                          to={
-                            item.id
-                              ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
-                              : `/series/${item.seriesId}/`
-                          }
-                          onClick={(event) => {
-                            event.preventDefault()
-                            navigateToMovieHandler({
-                              seriesId: item.seriesId,
-                              movieId: item.id,
-                            })
-                          }}
-                        >
-                          {item.title}
-                        </Link>
-                      ) : (
-                        <span className="top-page__work-title text-strong">{item.title}</span>
-                      )}
-                      <p className="top-page__work-meta text-muted">
-                        投稿日: {formatPublishedDate(item)}
-                      </p>
-                    </div>
+                    <TopPageWorkCard
+                      item={item}
+                      navigateToMovieHandler={navigateToMovieHandler}
+                      showMeta
+                    />
                   </li>
                 ))}
               </ul>
@@ -485,7 +531,11 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           ) : null}
         </section>
         <section
-          className="top-page__recent top-page__list top-page__list--panel"
+          ref={recentMotion.ref}
+          className={buildMotionClassName(
+            'top-page__recent top-page__list top-page__list--panel',
+            recentMotion
+          )}
           aria-label="過去100件一覧"
         >
           <h2>過去100件の作品</h2>
@@ -536,47 +586,21 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             >
               {recentListItems.map((item) => (
                 <li key={item.id} className="top-page__work-item">
-                  <div className="top-page__work-card card-interactive">
-                    <div className="top-page__work-thumb">
-                      {resolveThumbnailUrl(item) ? (
-                        <img
-                          src={resolveThumbnailUrl(item)}
-                          alt={`${item.title}のサムネイル`}
-                        />
-                      ) : (
-                      <span className="top-page__work-thumb-placeholder media-text">
-                        サムネイルなし
-                      </span>
-                    )}
-                  </div>
-                  {item.seriesId ? (
-                    <Link
-                      className="top-page__work-link text-strong"
-                      to={
-                        item.id
-                          ? `/series/${item.seriesId}/?selectedMovieId=${item.id}`
-                          : `/series/${item.seriesId}/`
-                      }
-                        onClick={(event) => {
-                          event.preventDefault()
-                          navigateToMovieHandler({
-                            seriesId: item.seriesId,
-                            movieId: item.id,
-                          })
-                        }}
-                      >
-                        {item.title}
-                      </Link>
-                    ) : (
-                    <span className="top-page__work-title text-strong">{item.title}</span>
-                  )}
-                </div>
-              </li>
-            ))}
+                  <TopPageWorkCard
+                    item={item}
+                    navigateToMovieHandler={navigateToMovieHandler}
+                    showMeta={false}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </section>
-        <aside className="top-page__link top-page__link--cta" aria-label="推しリスト導線">
+        <aside
+          ref={linkMotion.ref}
+          className={buildMotionClassName('top-page__link top-page__link--cta', linkMotion)}
+          aria-label="推しリスト導線"
+        >
           <h2>推しリスト導線</h2>
           <p>みんなの推しリスト一覧への入口です。</p>
           <Link className="top-page__link-action" to="/oshi-lists/catalog/">

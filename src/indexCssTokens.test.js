@@ -79,4 +79,9 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('@keyframes motion-fade-in')
     expect(css).toContain('@media (prefers-reduced-motion: reduce)')
   })
+
+  it('defines shared motion appear rules', () => {
+    expect(css).toContain('.motion-appear')
+    expect(css).toContain('.motion-appear.is-inview')
+  })
 })

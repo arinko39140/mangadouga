@@ -5,10 +5,70 @@ import { createHistoryRecorder } from './historyRecorder.js'
 import { createNavigateToMovie } from './navigateToMovie.js'
 import { supabase } from './supabaseClient.js'
 import { createViewingHistoryProvider } from './viewingHistoryProvider.js'
+import { useInViewMotion } from './hooks/useInViewMotion.js'
 import './HistoryPage.css'
 
 const defaultDataProvider = createViewingHistoryProvider(supabase)
 const defaultHistoryRecorder = createHistoryRecorder(supabase)
+
+const buildMotionClassName = (baseClassName, motionState) => {
+  if (motionState.shouldReduceMotion) return baseClassName
+  return `${baseClassName} motion-appear${motionState.isInView ? ' is-inview' : ''}`
+}
+
+const HistoryCard = ({ item, navigateToMovieHandler }) => {
+  const motion = useInViewMotion()
+
+  return (
+    <article
+      ref={motion.ref}
+      className={buildMotionClassName('history-card card-secondary card-interactive', motion)}
+    >
+      <div className="history-card__thumb">
+        {item.thumbnailUrl ? (
+          <img src={item.thumbnailUrl} alt={item.title} />
+        ) : (
+          <span className="history-card__thumb-placeholder media-text">
+            サムネイル準備中
+          </span>
+        )}
+      </div>
+      <div className="history-card__body">
+        <div className="history-card__title-row">
+          <h2 className="history-card__title text-strong">{item.title}</h2>
+          {item.isOshi ? (
+            <span
+              className="history-card__oshi state-badge state-badge--active"
+              aria-label="推しバッジ"
+            >
+              推
+            </span>
+          ) : null}
+        </div>
+        {item.seriesId ? (
+          <Link
+            className="history-card__link"
+            to={
+              item.movieId
+                ? `/series/${item.seriesId}/?selectedMovieId=${item.movieId}`
+                : `/series/${item.seriesId}/`
+            }
+            onClick={(event) => {
+              event.preventDefault()
+              navigateToMovieHandler({
+                seriesId: item.seriesId,
+                movieId: item.movieId,
+              })
+            }}
+          >
+            作品ページへ
+          </Link>
+        ) : null}
+        <p className="history-card__meta text-muted">最終閲覧: {item.clickedAt}</p>
+      </div>
+    </article>
+  )
+}
 
 function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToMovie }) {
   const navigate = useNavigate()
@@ -94,50 +154,7 @@ function HistoryPage({ authGate, dataProvider = defaultDataProvider, navigateToM
       >
         {items.map((item) => (
           <li key={item.historyId} className="history-list__item">
-            <article className="history-card card-secondary card-interactive">
-              <div className="history-card__thumb">
-                {item.thumbnailUrl ? (
-                  <img src={item.thumbnailUrl} alt={item.title} />
-                ) : (
-                  <span className="history-card__thumb-placeholder media-text">
-                    サムネイル準備中
-                  </span>
-                )}
-              </div>
-              <div className="history-card__body">
-                <div className="history-card__title-row">
-                  <h2 className="history-card__title text-strong">{item.title}</h2>
-                  {item.isOshi ? (
-                    <span
-                      className="history-card__oshi state-badge state-badge--active"
-                      aria-label="推しバッジ"
-                    >
-                      推
-                    </span>
-                  ) : null}
-                </div>
-                {item.seriesId ? (
-                  <Link
-                    className="history-card__link"
-                    to={
-                      item.movieId
-                        ? `/series/${item.seriesId}/?selectedMovieId=${item.movieId}`
-                        : `/series/${item.seriesId}/`
-                    }
-                    onClick={(event) => {
-                      event.preventDefault()
-                      navigateToMovieHandler({
-                        seriesId: item.seriesId,
-                        movieId: item.movieId,
-                      })
-                    }}
-                  >
-                    作品ページへ
-                  </Link>
-                ) : null}
-                <p className="history-card__meta text-muted">最終閲覧: {item.clickedAt}</p>
-              </div>
-            </article>
+            <HistoryCard item={item} navigateToMovieHandler={navigateToMovieHandler} />
           </li>
         ))}
       </ul>

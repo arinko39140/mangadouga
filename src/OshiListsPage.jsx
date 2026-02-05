@@ -6,9 +6,89 @@ import { publishOshiListUpdated, subscribeOshiListUpdated } from './oshiListEven
 import { DEFAULT_SORT_ORDER, normalizeSortOrder } from './sortOrderPolicy.js'
 import SortControl from './SortControl.jsx'
 import { supabase } from './supabaseClient.js'
+import { useInViewMotion } from './hooks/useInViewMotion.js'
 import './OshiListsPage.css'
 
 const defaultDataProvider = createOshiListCatalogProvider(supabase)
+
+const buildMotionClassName = (baseClassName, motionState) => {
+  if (motionState.shouldReduceMotion) return baseClassName
+  return `${baseClassName} motion-appear${motionState.isInView ? ' is-inview' : ''}`
+}
+
+const OshiListCard = ({ item, isUpdating, isOwner, onToggle }) => {
+  const motion = useInViewMotion()
+  const isFavorited = Boolean(item.isFavorited)
+  const canLinkToUser = Boolean(item.userId)
+  const className = buildMotionClassName(
+    isFavorited
+      ? 'oshi-lists__card card-primary card-interactive'
+      : 'oshi-lists__card card-primary card-interactive is-inactive',
+    motion
+  )
+
+  return (
+    <article ref={motion.ref} className={className}>
+      <div className="oshi-lists__body">
+        <div className="oshi-lists__title-row">
+          <h2 className="oshi-lists__title text-strong">
+            {canLinkToUser ? (
+              <Link className="oshi-lists__user" to={`/users/${item.userId}/`}>
+                <span className="oshi-lists__avatar" aria-hidden="true">
+                  {item.iconUrl ? (
+                    <img src={item.iconUrl} alt="" aria-hidden="true" />
+                  ) : (
+                    <span className="oshi-lists__avatar-placeholder">?</span>
+                  )}
+                </span>
+                <span className="oshi-lists__title-name text-strong">
+                  {item.name}
+                </span>
+              </Link>
+            ) : (
+              <span className="oshi-lists__user">
+                <span className="oshi-lists__avatar" aria-hidden="true">
+                  {item.iconUrl ? (
+                    <img src={item.iconUrl} alt="" aria-hidden="true" />
+                  ) : (
+                    <span className="oshi-lists__avatar-placeholder">?</span>
+                  )}
+                </span>
+                <span className="oshi-lists__title-name text-strong">
+                  {item.name}
+                </span>
+              </span>
+            )}
+          </h2>
+          <span
+            className={
+              isFavorited
+                ? 'oshi-lists__chip state-badge state-badge--active'
+                : 'oshi-lists__chip state-badge state-badge--inactive'
+            }
+          >
+            {isFavorited ? '済' : '推'}
+          </span>
+        </div>
+        <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
+        <div className="oshi-lists__actions">
+          <span className="oshi-lists__muted">公開中</span>
+          {!isOwner ? (
+            <button
+              type="button"
+              className={isFavorited ? 'oshi-lists__oshi-button is-registered' : 'oshi-lists__oshi-button'}
+              aria-pressed={isFavorited}
+              disabled={isUpdating}
+              onClick={() => onToggle(item.listId)}
+            >
+              {isFavorited ? '解除' : '登録'}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  )
+}
 
 function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
   const navigate = useNavigate()
@@ -119,85 +199,16 @@ function OshiListsPage({ dataProvider = defaultDataProvider, authGate }) {
         className="oshi-lists__items oshi-lists__items--grid card-collection card-collection--grid"
         aria-label="推しリスト一覧"
       >
-        {items.map((item) => {
-          const isFavorited = Boolean(item.isFavorited)
-          const isUpdating = oshiUpdatingIds.includes(item.listId)
-          const canLinkToUser = Boolean(item.userId)
-          const isOwner = Boolean(item.isOwner)
-          return (
-            <li key={item.listId} className="oshi-lists__item">
-              <article
-                className={
-                  isFavorited
-                    ? 'oshi-lists__card card-primary card-interactive'
-                    : 'oshi-lists__card card-primary card-interactive is-inactive'
-                }
-              >
-                <div className="oshi-lists__body">
-                  <div className="oshi-lists__title-row">
-                    <h2 className="oshi-lists__title text-strong">
-                      {canLinkToUser ? (
-                        <Link className="oshi-lists__user" to={`/users/${item.userId}/`}>
-                          <span className="oshi-lists__avatar" aria-hidden="true">
-                            {item.iconUrl ? (
-                              <img src={item.iconUrl} alt="" aria-hidden="true" />
-                            ) : (
-                              <span className="oshi-lists__avatar-placeholder">?</span>
-                            )}
-                          </span>
-                          <span className="oshi-lists__title-name text-strong">
-                            {item.name}
-                          </span>
-                        </Link>
-                      ) : (
-                        <span className="oshi-lists__user">
-                          <span className="oshi-lists__avatar" aria-hidden="true">
-                            {item.iconUrl ? (
-                              <img src={item.iconUrl} alt="" aria-hidden="true" />
-                            ) : (
-                              <span className="oshi-lists__avatar-placeholder">?</span>
-                            )}
-                          </span>
-                          <span className="oshi-lists__title-name text-strong">
-                            {item.name}
-                          </span>
-                        </span>
-                      )}
-                    </h2>
-                    <span
-                      className={
-                        isFavorited
-                          ? 'oshi-lists__chip state-badge state-badge--active'
-                          : 'oshi-lists__chip state-badge state-badge--inactive'
-                      }
-                    >
-                      {isFavorited ? '済' : '推'}
-                    </span>
-                  </div>
-                  <p className="oshi-lists__meta">お気に入り数: {item.favoriteCount ?? 0}</p>
-                  <div className="oshi-lists__actions">
-                    <span className="oshi-lists__muted">公開中</span>
-                    {!isOwner ? (
-                      <button
-                        type="button"
-                        className={
-                          isFavorited
-                            ? 'oshi-lists__oshi-button is-registered'
-                            : 'oshi-lists__oshi-button'
-                        }
-                        aria-pressed={isFavorited}
-                        disabled={isUpdating}
-                        onClick={() => handleOshiToggle(item.listId)}
-                      >
-                        {isFavorited ? '解除' : '登録'}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            </li>
-          )
-        })}
+        {items.map((item) => (
+          <li key={item.listId} className="oshi-lists__item">
+            <OshiListCard
+              item={item}
+              isUpdating={oshiUpdatingIds.includes(item.listId)}
+              isOwner={Boolean(item.isOwner)}
+              onToggle={handleOshiToggle}
+            />
+          </li>
+        ))}
       </ul>
     )
   }

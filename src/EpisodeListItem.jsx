@@ -1,13 +1,19 @@
-function EpisodeListItem({
-  episode,
-  isSelected = false,
-  onSelect,
-  onToggleOshi,
-}) {
+import { useInViewMotion } from './hooks/useInViewMotion.js'
+
+const buildMotionClassName = (baseClassName, motionState) => {
+  if (motionState.shouldReduceMotion) return baseClassName
+  return `${baseClassName} motion-appear${motionState.isInView ? ' is-inview' : ''}`
+}
+
+function EpisodeListItem({ episode, isSelected = false, onSelect, onToggleOshi }) {
+  const motion = useInViewMotion()
   const publishedLabel = episode.publishedAt ?? '未設定'
 
   return (
-    <div className="work-page__episode-card">
+    <div
+      ref={motion.ref}
+      className={buildMotionClassName('work-page__episode-card', motion)}
+    >
       <button
         type="button"
         className={
