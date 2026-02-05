@@ -56,6 +56,11 @@ describe('AppRouter', () => {
     ).toBeInTheDocument()
   })
 
+  it('ルート/history/で閲覧履歴ページが表示される', () => {
+    renderWithRoute('/history/')
+    expect(screen.getByRole('heading', { name: '閲覧履歴' })).toBeInTheDocument()
+  })
+
   it('対象ページ以外ではユーザー情報セクションを表示しない', () => {
     renderWithRoute('/login/')
     expect(screen.queryByRole('heading', { name: 'ユーザー情報' })).toBeNull()
