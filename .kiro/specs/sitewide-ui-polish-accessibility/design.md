@@ -283,6 +283,8 @@ graph TB
 **Responsibilities & Constraints**
 - 対象データと反映先（画面/ビルド/DB）を明示する。
 - 更新失敗の代表例と対処を提示する。
+- 正の情報源（SSOT）は Supabase とし、CSV/JSON は補助資料として扱う。
+- ドキュメント更新の責務を更新担当者と開発者で分離する。
 
 **Dependencies**
 - Inbound: 更新担当者の利用 (P0)
@@ -295,6 +297,14 @@ graph TB
 - Integration: `docs/data-update-flow.md` を単一の参照元として維持する。
 - Validation: 更新後チェックリストを常に最新化する。
 - Risks: データ経路の変更が反映されないとドキュメントが形骸化する。
+- Update Responsibility:
+  - 更新担当者: CSV/JSONやデータ内容の更新時に、手順・チェックリスト・注意点を更新する。
+  - 開発者: Supabaseスキーマ/スクリプト/反映先の変更時に、データ一覧・反映先・更新トリガーを更新する。
+- Update Triggers:
+  - CSV/JSONの追加・削除・列変更
+  - Supabaseテーブル/列の追加・削除・命名変更
+  - `scripts/` の更新手順変更
+  - 画面の反映先追加・変更
 
 ## Data Models
 
@@ -357,3 +367,30 @@ graph TB
 - まず共通トークンとフォーカス/モーション基準を定義する。
 - 重点ページから段階適用し、差分を縮小する。
 - `content/` への適用は次フェーズで検討する。
+
+### Scope Definition (React pages only)
+対象ページは `src/AppRouter.jsx` のルート定義に一致し、以下を含む。`LoginPage` と NotFound など補助ページは対象外とする。
+- TopPage (/)
+- OshiMyListPage (/oshi-lists/)
+- OshiListsPage (/oshi-lists/catalog/)
+- OshiListPage (/oshi-lists/:listId/)
+- OshiFavoritesPage (/oshi-lists/favorites/)
+- UserPage (/users/:userId/)
+- UserOshiSeriesPage (/users/:userId/oshi-series/)
+- HistoryPage (/history/)
+- WorkPage (/series/:seriesId/)
+
+### Definition of Done (DoD)
+- DoD-1: 上記対象ページすべてで `UiTokenSheet`（`src/index.css` のCSS変数）参照を確認
+- DoD-2: カード/ボタン/ナビゲーションの主要UIが `CardPatternLibrary` / `NavigationPatternLibrary` に統一
+- DoD-3: `outline: none` を除去し、`:focus-visible` の統一フォーカスリングが表示される
+- DoD-4: `prefers-reduced-motion` の抑制ルールが全対象ページに適用
+- DoD-5: 重点ページ（Top / OshiLists / Work / History）でコントラスト測定が完了し、AA基準を満たす
+
+### Migration Priority
+1. TopPage
+2. OshiListsPage
+3. WorkPage
+4. HistoryPage
+5. UserPage / UserOshiSeriesPage
+6. OshiMyListPage / OshiFavoritesPage / OshiListPage
