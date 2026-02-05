@@ -13,7 +13,7 @@
 1.2. When ナビゲーション要素が表示されるとき, the MangaDouga UI shall 全ページで同一の視覚ルールとレイアウト規則に従って表示する
 1.3. The MangaDouga UI shall 見出し、本文、補足情報の階層が視覚的に区別できるようにする
 1.4. While ダーク/ライトなどのテーマ切替が存在しない場合, the MangaDouga UI shall 既定テーマ内で統一された配色体系を維持する
-1.5. The MangaDouga UI shall 「全ページ」の対象範囲（Reactページのみ / `content/` の静的ページも含む）を明示し、その範囲内で一貫性を担保する
+1.5. The MangaDouga UI shall 「全ページ」の対象範囲を明示し、その範囲内で一貫性を担保する（対象はReactページのみで、`content/` 配下の静的ページと `LoginPage` / `NotFound` は除外）
 
 ### Requirement 2: タイポグラフィと配色の強化
 **Objective:** As a サイト閲覧者, I want 文字の読みやすさと配色の可読性が高い, so that 情報を迷わず理解できる
@@ -53,7 +53,7 @@
 5.2. When コンテンツ更新手順を参照するとき, the project documentation shall 必要な入力項目、形式、配置場所を明示する
 5.3. If 更新に失敗する典型例がある場合, then the project documentation shall 代表的なエラー原因と対処方法を記載する
 5.4. The project documentation shall 更新後に確認すべき表示結果のチェック項目を含める
-5.5. The project documentation shall CSV/JSONの対象データ範囲（静的データ / Supabase連携データなど）と反映先（ビルド/DB/画面）を明示する
+5.5. The project documentation shall CSV/JSONの対象データ範囲（静的データ / Supabase連携データなど）と反映先（ビルド/DB/画面）を明示する。正の情報源（SSOT）はSupabaseとし、CSV/JSONは補助資料であることを明記する
 
 ### Requirement 6: アクセシビリティ（キーボード操作とフォーカス）
 **Objective:** As a キーボード利用者, I want 主要操作をキーボードだけで完結できる, so that マウスがなくても利用できる
