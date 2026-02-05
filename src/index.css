@@ -140,7 +140,7 @@ a {
     border-color 0.2s ease;
 }
 
-.card-interactive:hover {
+.card-interactive.motion-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 16px 32px rgba(43, 30, 27, 0.14);
 }
@@ -217,6 +217,31 @@ a {
   .motion-appear {
     transform: none;
     transition: opacity 0.15s ease;
+  }
+}
+
+/* Motion policy: hover */
+.motion-hover {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-hover {
+    transition:
+      box-shadow 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .card-interactive.motion-hover:hover {
+    transform: none;
+    box-shadow: var(--shadow-card);
   }
 }
 

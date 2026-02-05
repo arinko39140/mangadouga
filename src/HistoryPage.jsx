@@ -22,7 +22,10 @@ const HistoryCard = ({ item, navigateToMovieHandler }) => {
   return (
     <article
       ref={motion.ref}
-      className={buildMotionClassName('history-card card-secondary card-interactive', motion)}
+      className={buildMotionClassName(
+        'history-card card-secondary card-interactive motion-hover',
+        motion
+      )}
     >
       <div className="history-card__thumb">
         {item.thumbnailUrl ? (

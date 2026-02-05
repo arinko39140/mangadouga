@@ -22,8 +22,8 @@ const OshiListCard = ({ item, isUpdating, isOwner, onToggle }) => {
   const canLinkToUser = Boolean(item.userId)
   const className = buildMotionClassName(
     isFavorited
-      ? 'oshi-lists__card card-primary card-interactive'
-      : 'oshi-lists__card card-primary card-interactive is-inactive',
+      ? 'oshi-lists__card card-primary card-interactive motion-hover'
+      : 'oshi-lists__card card-primary card-interactive motion-hover is-inactive',
     motion
   )
 

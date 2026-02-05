@@ -112,7 +112,7 @@ const buildMotionClassName = (baseClassName, motionState) => {
 const TopPageWorkCard = ({ item, navigateToMovieHandler, showMeta }) => {
   const motion = useInViewMotion()
   const className = buildMotionClassName(
-    'top-page__work-card card-interactive',
+    'top-page__work-card card-interactive motion-hover',
     motion
   )
 

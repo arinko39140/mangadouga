@@ -84,4 +84,10 @@ describe('index.css UI tokens', () => {
     expect(css).toContain('.motion-appear')
     expect(css).toContain('.motion-appear.is-inview')
   })
+
+  it('defines shared hover motion rules with reduced-motion overrides', () => {
+    expect(css).toContain('.motion-hover')
+    expect(css).toContain('.motion-hover:hover')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+  })
 })
