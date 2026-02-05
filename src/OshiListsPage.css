@@ -17,7 +17,7 @@
 
 .oshi-lists__label {
   font-weight: 600;
-  color: #3b2f40;
+  color: #5b2d1e;
 }
 
 .oshi-lists__toggle-group {
@@ -26,7 +26,7 @@
   background: rgba(255, 255, 255, 0.7);
   padding: 0.35rem;
   border-radius: 999px;
-  border: 1px solid rgba(120, 99, 117, 0.2);
+  border: 1px solid rgba(255, 122, 89, 0.25);
 }
 
 .oshi-lists__toggle {
@@ -35,16 +35,16 @@
   padding: 0.45rem 1rem;
   font-weight: 600;
   background: transparent;
-  color: #6a596b;
+  color: #7a4a3a;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   font-family: inherit;
 }
 
 .oshi-lists__toggle.is-active {
-  background: #2f2035;
-  color: #fff7f5;
-  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+  background: linear-gradient(135deg, #ff7a59, #ffb000);
+  color: #fffdfb;
+  box-shadow: 0 10px 20px rgba(255, 122, 89, 0.28);
 }
 
 .oshi-lists__items {
@@ -64,6 +64,7 @@
 .oshi-lists__card {
   display: grid;
   overflow: hidden;
+  border-radius: var(--radius-card);
 }
 
 .oshi-lists__card.is-inactive {
@@ -80,7 +81,7 @@
 
 .oshi-lists__thumb {
   position: relative;
-  background: rgba(35, 25, 45, 0.08);
+  background: rgba(255, 122, 89, 0.08);
   display: grid;
   place-items: center;
   min-height: 140px;
@@ -94,7 +95,7 @@
 }
 
 .oshi-lists__thumb-placeholder {
-  color: #7b6875;
+  color: #8b6a5f;
   font-size: 0.9rem;
 }
 
@@ -102,13 +103,13 @@
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  background: #ffded9;
-  color: #8d2c24;
+  background: rgba(255, 176, 0, 0.2);
+  color: #8a4b00;
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 1px solid rgba(141, 44, 36, 0.2);
+  border: 1px solid rgba(255, 176, 0, 0.4);
 }
 
 .oshi-lists__body {
@@ -143,7 +144,7 @@
   height: 32px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(47, 32, 53, 0.08);
+  background: rgba(255, 122, 89, 0.12);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -158,7 +159,7 @@
 
 .oshi-lists__avatar-placeholder {
   font-size: 0.85rem;
-  color: #6a596b;
+  color: #7a4a3a;
   font-weight: 700;
 }
 
@@ -168,8 +169,8 @@
 }
 
 .oshi-lists__chip {
-  background: rgba(47, 32, 53, 0.08);
-  color: #3b2f40;
+  background: rgba(255, 122, 89, 0.18);
+  color: #5b2d1e;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -193,28 +194,28 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #2f2035;
+  color: #b24a2f;
   font-weight: 600;
   text-decoration: none;
-  border-bottom: 1px solid rgba(47, 32, 53, 0.4);
+  border-bottom: 1px solid rgba(178, 74, 47, 0.5);
   padding-bottom: 0.1rem;
 }
 
 .oshi-lists__link:hover {
-  color: #1f1824;
-  border-bottom-color: rgba(31, 24, 36, 0.7);
+  color: #8f3a22;
+  border-bottom-color: rgba(143, 58, 34, 0.7);
 }
 
 .oshi-lists__muted {
-  color: #9a8895;
+  color: #a37a6f;
   font-size: 0.85rem;
 }
 
 .oshi-lists__oshi-button {
-  border: 1px solid rgba(120, 99, 117, 0.3);
+  border: 1px solid rgba(255, 122, 89, 0.35);
   border-radius: 999px;
   background: #fff;
-  color: #6a596b;
+  color: #7a4a3a;
   padding: 0.35rem 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -223,10 +224,10 @@
 }
 
 .oshi-lists__oshi-button.is-registered {
-  background: #2f2035;
-  color: #fff7f5;
+  background: linear-gradient(135deg, #ff7a59, #ffb000);
+  color: #fffdfb;
   border-color: transparent;
-  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+  box-shadow: 0 10px 20px rgba(255, 122, 89, 0.28);
 }
 
 .oshi-lists__oshi-button:disabled {
@@ -237,7 +238,7 @@
 
 .oshi-lists__status {
   margin: 0;
-  color: #6a596b;
+  color: #7a4a3a;
 }
 
 .oshi-lists__status--error {

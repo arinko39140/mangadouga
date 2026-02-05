@@ -10,12 +10,12 @@
 
 .user-page__title {
   margin: 0;
-  color: #2a1e2f;
+  color: #3f1d16;
 }
 
 .user-page__subtitle {
   margin: 0;
-  color: #6a596b;
+  color: #7a4a3a;
   font-size: 0.95rem;
 }
 
@@ -26,7 +26,7 @@
 
 .user-page__status {
   margin: 0;
-  color: #6a596b;
+  color: #7a4a3a;
 }
 
 .user-page__status--error {
@@ -41,17 +41,17 @@
   align-self: flex-start;
   border: none;
   border-radius: 999px;
-  background: #2f2035;
-  color: #fff7f5;
+  background: linear-gradient(135deg, #ff7a59, #ffb000);
+  color: #fffdfb;
   padding: 0.5rem 1.2rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 10px 20px rgba(47, 32, 53, 0.2);
+  box-shadow: 0 10px 20px rgba(255, 122, 89, 0.28);
   font-family: inherit;
 }
 
 .user-page__retry:hover {
-  background: #241b2b;
+  filter: brightness(0.97);
 }
 
 .user-page__retry:disabled {
@@ -71,14 +71,14 @@
   font-size: 0.85rem;
   padding: 0.4rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid rgba(120, 99, 117, 0.25);
-  color: #2f2035;
-  background: #fff7f5;
+  border: 1px solid rgba(255, 122, 89, 0.35);
+  color: #7a4a3a;
+  background: rgba(255, 250, 246, 0.9);
   font-weight: 600;
 }
 
 .user-page__tab:hover {
-  background: #f4eef9;
+  background: rgba(255, 210, 183, 0.6);
 }
 
 .user-profile-edit {

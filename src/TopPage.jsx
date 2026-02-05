@@ -16,7 +16,6 @@ import { useInViewMotion } from './hooks/useInViewMotion.js'
 import './TopPage.css'
 
 const WEEKDAYS = [
-  { key: 'all', label: 'すべて' },
   { key: 'mon', label: '月' },
   { key: 'tue', label: '火' },
   { key: 'wed', label: '水' },
@@ -25,6 +24,7 @@ const WEEKDAYS = [
   { key: 'sat', label: '土' },
   { key: 'sun', label: '日' },
 ]
+const WEEKDAYS_WITH_ALL = [{ key: 'all', label: 'すべて' }, ...WEEKDAYS]
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const JST_WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -216,9 +216,9 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
   const isAllSelected = selectedWeekday === 'all'
   const isAllRecent = recentWeekday === 'all'
   const selectedWeekdayLabel =
-    WEEKDAYS.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
+    WEEKDAYS_WITH_ALL.find((weekday) => weekday.key === selectedWeekday)?.label ?? ''
   const recentWeekdayLabel =
-    WEEKDAYS.find((weekday) => weekday.key === recentWeekday)?.label ?? ''
+    WEEKDAYS_WITH_ALL.find((weekday) => weekday.key === recentWeekday)?.label ?? ''
   const selectedFilterLabel = isAllSelected
     ? 'すべて'
     : `${selectedWeekdayLabel}曜日`
@@ -548,7 +548,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             />
           </div>
           <div className="top-page__weekday" role="group" aria-label="過去100件の曜日">
-            {WEEKDAYS.map((weekday) => (
+            {WEEKDAYS_WITH_ALL.map((weekday) => (
               <button
                 key={weekday.key}
                 type="button"

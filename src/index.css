@@ -1,25 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=M+PLUS+Rounded+1c:wght@400;600;700&display=swap');
 
 :root {
-  --color-text: #2b1e1b;
-  --color-text-strong: #1f1412;
-  --color-text-muted: #6a5c57;
-  --color-surface: #fff7e8;
+  --color-text: #24100f;
+  --color-text-strong: #150909;
+  --color-text-muted: #6b5856;
+  --color-surface: #fff5e9;
   --color-surface-elevated: #ffffff;
-  --color-accent: #ff6b6b;
-  --color-accent-secondary: #4ecdc4;
-  --color-warning: #ffb703;
-  --focus-ring-color: #2e6bff;
+  --color-accent: #ff7a59;
+  --color-accent-secondary: #20c997;
+  --color-warning: #ffb000;
+  --focus-ring-color: #2b6dff;
   --focus-ring-width: 2px;
-  --shadow-card: 0 12px 24px rgba(43, 30, 27, 0.12);
-  --radius-card: 16px;
+  --shadow-card: 0 14px 28px rgba(21, 9, 9, 0.12);
+  --radius-card: 20px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
-  --font-heading: 'Playfair Display', 'Times New Roman', serif;
-  --font-display: 'Playfair Display', 'Times New Roman', serif;
-  --font-caption: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-body: 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-heading: 'Fredoka', 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-display: 'Fredoka', 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-caption: 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -37,10 +37,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.9), transparent 55%),
-    radial-gradient(circle at 20% 20%, rgba(255, 214, 199, 0.6), transparent 45%),
-    radial-gradient(circle at 80% 30%, rgba(208, 196, 245, 0.6), transparent 45%),
-    linear-gradient(160deg, #fef6f1, #f3eef6);
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), transparent 55%),
+    radial-gradient(circle at 16% 18%, rgba(255, 205, 230, 0.7), transparent 45%),
+    radial-gradient(circle at 82% 28%, rgba(173, 232, 255, 0.65), transparent 48%),
+    radial-gradient(circle at 65% 75%, rgba(197, 255, 219, 0.55), transparent 52%),
+    linear-gradient(160deg, #fff0f6, #eefcff);
 }
 
 #root {
@@ -97,7 +98,7 @@ a {
   justify-content: center;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: rgba(31, 20, 18, 0.65);
+  background: linear-gradient(135deg, rgba(255, 122, 89, 0.92), rgba(255, 176, 0, 0.9));
   color: #fff;
   font-weight: 600;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -116,21 +117,21 @@ a {
 }
 
 .state-badge--warning {
-  background: rgba(255, 183, 3, 0.18);
-  color: #8a5b00;
-  border-color: rgba(255, 183, 3, 0.5);
+  background: rgba(255, 176, 0, 0.22);
+  color: #7a4a00;
+  border-color: rgba(255, 176, 0, 0.55);
 }
 
 .state-badge--inactive {
-  background: rgba(43, 30, 27, 0.08);
+  background: rgba(21, 9, 9, 0.08);
   color: var(--color-text-muted);
-  border-color: rgba(43, 30, 27, 0.12);
+  border-color: rgba(21, 9, 9, 0.14);
 }
 
 .state-badge--active {
-  background: rgba(255, 107, 107, 0.18);
+  background: rgba(255, 122, 89, 0.22);
   color: var(--color-text-strong);
-  border-color: rgba(255, 107, 107, 0.45);
+  border-color: rgba(255, 122, 89, 0.5);
 }
 
 .card-interactive {
@@ -284,8 +285,8 @@ a {
 }
 
 .nav-pattern__item:hover {
-  background: rgba(255, 107, 107, 0.12);
-  border-color: rgba(255, 107, 107, 0.35);
+  background: rgba(255, 122, 89, 0.16);
+  border-color: rgba(255, 122, 89, 0.4);
 }
 
 .nav-pattern__item:focus-visible {
@@ -294,8 +295,8 @@ a {
 }
 
 .nav-pattern__item.is-active {
-  background: rgba(255, 107, 107, 0.18);
-  border-color: rgba(255, 107, 107, 0.55);
+  background: rgba(255, 122, 89, 0.25);
+  border-color: rgba(255, 122, 89, 0.55);
   color: var(--color-text-strong);
 }
 
