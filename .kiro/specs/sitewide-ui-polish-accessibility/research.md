@@ -13,35 +13,42 @@
 - **Feature**: `sitewide-ui-polish-accessibility`
 - **Discovery Scope**: Extension
 - **Key Findings**:
-  - `prefers-reduced-motion` はOSの設定に合わせて非必須アニメーションを減らすための標準的なCSSメディア機能として定義されている。
-  - コントラスト比は本文4.5:1、ラージテキスト3:1、UIコンポーネント3:1がAA基準として整理されている。
-  - `:focus-visible` は入力モダリティに応じてフォーカス表示を制御し、視認性確保を前提にカスタムリングを設計できる。
+  - `prefers-reduced-motion` はOS設定に連動し、非必須モーションを削減・置換するための標準的なメディア機能である。
+  - WCAG 2.1のコントラスト基準は本文4.5:1、ラージテキスト3:1を要求し、非テキスト要素（フォーカスリングなど）は3:1を求める。
+  - WCAG 2.2ではフォーカスがコンテンツに隠れないことがAA要件として追加され、フォーカス可視性の検証項目に含める必要がある。
 
 ## Research Log
 
 ### Reduced Motion の適用範囲
-- **Context**: 要件4.4/4.5で動きの抑制を明確化する必要があるため。
-- **Sources Consulted**: [MDN: prefers-reduced-motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-motion)
+- **Context**: 要件4.4/4.5で動きの抑制を具体化する必要があるため。
+- **Sources Consulted**: MDN `prefers-reduced-motion`
 - **Findings**:
-  - `prefers-reduced-motion: reduce` は非必須アニメーションを減らす意図を示す。
-  - すべてのアニメーションを完全停止するのではなく、必要性に応じて削減/置換することが推奨される。
-- **Implications**: 初回ロード/カード出現/ホバーに対して「非必須」判定を行い、reduce時の代替表現を定義する。
+  - `prefers-reduced-motion: reduce` は非必須アニメーションを削減・置換する意図を示す。
+  - すべてのアニメーションを完全停止するのではなく、必須/非必須の区分が必要。
+- **Implications**: 初回ロード/カード出現/ホバーは「非必須」扱いを基本とし、reduce時は移動や拡大を抑える指針を設ける。
 
 ### コントラスト基準の明確化
 - **Context**: 要件2.5/7.1/7.4で基準値の明示が必要。
-- **Sources Consulted**: [MDN: Color contrast](https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Understanding_WCAG/Perceivable/Color_contrast)、[WebAIM: Contrast and Color](https://webaim.org/articles/contrast/)
+- **Sources Consulted**: W3C Understanding SC 1.4.3, W3C Understanding SC 1.4.11
 - **Findings**:
-  - 通常テキストは4.5:1、ラージテキストは3:1、UIコンポーネントは3:1がAA基準。
-  - 非テキスト要素（フォーカスリングなど）も3:1が推奨される。
-- **Implications**: デザイン・トークンのコントラスト検証対象（本文/見出し/補足/ボタンラベル/フォーカスリング）を明記する。
+  - 通常テキストは4.5:1、ラージテキストは3:1がAA基準。
+  - UIコンポーネントやフォーカスリングなどの非テキスト要素は3:1が基準。
+- **Implications**: トークン設計とQAで本文/見出し/補足/ボタンラベル/フォーカスリングの測定対象を明示する。
 
 ### フォーカス可視化の標準化
 - **Context**: 要件6.2/6.5でフォーカスリングの共通規則が必要。
-- **Sources Consulted**: [MDN: :focus-visible](https://developer.mozilla.org/en-US/docs/Web/CSS/%3Afocus-visible)
+- **Sources Consulted**: MDN `:focus-visible`
 - **Findings**:
-  - `:focus-visible` はキーボード操作時のフォーカス表示に適する。
-  - `outline` を除去するとキーボード利用者の操作性が低下するため、視認性の高いリング設計が必要。
-- **Implications**: 全体のフォーカスリングは `:focus-visible` を基準にし、UIトークンで色/太さを統一する。
+  - `:focus-visible` は入力モダリティに応じてフォーカス表示を制御できる。
+  - `outline` を除去する場合は代替リングが必須であり、視認性を担保する必要がある。
+- **Implications**: `:focus-visible` を基準に共通フォーカスリングを定義し、色/太さをトークン化する。
+
+### フォーカス非遮蔽の検証
+- **Context**: 要件6.2/6.4の「フォーカス位置の視認性」を補強する観点。
+- **Sources Consulted**: W3C WAI "What’s New in WCAG 2.2"
+- **Findings**:
+  - WCAG 2.2ではフォーカス要素が作者コンテンツに隠れないことがAA要件として追加された。
+- **Implications**: ナビゲーションやカードのフォーカスがヘッダー/フッターに隠れないかをQAチェックに追加する。
 
 ## Architecture Pattern Evaluation
 
@@ -97,9 +104,11 @@
 - 既存CSSの分散により統一感が不十分になる — トークン化 + 優先ページ移行計画を明確化
 - `content/` 配下の静的ページが別トーンで残る — 適用範囲の合意を先に取る
 - フォーカスリングが既存デザインと衝突する — 視認性と調和の両立を検証する
+- フォーカスが固定ヘッダー等に隠れる — QAでフォーカス非遮蔽の確認項目を追加する
 
 ## References
 - [MDN: prefers-reduced-motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-motion) — reduced motionの意図と適用範囲
-- [MDN: Color contrast](https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Understanding_WCAG/Perceivable/Color_contrast) — WCAG AAのコントラスト比
-- [WebAIM: Contrast and Color](https://webaim.org/articles/contrast/) — 非テキスト要素のコントラスト基準
-- [MDN: :focus-visible](https://developer.mozilla.org/en-US/docs/Web/CSS/%3Afocus-visible) — フォーカス表示の標準指針
+- [W3C: Understanding SC 1.4.3 Contrast (Minimum)](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum) — テキストのコントラスト比
+- [W3C: Understanding SC 1.4.11 Non-text Contrast](https://w3c.github.io/wcag21/understanding/non-text-contrast) — 非テキスト要素のコントラスト比
+- [MDN: :focus-visible](https://developer.mozilla.org/en-US/docs/Web/CSS/%3Afocus-visible) — 入力モダリティに応じたフォーカス表示
+- [W3C WAI: What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/) — フォーカス非遮蔽の追加要件
