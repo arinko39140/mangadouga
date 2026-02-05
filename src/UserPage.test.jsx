@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import UserPage from './UserPage.jsx'
@@ -456,5 +456,58 @@ describe('UserPage', () => {
     expect(listProvider.fetchListSummary).toHaveBeenCalledTimes(2)
     expect(seriesProvider.fetchSeriesSummary).toHaveBeenCalledTimes(2)
     expect(favoritesProvider.fetchFavoritesSummary).toHaveBeenCalledTimes(2)
+  })
+
+  it('プロフィール編集はフォーカスが閉じ込められ、閉じた後に戻る', async () => {
+    const profileProvider = {
+      fetchUserProfile: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { userId: 'user-1', name: '花音', iconUrl: null, links: [] },
+      }),
+    }
+    const listProvider = {
+      fetchListSummary: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { listId: 'list-1', status: 'public', favoriteCount: 0, isFavorited: false },
+      }),
+    }
+    const seriesProvider = {
+      fetchSeriesSummary: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
+    }
+    const favoritesProvider = {
+      fetchFavoritesSummary: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    }
+    const authGate = {
+      getStatus: vi.fn().mockResolvedValue({ ok: true, status: { isAuthenticated: true } }),
+      redirectToLogin: vi.fn(),
+    }
+
+    renderUserPage({ profileProvider, listProvider, seriesProvider, favoritesProvider, authGate })
+
+    const editButton = await screen.findByRole('button', { name: 'プロフィール編集' })
+    fireEvent.click(editButton)
+
+    const dialog = await screen.findByRole('dialog', { name: 'プロフィール編集' })
+    const content = document.querySelector('.user-page__content')
+    expect(content).toHaveAttribute('inert')
+    expect(content).toHaveAttribute('aria-hidden', 'true')
+
+    const nameInput = within(dialog).getByLabelText('表示名')
+    const cancelButton = within(dialog).getByRole('button', { name: 'キャンセル' })
+
+    cancelButton.focus()
+    expect(cancelButton).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(nameInput).toHaveFocus()
+
+    nameInput.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(cancelButton).toHaveFocus()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'プロフィール編集' })).not.toBeInTheDocument()
+    })
+    expect(editButton).toHaveFocus()
   })
 })

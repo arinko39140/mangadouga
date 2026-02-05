@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createAuthGate } from './authGate.js'
 import ExternalLinksPanel from './ExternalLinksPanel.jsx'
@@ -17,6 +17,7 @@ import { createUserPageProvider } from './userPageProvider.js'
 import { createUserSeriesProvider } from './userSeriesProvider.js'
 import { publishUserProfileUpdated } from './userProfileEvents.js'
 import { subscribeUserSeriesUpdated } from './userSeriesEvents.js'
+import { useFocusTrap } from './hooks/useFocusTrap.js'
 import './UserPage.css'
 
 const defaultProfileProvider = createUserPageProvider(supabase)
@@ -138,6 +139,8 @@ function UserPage({
   const [iconCrop, setIconCrop] = useState(null)
   const [iconUploadError, setIconUploadError] = useState(null)
   const [iconUploadStatus, setIconUploadStatus] = useState('idle')
+  const editButtonRef = useRef(null)
+  const editDialogRef = useRef(null)
   const [profileForm, setProfileForm] = useState({
     name: '',
     iconUrl: '',
@@ -368,7 +371,7 @@ function UserPage({
     }
   }
 
-  const handleProfileCancel = () => {
+  const handleProfileCancel = useCallback(() => {
     setIsEditingProfile(false)
     setProfileSaveError(null)
     setIconFile(null)
@@ -387,7 +390,14 @@ function UserPage({
         otherLabel: profile.links?.find((link) => link.category === 'other')?.label ?? '',
       })
     }
-  }
+  }, [profile])
+
+  useFocusTrap({
+    active: isOwner && isEditingProfile,
+    containerRef: editDialogRef,
+    onDeactivate: handleProfileCancel,
+    returnFocusRef: editButtonRef,
+  })
 
   useEffect(() => {
     if (!iconFile) {
@@ -706,33 +716,63 @@ function UserPage({
         renderProfileError()
       ) : (
         <div className="user-page__sections">
-          <UserInfoPanel
-            profile={profile}
-            isLoading={profileLoading}
-            actions={
-              isOwner ? (
-                <>
-                  <Link
-                    to="/history/"
-                    className="user-page__tab user-page__tab--history"
-                  >
-                    閲覧履歴
-                  </Link>
-                  <button
-                    type="button"
-                    className="button button--ghost user-page__edit-button"
-                    onClick={() => setIsEditingProfile(true)}
-                  >
-                    プロフィール編集
-                  </button>
-                </>
-              ) : null
-            }
-          />
+          <div
+            className="user-page__content"
+            aria-hidden={isOwner && isEditingProfile ? 'true' : undefined}
+            inert={isOwner && isEditingProfile ? '' : undefined}
+          >
+            <UserInfoPanel
+              profile={profile}
+              isLoading={profileLoading}
+              actions={
+                isOwner ? (
+                  <>
+                    <Link
+                      to="/history/"
+                      className="user-page__tab user-page__tab--history"
+                    >
+                      閲覧履歴
+                    </Link>
+                    <button
+                      type="button"
+                      className="button button--ghost user-page__edit-button"
+                      onClick={() => setIsEditingProfile(true)}
+                      ref={editButtonRef}
+                    >
+                      プロフィール編集
+                    </button>
+                  </>
+                ) : null
+              }
+            />
+            {renderExternalLinks()}
+            <UserOshiSections
+              viewerUserId={viewerUserId}
+              targetUserId={userId}
+              listPanel={listPanel}
+              seriesPanel={seriesPanel}
+              favoritesPanel={favoritesPanel}
+            />
+            {favoriteError ? (
+              <p className="user-page__status user-page__status--error" role="alert">
+                お気に入り操作に失敗しました。
+              </p>
+            ) : null}
+          </div>
           {isOwner && isEditingProfile ? (
-            <section className="user-profile-edit" aria-live="polite">
+            <section
+              className="user-profile-edit"
+              aria-live="polite"
+              aria-modal="true"
+              role="dialog"
+              aria-labelledby="user-profile-edit-title"
+              tabIndex={-1}
+              ref={editDialogRef}
+            >
               <header className="user-profile-edit__header">
-                <h2 className="user-profile-edit__title">プロフィール編集</h2>
+                <h2 className="user-profile-edit__title" id="user-profile-edit-title">
+                  プロフィール編集
+                </h2>
               </header>
               <form className="form" onSubmit={handleProfileSave}>
                 <label>
@@ -920,19 +960,6 @@ function UserPage({
                 </div>
               </form>
             </section>
-          ) : null}
-          {renderExternalLinks()}
-          <UserOshiSections
-            viewerUserId={viewerUserId}
-            targetUserId={userId}
-            listPanel={listPanel}
-            seriesPanel={seriesPanel}
-            favoritesPanel={favoritesPanel}
-          />
-          {favoriteError ? (
-            <p className="user-page__status user-page__status--error" role="alert">
-              お気に入り操作に失敗しました。
-            </p>
           ) : null}
         </div>
       )}
