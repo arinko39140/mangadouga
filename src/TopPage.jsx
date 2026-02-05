@@ -475,6 +475,20 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           </div>
           <p>曜日を選ぶと一覧が切り替わります。</p>
         </nav>
+        <aside
+          ref={linkMotion.ref}
+          className={buildMotionClassName('top-page__link top-page__link--cta', linkMotion)}
+          aria-label="推しリスト導線"
+        >
+          <h2>推しリスト導線</h2>
+          <p>みんなの推しリスト一覧への入口です。</p>
+          <Link className="top-page__link-action" to="/oshi-lists/catalog/">
+            みんなの推しリスト一覧へ
+          </Link>
+          <Link className="top-page__link-action" to="/oshi-lists/">
+            推しリストへ
+          </Link>
+        </aside>
         <section
           ref={listMotion.ref}
           className={buildMotionClassName(
@@ -598,20 +612,6 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
             </ul>
           )}
         </section>
-        <aside
-          ref={linkMotion.ref}
-          className={buildMotionClassName('top-page__link top-page__link--cta', linkMotion)}
-          aria-label="推しリスト導線"
-        >
-          <h2>推しリスト導線</h2>
-          <p>みんなの推しリスト一覧への入口です。</p>
-          <Link className="top-page__link-action" to="/oshi-lists/catalog/">
-            みんなの推しリスト一覧へ
-          </Link>
-          <Link className="top-page__link-action" to="/oshi-lists/">
-            推しリストへ
-          </Link>
-        </aside>
       </div>
     </main>
   )

@@ -78,6 +78,17 @@ describe('TopPage layout', () => {
     expect(listLink).toHaveClass('top-page__link--cta')
   })
 
+  it('曜日ナビゲーションと推しリスト導線が一覧より先にフォーカスされる順序で配置される', () => {
+    renderTopPage()
+
+    const nav = screen.getByRole('navigation', { name: '曜日ナビゲーション' })
+    const link = screen.getByRole('complementary', { name: '推しリスト導線' })
+    const list = screen.getByRole('region', { name: '曜日別一覧' })
+
+    expect(nav.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(link.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('推しリスト導線からみんなの推しリストページへ遷移できる', () => {
     renderTopPage()
 
