@@ -211,6 +211,7 @@ graph TB
 
 **Implementation Notes**
 - Integration: `App.css`/`LoginPage.css` の `outline: none` を共通ルールに置換。
+- Integration (追加): `src/` 配下の全CSSを棚卸しし、フォーカス関連のルールを `src/index.css` の共通規則へ集約する（`outline: none` 置換、`:focus-visible` 統一）。
 - Validation: コントラスト3:1相当のリング視認性をチェック。
 - Risks: マウス操作時の過剰表示を避ける必要がある。
 
@@ -273,6 +274,7 @@ Risks: なし（次フェーズで検討）。
 
 **Implementation Notes**
 - Integration: `docs/data-update-flow.md` に集約する設計。
+- Integration (追加): 対象CSV/JSONの一覧、主要カラム、配置場所、反映先（画面/ビルド/DB）を表形式で明記する。
 - Validation: 更新後の表示チェックリストを明記。
 - Risks: 実データの更新経路が未整理のままだと文書が形骸化する。
 
