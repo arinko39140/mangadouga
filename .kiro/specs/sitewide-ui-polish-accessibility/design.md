@@ -150,6 +150,29 @@ graph TB
 | `--font-display` | 強調見出し | タイトル/重要情報 |
 | `--font-caption` | 補足テキスト | 小さめ・可読性維持 |
 
+**Proposed Token Values（ポップ/温かみ）**
+| Token | Value | Notes |
+| --- | --- | --- |
+| `--color-text` | `#2b1e1b` | 本文 |
+| `--color-text-strong` | `#1f1412` | 見出し/強調 |
+| `--color-text-muted` | `#6a5c57` | 補足/メタ |
+| `--color-surface` | `#fff7e8` | 背景 |
+| `--color-surface-elevated` | `#ffffff` | カード面 |
+| `--color-accent` | `#ff6b6b` | 主要アクセント |
+| `--color-accent-secondary` | `#4ecdc4` | 補助アクセント |
+| `--color-warning` | `#ffb703` | 警告/注意 |
+| `--focus-ring-color` | `#2e6bff` | フォーカスリング |
+| `--focus-ring-width` | `2px` | 2px以上 |
+| `--shadow-card` | `0 12px 24px rgba(43, 30, 27, 0.12)` | カード影 |
+| `--radius-card` | `16px` | 角丸 |
+| `--space-2` | `8px` | 余白スケール |
+| `--space-3` | `12px` | 余白スケール |
+| `--space-4` | `16px` | 余白スケール |
+| `--font-body` | `Inter` | 本文 |
+| `--font-heading` | `M PLUS Rounded 1c` | 見出し |
+| `--font-display` | `M PLUS Rounded 1c` | 強調見出し |
+| `--font-caption` | `Inter` | 補足 |
+
 **Dependencies**
 - Inbound: 各ページCSS — トークン参照 (P0)
 - Outbound: なし
@@ -415,7 +438,10 @@ graph TB
 ### Contrast Measurement Log（記録フォーマット）
 | Page | Element | Foreground/Background | Ratio | Tool | Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| TopPage | `h1` | `#000/#fff` | `7.0:1` | WebAIM | 2026-02-05 | 例 |
+| Global | `body text` | `#2b1e1b/#fff7e8` | `15.12:1` | node-contrast | 2026-02-05 | トークン算出 |
+| Global | `heading` | `#1f1412/#fff7e8` | `16.90:1` | node-contrast | 2026-02-05 | トークン算出 |
+| Global | `muted text` | `#6a5c57/#fff7e8` | `6.01:1` | node-contrast | 2026-02-05 | トークン算出 |
+| Global | `focus ring` | `#2e6bff/#ffffff` | `4.50:1` | node-contrast | 2026-02-05 | トークン算出 |
 
 ## Security Considerations
 - 認証/権限を変更しないため、セキュリティ影響は限定的。
