@@ -630,7 +630,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
           )}
           aria-label="過去100件一覧"
         >
-          <h2>過去100件の作品</h2>
+          <h2>作品一覧</h2>
           <div className="top-page__sort">
             <p className="top-page__sort-label">並び順: {selectedSortLabel}</p>
             <SortControl
