@@ -71,6 +71,11 @@
   border-radius: var(--radius-card);
 }
 
+.oshi-lists__item,
+.oshi-lists__items--grid .oshi-lists__card {
+  height: 100%;
+}
+
 .oshi-lists__card.is-inactive {
   opacity: 0.75;
 }
@@ -81,6 +86,7 @@
 
 .oshi-lists__items--grid .oshi-lists__card {
   grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
 }
 
 .oshi-lists__thumb {
@@ -88,6 +94,7 @@
   background: rgba(255, 122, 89, 0.08);
   display: grid;
   place-items: center;
+  aspect-ratio: 16 / 9;
   min-height: 140px;
 }
 

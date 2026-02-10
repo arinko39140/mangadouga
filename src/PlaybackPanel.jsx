@@ -160,6 +160,7 @@ function PlaybackPanel({ episode, isLoading, onPlay }) {
   return (
     <div className="work-page__player">
       <iframe
+        key={episode.id}
         ref={iframeRef}
         title={`再生中: ${episode.title}`}
         src={embedUrl}

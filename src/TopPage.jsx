@@ -599,27 +599,30 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
                 ? '通信エラーが発生しました。'
                 : '不明なエラーが発生しました。'}
             </p>
-          ) : selectedList.length === 0 ? (
-            <p className="top-page__status">
-              {selectedFilterLabel}の一覧がありません。
-            </p>
           ) : (
-            <ul
-              className="top-page__list-items top-page__list-items--grid card-collection card-collection--grid"
-              aria-label="曜日別一覧のアイテム"
-            >
-              {selectedList.map((item) => (
-                <li key={item.id} className="top-page__work-item">
-                  <TopPageWorkCard
-                    item={item}
-                    navigateToMovieHandler={navigateToMovieHandler}
-                    showMeta={false}
-                    onToggleOshi={handleOshiToggle}
-                    isUpdating={oshiUpdatingIds.includes(item.id)}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul
+                className="top-page__list-items top-page__list-items--grid card-collection card-collection--grid"
+                aria-label="曜日別一覧のアイテム"
+              >
+                {selectedList.map((item) => (
+                  <li key={item.id} className="top-page__work-item">
+                    <TopPageWorkCard
+                      item={item}
+                      navigateToMovieHandler={navigateToMovieHandler}
+                      showMeta={false}
+                      onToggleOshi={handleOshiToggle}
+                      isUpdating={oshiUpdatingIds.includes(item.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {selectedList.length === 0 ? (
+                <p className="top-page__status">
+                  {selectedFilterLabel}の一覧がありません。
+                </p>
+              ) : null}
+            </>
           )}
         </section>
         <section
