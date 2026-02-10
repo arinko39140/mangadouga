@@ -84,28 +84,13 @@
   margin: 0;
 }
 
-.work-page__oshi-button {
-  border: 1px solid rgba(255, 122, 89, 0.35);
-  border-radius: 999px;
-  background: #fff;
-  color: #7a4a3a;
-  padding: 0.35rem 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-  font-family: inherit;
-  line-height: 1;
+.work-page__episode-card {
+  position: relative;
 }
 
-.work-page__oshi-button.is-registered {
-  background: linear-gradient(135deg, #ff7a59, #ffb000);
-  color: #fffdfb;
-  border-color: transparent;
-  box-shadow: 0 10px 20px rgba(255, 122, 89, 0.28);
-}
-
-.work-page__oshi-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
+.work-page__oshi-button--overlay {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
 }

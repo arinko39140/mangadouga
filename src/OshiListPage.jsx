@@ -275,6 +275,19 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate, navigateTo
             <li key={item.id} className="oshi-lists__item">
               <article className="oshi-lists__card card-primary card-interactive motion-hover">
                 <div className="oshi-lists__thumb">
+                  <button
+                    type="button"
+                    className={
+                      item.isOshi
+                        ? 'oshi-lists__oshi-button oshi-lists__oshi-button--overlay is-registered'
+                        : 'oshi-lists__oshi-button oshi-lists__oshi-button--overlay'
+                    }
+                    aria-pressed={item.isOshi}
+                    disabled={isUpdating}
+                    onClick={() => handleOshiToggle(item.id)}
+                  >
+                    {item.isOshi ? '済' : '推'}
+                  </button>
                   {thumbnailUrl ? (
                     <img src={thumbnailUrl} alt={`${item.title}のサムネイル`} />
                   ) : (
@@ -286,19 +299,6 @@ function OshiListPage({ dataProvider = defaultDataProvider, authGate, navigateTo
                 <div className="oshi-lists__body">
                   <div className="oshi-lists__title-row">
                     <h2 className="oshi-lists__title">{item.title}</h2>
-                    <button
-                      type="button"
-                      className={
-                        item.isOshi
-                          ? 'oshi-lists__oshi-button is-registered'
-                          : 'oshi-lists__oshi-button'
-                      }
-                      aria-pressed={item.isOshi}
-                      disabled={isUpdating}
-                      onClick={() => handleOshiToggle(item.id)}
-                    >
-                      {item.isOshi ? '済' : '推'}
-                    </button>
                   </div>
                   <div className="oshi-lists__actions">
                     {item.seriesId ? (

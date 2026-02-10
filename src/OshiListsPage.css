@@ -227,6 +227,13 @@
   font-family: inherit;
 }
 
+.oshi-lists__oshi-button--overlay {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+}
+
 .oshi-lists__oshi-button.is-registered {
   background: linear-gradient(135deg, #ff7a59, #ffb000);
   color: #fffdfb;

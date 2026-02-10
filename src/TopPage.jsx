@@ -128,6 +128,17 @@ const TopPageWorkCard = ({
   return (
     <div ref={motion.ref} className={className}>
       <div className="top-page__work-thumb">
+        <button
+          type="button"
+          className={`top-page__oshi-badge top-page__oshi-badge--overlay oshi-lists__oshi-button ${
+            isOshi ? 'is-registered' : ''
+          }`}
+          aria-pressed={isOshi}
+          disabled={isUpdating}
+          onClick={() => onToggleOshi?.(item.id)}
+        >
+          {isOshi ? '済' : '推'}
+        </button>
         {resolveThumbnailUrl(item) ? (
           <img src={resolveThumbnailUrl(item)} alt={`${item.title}のサムネイル`} />
         ) : (
@@ -158,17 +169,6 @@ const TopPageWorkCard = ({
         ) : (
           <span className="top-page__work-title text-strong">{item.title}</span>
         )}
-        <button
-          type="button"
-          className={`top-page__oshi-badge state-badge ${
-            isOshi ? 'state-badge--active' : 'state-badge--inactive'
-          }`}
-          aria-pressed={isOshi}
-          disabled={isUpdating}
-          onClick={() => onToggleOshi?.(item.id)}
-        >
-          {isOshi ? '済' : '推'}
-        </button>
       </div>
       {showMeta ? (
         <p className="top-page__work-meta text-muted">
@@ -524,8 +524,8 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
               <PlaybackPanel episode={featuredEpisode} isLoading={false} />
               <button
                 type="button"
-                className={`top-page__oshi-badge top-page__oshi-badge--overlay state-badge ${
-                  featuredEpisode.isOshi ? 'state-badge--active' : 'state-badge--inactive'
+                className={`top-page__oshi-badge top-page__oshi-badge--overlay oshi-lists__oshi-button ${
+                  featuredEpisode.isOshi ? 'is-registered' : ''
                 }`}
                 aria-pressed={featuredEpisode.isOshi}
                 disabled={oshiUpdatingIds.includes(featuredEpisode.id)}

@@ -44,8 +44,8 @@ function EpisodeListItem({ episode, isSelected = false, onSelect, onToggleOshi }
         type="button"
         className={
           episode.isOshi
-            ? 'work-page__oshi-button is-registered'
-            : 'work-page__oshi-button'
+            ? 'work-page__oshi-button work-page__oshi-button--overlay oshi-lists__oshi-button is-registered'
+            : 'work-page__oshi-button work-page__oshi-button--overlay oshi-lists__oshi-button'
         }
         aria-pressed={episode.isOshi}
         onClick={() => onToggleOshi?.(episode.id)}
