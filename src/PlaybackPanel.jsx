@@ -1,3 +1,40 @@
+import { useEffect, useRef } from 'react'
+
+let youtubeApiPromise
+
+const loadYouTubeIframeApi = () => {
+  if (typeof window === 'undefined') return Promise.resolve(null)
+  if (window.YT?.Player) return Promise.resolve(window.YT)
+  if (youtubeApiPromise) return youtubeApiPromise
+
+  youtubeApiPromise = new Promise((resolve) => {
+    const existingScript = document.getElementById('youtube-iframe-api')
+    const previousReady = window.onYouTubeIframeAPIReady
+
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousReady === 'function') {
+        previousReady()
+      }
+      resolve(window.YT)
+    }
+
+    if (existingScript) return
+
+    const tag = document.createElement('script')
+    tag.id = 'youtube-iframe-api'
+    tag.src = 'https://www.youtube.com/iframe_api'
+
+    const firstScript = document.getElementsByTagName('script')[0]
+    if (firstScript?.parentNode) {
+      firstScript.parentNode.insertBefore(tag, firstScript)
+    } else {
+      document.head.appendChild(tag)
+    }
+  })
+
+  return youtubeApiPromise
+}
+
 const buildYouTubeEmbedUrl = (videoUrl) => {
   if (!videoUrl) return null
 
@@ -11,25 +48,36 @@ const buildYouTubeEmbedUrl = (videoUrl) => {
   const hostname = parsed.hostname.replace(/^www\./, '')
   const pathname = parsed.pathname
 
+  const buildEmbedUrl = (id) => {
+    if (!id) return null
+    const url = new URL(`https://www.youtube.com/embed/${id}`)
+    url.searchParams.set('enablejsapi', '1')
+    url.searchParams.set('playsinline', '1')
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      url.searchParams.set('origin', window.location.origin)
+    }
+    return url.toString()
+  }
+
   if (hostname === 'youtu.be') {
     const id = pathname.split('/').filter(Boolean)[0]
-    return id ? `https://www.youtube.com/embed/${id}` : null
+    return buildEmbedUrl(id)
   }
 
   if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
     if (pathname === '/watch') {
       const id = parsed.searchParams.get('v')
-      return id ? `https://www.youtube.com/embed/${id}` : null
+      return buildEmbedUrl(id)
     }
 
     if (pathname.startsWith('/embed/')) {
       const id = pathname.split('/').filter(Boolean)[1]
-      return id ? `https://www.youtube.com/embed/${id}` : null
+      return buildEmbedUrl(id)
     }
 
     if (pathname.startsWith('/shorts/')) {
       const id = pathname.split('/').filter(Boolean)[1]
-      return id ? `https://www.youtube.com/embed/${id}` : null
+      return buildEmbedUrl(id)
     }
   }
 
@@ -37,6 +85,48 @@ const buildYouTubeEmbedUrl = (videoUrl) => {
 }
 
 function PlaybackPanel({ episode, isLoading, onPlay }) {
+  const iframeRef = useRef(null)
+  const playerRef = useRef(null)
+  const recordedRef = useRef(new Set())
+
+  useEffect(() => {
+    const embedUrl = buildYouTubeEmbedUrl(episode?.videoUrl)
+    if (!embedUrl || !episode?.id || typeof onPlay !== 'function') return undefined
+
+    let cancelled = false
+
+    const setupPlayer = async () => {
+      const yt = await loadYouTubeIframeApi()
+      if (cancelled || !yt?.Player || !iframeRef.current) return
+
+      if (playerRef.current?.destroy) {
+        playerRef.current.destroy()
+      }
+
+      playerRef.current = new yt.Player(iframeRef.current, {
+        events: {
+          onStateChange: (event) => {
+            if (event?.data === yt.PlayerState?.PLAYING) {
+              if (!recordedRef.current.has(episode.id)) {
+                recordedRef.current.add(episode.id)
+                onPlay(episode)
+              }
+            }
+          },
+        },
+      })
+    }
+
+    setupPlayer()
+
+    return () => {
+      cancelled = true
+      if (playerRef.current?.destroy) {
+        playerRef.current.destroy()
+        playerRef.current = null
+      }
+    }
+  }, [episode, onPlay])
   if (isLoading) {
     return <p className="work-page__status">再生準備中...</p>
   }
@@ -69,16 +159,8 @@ function PlaybackPanel({ episode, isLoading, onPlay }) {
 
   return (
     <div className="work-page__player">
-      {typeof onPlay === 'function' ? (
-        <button
-          type="button"
-          className="work-page__play-button"
-          onClick={() => onPlay(episode)}
-        >
-          再生する
-        </button>
-      ) : null}
       <iframe
+        ref={iframeRef}
         title={`再生中: ${episode.title}`}
         src={embedUrl}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

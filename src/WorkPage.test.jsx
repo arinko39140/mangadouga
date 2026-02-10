@@ -196,7 +196,7 @@ describe('WorkPage state', () => {
 
   })
 
-  it('再生ボタン押下で履歴を記録する', async () => {
+  it('再生開始で履歴を記録する', async () => {
     const dataProvider = {
       fetchSeriesOverview: vi.fn().mockResolvedValue({
         ok: true,
@@ -224,11 +224,20 @@ describe('WorkPage state', () => {
     const historyRecorder = {
       recordView: vi.fn().mockResolvedValue({ ok: true, data: { historyId: 1 } }),
     }
+    let lastPlayerOptions
+    window.YT = {
+      PlayerState: { PLAYING: 1 },
+      Player: function Player(_element, options) {
+        lastPlayerOptions = options
+        return { destroy: vi.fn() }
+      },
+    }
 
     renderWorkPage(dataProvider, 'series-1', null, historyRecorder)
 
-    const playButton = await screen.findByRole('button', { name: '再生する' })
-    fireEvent.click(playButton)
+    await screen.findByTitle('再生中: 最新話')
+
+    lastPlayerOptions.events.onStateChange({ data: 1 })
 
     await waitFor(() => {
       expect(historyRecorder.recordView).toHaveBeenCalledWith(

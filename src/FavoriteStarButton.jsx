@@ -4,7 +4,11 @@ function FavoriteStarButton({ isFavorited, isLoading, onToggle }) {
   return (
     <button
       type="button"
-      className="work-page__favorite"
+      className={
+        isFavorited
+          ? 'work-page__favorite work-page__oshi-button is-registered'
+          : 'work-page__favorite work-page__oshi-button'
+      }
       aria-pressed={Boolean(isFavorited)}
       onClick={onToggle}
       disabled={isLoading}

@@ -21,7 +21,12 @@ describe('PlaybackPanel', () => {
     )
 
     const iframe = screen.getByTitle('再生中: 第1話')
-    expect(iframe).toHaveAttribute('src', 'https://www.youtube.com/embed/abc123')
+    const src = iframe.getAttribute('src')
+    expect(src).toMatch(/^https:\\/\\/www\\.youtube\\.com\\/embed\\/abc123/)
+    const url = new URL(src)
+    expect(url.searchParams.get('enablejsapi')).toBe('1')
+    expect(url.searchParams.get('playsinline')).toBe('1')
+    expect(url.searchParams.get('origin')).toBe(window.location.origin)
   })
 
   it('動画URLが未設定の場合は代替表示を行う', () => {
