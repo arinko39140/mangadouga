@@ -137,7 +137,10 @@ function AppShell({ children }) {
     <div className="app-shell">
       <header className="app-shell__header">
         <Link className="app-shell__brand" to="/">
-          Manga Douga
+          <span className="app-shell__brand-icon" aria-hidden>
+            MD
+          </span>
+          <span className="app-shell__brand-text">Manga Douga</span>
         </Link>
         <AuthStatus />
       </header>

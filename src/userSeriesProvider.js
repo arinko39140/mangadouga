@@ -83,6 +83,35 @@ const fetchLatestThumbnails = async (supabaseClient, seriesIds) => {
   return { ok: true, data: buildThumbnailMap(data) }
 }
 
+const fetchRegisteredSeriesMap = async (supabaseClient, viewerUserId, seriesIds) => {
+  if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+    return { ok: false, error: 'not_configured' }
+  }
+  if (typeof viewerUserId !== 'string' || viewerUserId.trim() === '') {
+    return { ok: true, data: new Set() }
+  }
+  if (!Array.isArray(seriesIds) || seriesIds.length === 0) {
+    return { ok: true, data: new Set() }
+  }
+
+  const { data, error } = await supabaseClient
+    .from('user_series')
+    .select('series_id')
+    .eq('user_id', viewerUserId)
+    .in('series_id', seriesIds)
+
+  if (error) {
+    return { ok: false, error: normalizeError(error) }
+  }
+
+  const set = new Set(
+    (data ?? [])
+      .map((row) => (row?.series_id != null ? String(row.series_id) : ''))
+      .filter(Boolean)
+  )
+  return { ok: true, data: set }
+}
+
 export const createUserSeriesProvider = (supabaseClient) => ({
   async fetchSeries(userId) {
     if (typeof userId !== 'string' || userId.trim() === '') {
@@ -250,19 +279,42 @@ export const createUserSeriesProvider = (supabaseClient) => ({
     }
 
     const thumbnailMap = thumbnailResult.data
+    const baseItems = seriesItems.map((item) =>
+      mapSeriesRowWithThumbnail(
+        {
+          series_id: item.seriesId,
+          title: item.title,
+          favorite_count: item.favoriteCount,
+          update: item.updatedAt,
+        },
+        thumbnailMap.get(item.seriesId)
+      )
+    )
+
+    if (isOwner || !viewerUserId) {
+      return { ok: true, data: baseItems }
+    }
+
+    const registeredResult = await fetchRegisteredSeriesMap(
+      supabaseClient,
+      viewerUserId,
+      baseItems.map((item) => item.seriesId)
+    )
+
+    if (!registeredResult.ok) {
+      return {
+        ok: true,
+        data: baseItems.map((item) => ({ ...item, isRegistered: false })),
+      }
+    }
+
+    const registeredSet = registeredResult.data
     return {
       ok: true,
-      data: seriesItems.map((item) =>
-        mapSeriesRowWithThumbnail(
-          {
-            series_id: item.seriesId,
-            title: item.title,
-            favorite_count: item.favoriteCount,
-            update: item.updatedAt,
-          },
-          thumbnailMap.get(item.seriesId)
-        )
-      ),
+      data: baseItems.map((item) => ({
+        ...item,
+        isRegistered: registeredSet.has(item.seriesId),
+      })),
     }
   },
 

@@ -518,7 +518,7 @@ describe('UserOshiSeriesPage', () => {
 
     await waitFor(() => {
       expect(seriesProvider.registerSeries).toHaveBeenCalledWith({ seriesId: 's1' })
-      expect(screen.getByRole('button', { name: '登録済み' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: '解除' })).toBeEnabled()
     })
   })
 })

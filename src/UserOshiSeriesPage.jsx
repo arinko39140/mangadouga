@@ -160,14 +160,7 @@ function UserOshiSeriesPage({
 
       if (seriesResult.ok) {
         const nextItems = Array.isArray(seriesResult.data) ? seriesResult.data : []
-        setSeriesItems(
-          isOwner
-            ? nextItems
-            : nextItems.map((item) => ({
-                ...item,
-                isRegistered: false,
-              }))
-        )
+        setSeriesItems(nextItems)
       } else {
         setSeriesItems([])
         setSeriesError(seriesResult.error ?? 'unknown')
@@ -269,7 +262,7 @@ function UserOshiSeriesPage({
     }
   }
 
-  const handleUnregisterSeries = async (seriesId) => {
+  const handleUnregisterSeries = async (seriesId, { removeFromList = true } = {}) => {
     if (!seriesProvider || typeof seriesProvider.unregisterSeries !== 'function') return
     if (!seriesId) return
     setSeriesActionError(null)
@@ -286,7 +279,13 @@ function UserOshiSeriesPage({
     try {
       const result = await seriesProvider.unregisterSeries({ seriesId })
       if (result.ok) {
-        setSeriesItems((prev) => prev.filter((item) => item.seriesId !== seriesId))
+        setSeriesItems((prev) =>
+          removeFromList
+            ? prev.filter((item) => item.seriesId !== seriesId)
+            : prev.map((item) =>
+                item.seriesId !== seriesId ? item : { ...item, isRegistered: false }
+              )
+        )
         publishUserSeriesUpdated()
       } else if (result.error === 'auth_required') {
         authGateInstance.redirectToLogin()
@@ -374,22 +373,21 @@ function UserOshiSeriesPage({
                     <button
                       type="button"
                       className={
-                        isOwner || !item.isRegistered
-                          ? 'user-series-list__oshi-button'
-                          : 'user-series-list__oshi-button is-registered'
+                        item.isRegistered
+                          ? 'user-series-list__oshi-button is-registered'
+                          : 'user-series-list__oshi-button'
                       }
                       aria-pressed={isOwner ? true : Boolean(item.isRegistered)}
-                      disabled={
-                        seriesUpdatingIds.includes(item.seriesId) ||
-                        (!isOwner && item.isRegistered)
-                      }
+                      disabled={seriesUpdatingIds.includes(item.seriesId)}
                       onClick={() =>
                         isOwner
-                          ? handleUnregisterSeries(item.seriesId)
-                          : handleRegisterSeries(item.seriesId)
+                          ? handleUnregisterSeries(item.seriesId, { removeFromList: true })
+                          : item.isRegistered
+                            ? handleUnregisterSeries(item.seriesId, { removeFromList: false })
+                            : handleRegisterSeries(item.seriesId)
                       }
                     >
-                      {isOwner ? '解除' : item.isRegistered ? '登録済み' : '登録'}
+                      {isOwner ? '解除' : item.isRegistered ? '解除' : '登録'}
                     </button>
                   </div>
                 ) : null}

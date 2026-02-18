@@ -7,10 +7,38 @@
 }
 
 .app-shell__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: 'Playfair Display', 'Times New Roman', serif;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   text-decoration: none;
   color: inherit;
+}
+
+.app-shell__brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fredoka', 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 55%),
+    linear-gradient(135deg, #ff7a59, #ffb000);
+  box-shadow:
+    0 12px 24px rgba(255, 122, 89, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.app-shell__brand-text {
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .app-shell__content {
