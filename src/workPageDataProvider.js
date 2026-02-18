@@ -14,6 +14,15 @@ const normalizeError = (error) => {
 
 const PAGE_SIZE = 50
 
+const syncFavoriteCountBestEffort = async (client, name, params) => {
+  if (!client || typeof client.rpc !== 'function') return
+  try {
+    await client.rpc(name, params)
+  } catch {
+    // 件数同期の失敗はトグル結果を失敗扱いにしない
+  }
+}
+
 const mapSeriesRow = (row) => ({
   id: row.series_id,
   title: row.title,
@@ -27,6 +36,7 @@ const mapEpisodeRow = (row, isOshi) => ({
   thumbnailUrl: row.thumbnail_url ?? null,
   publishedAt: row.update ?? null,
   videoUrl: row.url ?? null,
+  favoriteCount: row.favorite_count ?? 0,
   isOshi: Boolean(isOshi),
 })
 
@@ -106,15 +116,38 @@ const toggleListMovie = async ({ client, listId, movieId }) => {
   return { ok: true, data: { isOshi: true } }
 }
 
+const fetchMovieFavoriteCount = async ({ client, movieId }) => {
+  const { data, error } = await client
+    .from('movie')
+    .select('favorite_count')
+    .eq('movie_id', movieId)
+    .limit(1)
+
+  if (error) return null
+  return data?.[0]?.favorite_count ?? 0
+}
+
 export const createWorkPageDataProvider = (supabaseClient) => {
   let cachedListId = null
+  let cachedUserId = null
 
-  const fetchListId = async () => {
-    if (cachedListId !== null) return { ok: true, listId: cachedListId }
+  const fetchListId = async ({ requireAuth = false } = {}) => {
+    const userResult = await resolveCurrentUserId(supabaseClient)
+    if (!userResult.ok) {
+      if (requireAuth) return { ok: false, error: userResult.error }
+      cachedListId = null
+      cachedUserId = null
+      return { ok: true, listId: null }
+    }
+
+    if (cachedListId !== null && cachedUserId === userResult.userId) {
+      return { ok: true, listId: cachedListId }
+    }
 
     const { data, error } = await supabaseClient
       .from('list')
       .select('list_id')
+      .eq('user_id', userResult.userId)
       .order('list_id', { ascending: true })
       .limit(1)
 
@@ -124,6 +157,7 @@ export const createWorkPageDataProvider = (supabaseClient) => {
 
     const listId = data?.[0]?.list_id ?? null
     cachedListId = listId
+    cachedUserId = userResult.userId
     return { ok: true, listId }
   }
 
@@ -251,6 +285,14 @@ export const createWorkPageDataProvider = (supabaseClient) => {
         seriesId,
       })
 
+      if (toggleResult.ok) {
+        await syncFavoriteCountBestEffort(
+          supabaseClient,
+          'sync_series_favorite_count',
+          { target_series_id: seriesId }
+        )
+      }
+
       return toggleResult
     },
 
@@ -262,16 +304,37 @@ export const createWorkPageDataProvider = (supabaseClient) => {
         return { ok: false, error: 'not_configured' }
       }
 
-      const listResult = await fetchListId()
+      const listResult = await fetchListId({ requireAuth: true })
       if (!listResult.ok || !listResult.listId) {
-        return { ok: false, error: listResult.error ?? 'not_configured' }
+        return { ok: false, error: listResult.error ?? 'not_found' }
       }
 
-      return toggleListMovie({
+      const result = await toggleListMovie({
         client: supabaseClient,
         listId: listResult.listId,
         movieId,
       })
+
+      if (result.ok) {
+        await syncFavoriteCountBestEffort(
+          supabaseClient,
+          'sync_movie_favorite_count',
+          { target_movie_id: movieId }
+        )
+        const favoriteCount = await fetchMovieFavoriteCount({
+          client: supabaseClient,
+          movieId,
+        })
+        return {
+          ok: true,
+          data: {
+            ...result.data,
+            favoriteCount,
+          },
+        }
+      }
+
+      return result
     },
   }
 }

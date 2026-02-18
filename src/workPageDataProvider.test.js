@@ -8,12 +8,15 @@ const buildEpisodesSupabaseMock = ({
   listError = null,
   listMovieRows = [],
   listMovieError = null,
+  sessionUserId = 'viewer-1',
+  sessionError = null,
 } = {}) => {
   const listLimitMock = vi
     .fn()
     .mockResolvedValue({ data: listRows, error: listError })
   const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
-  const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listEqMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
 
   const movieRangeMock = vi
     .fn()
@@ -37,11 +40,17 @@ const buildEpisodesSupabaseMock = ({
     return {}
   })
 
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
+
   return {
-    client: { from: fromMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
     calls: {
       fromMock,
       listSelectMock,
+      listEqMock,
       listOrderMock,
       listLimitMock,
       movieSelectMock,
@@ -51,6 +60,7 @@ const buildEpisodesSupabaseMock = ({
       listMovieSelectMock,
       listMovieEqMock,
       listMovieInMock,
+      getSessionMock,
     },
   }
 }
@@ -160,12 +170,17 @@ const buildToggleMovieSupabaseMock = ({
   listError = null,
   selectError = null,
   mutateError = null,
+  movieFavoriteCount = 7,
+  movieCountError = null,
+  sessionUserId = 'viewer-1',
+  sessionError = null,
 } = {}) => {
   const listLimitMock = vi
     .fn()
     .mockResolvedValue({ data: listId ? [{ list_id: listId }] : [], error: listError })
   const listOrderMock = vi.fn().mockReturnValue({ limit: listLimitMock })
-  const listSelectMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listEqMock = vi.fn().mockReturnValue({ order: listOrderMock })
+  const listSelectMock = vi.fn().mockReturnValue({ eq: listEqMock })
 
   const listMovieLimitMock = vi.fn().mockResolvedValue({
     data: existing ? [{ list_id: listId, movie_id: 'movie-1' }] : [],
@@ -184,17 +199,31 @@ const buildToggleMovieSupabaseMock = ({
     .fn()
     .mockResolvedValue({ data: null, error: mutateError })
 
+  const movieLimitMock = vi.fn().mockResolvedValue({
+    data: [{ favorite_count: movieFavoriteCount }],
+    error: movieCountError,
+  })
+  const movieEqMock = vi.fn().mockReturnValue({ limit: movieLimitMock })
+  const movieSelectMock = vi.fn().mockReturnValue({ eq: movieEqMock })
+
   const fromMock = vi.fn((name) => {
     if (name === 'list') return { select: listSelectMock }
+    if (name === 'movie') return { select: movieSelectMock }
     if (name !== 'list_movie') return {}
     return { select: listMovieSelectMock, delete: listMovieDeleteMock, insert: listMovieInsertMock }
   })
 
+  const getSessionMock = vi.fn().mockResolvedValue({
+    data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
+    error: sessionError,
+  })
+
   return {
-    client: { from: fromMock },
+    client: { from: fromMock, auth: { getSession: getSessionMock } },
     calls: {
       fromMock,
       listSelectMock,
+      listEqMock,
       listOrderMock,
       listLimitMock,
       listMovieSelectMock,
@@ -205,6 +234,10 @@ const buildToggleMovieSupabaseMock = ({
       listMovieDeleteEqListMock,
       listMovieDeleteEqMovieMock,
       listMovieInsertMock,
+      movieSelectMock,
+      movieEqMock,
+      movieLimitMock,
+      getSessionMock,
     },
   }
 }
@@ -326,6 +359,7 @@ describe('WorkPageDataProvider', () => {
 
     expect(calls.fromMock).toHaveBeenCalledWith('list')
     expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.listEqMock).toHaveBeenCalledWith('user_id', 'viewer-1')
     expect(calls.listOrderMock).toHaveBeenCalledWith('list_id', { ascending: true })
     expect(calls.listLimitMock).toHaveBeenCalledWith(1)
     expect(calls.fromMock).toHaveBeenCalledWith('movie')
@@ -542,6 +576,7 @@ describe('WorkPageDataProvider', () => {
 
     expect(calls.fromMock).toHaveBeenCalledWith('list')
     expect(calls.listSelectMock).toHaveBeenCalledWith('list_id')
+    expect(calls.listEqMock).toHaveBeenCalledWith('user_id', 'viewer-1')
     expect(calls.fromMock).toHaveBeenCalledWith('list_movie')
     expect(calls.listMovieEqListMock).toHaveBeenCalledWith('list_id', 1)
     expect(calls.listMovieEqMovieMock).toHaveBeenCalledWith('movie_id', 'movie-1')
@@ -549,7 +584,9 @@ describe('WorkPageDataProvider', () => {
       list_id: 1,
       movie_id: 'movie-1',
     })
-    expect(result).toEqual({ ok: true, data: { isOshi: true } })
+    expect(calls.movieSelectMock).toHaveBeenCalledWith('favorite_count')
+    expect(calls.movieEqMock).toHaveBeenCalledWith('movie_id', 'movie-1')
+    expect(result).toEqual({ ok: true, data: { isOshi: true, favoriteCount: 7 } })
   })
 
   it('推し登録時にmovieIdが無効ならinvalid_inputを返す', async () => {

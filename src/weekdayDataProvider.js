@@ -14,6 +14,7 @@ const mapRowToItem = (row, isOshi = false) => ({
   id: row.movie_id,
   title: row.movie_title,
   popularityScore: row.favorite_count,
+  favoriteCount: row.favorite_count ?? 0,
   thumbnailUrl: row.thumbnail_url ?? null,
   detailPath: row.url ?? '',
   publishedAt: row.update,
@@ -84,6 +85,28 @@ const isAuthError = (error) => {
 const normalizeError = (error) => {
   if (isAuthError(error)) return 'auth_required'
   return isNetworkError(error) ? 'network' : 'unknown'
+}
+
+const syncMovieFavoriteCountBestEffort = async (supabaseClient, movieId) => {
+  if (!supabaseClient || typeof supabaseClient.rpc !== 'function') return
+  try {
+    await supabaseClient.rpc('sync_movie_favorite_count', {
+      target_movie_id: movieId,
+    })
+  } catch {
+    // 件数同期の失敗はトグル結果を失敗扱いにしない
+  }
+}
+
+const fetchMovieFavoriteCount = async (supabaseClient, movieId) => {
+  const { data, error } = await supabaseClient
+    .from('movie')
+    .select('favorite_count')
+    .eq('movie_id', movieId)
+    .limit(1)
+
+  if (error) return null
+  return data?.[0]?.favorite_count ?? 0
 }
 
 export const createWeekdayDataProvider = (supabaseClient) => ({
@@ -341,7 +364,9 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
         return { ok: false, error: normalizeError(deleteError) }
       }
 
-      return { ok: true, data: { isOshi: false } }
+      await syncMovieFavoriteCountBestEffort(supabaseClient, movieId)
+      const favoriteCount = await fetchMovieFavoriteCount(supabaseClient, movieId)
+      return { ok: true, data: { isOshi: false, favoriteCount } }
     }
 
     const { error: insertError } = await supabaseClient
@@ -352,6 +377,8 @@ export const createWeekdayDataProvider = (supabaseClient) => ({
       return { ok: false, error: normalizeError(insertError) }
     }
 
-    return { ok: true, data: { isOshi: true } }
+    await syncMovieFavoriteCountBestEffort(supabaseClient, movieId)
+    const favoriteCount = await fetchMovieFavoriteCount(supabaseClient, movieId)
+    return { ok: true, data: { isOshi: true, favoriteCount } }
   },
 })

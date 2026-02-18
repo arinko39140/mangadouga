@@ -21,6 +21,15 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
+const syncMovieFavoriteCountBestEffort = async (client, movieId) => {
+  if (!client || typeof client.rpc !== 'function') return
+  try {
+    await client.rpc('sync_movie_favorite_count', { target_movie_id: movieId })
+  } catch {
+    // 件数同期の失敗はトグル結果を失敗扱いにしない
+  }
+}
+
 const toggleListMovie = async ({ client, listId, movieId }) => {
   const { data, error } = await client
     .from('list_movie')
@@ -46,6 +55,7 @@ const toggleListMovie = async ({ client, listId, movieId }) => {
       return { ok: false, error: normalizeError(deleteError) }
     }
 
+    await syncMovieFavoriteCountBestEffort(client, movieId)
     return { ok: true, data: { isOshi: false } }
   }
 
@@ -56,6 +66,7 @@ const toggleListMovie = async ({ client, listId, movieId }) => {
     return { ok: false, error: normalizeError(insertError) }
   }
 
+  await syncMovieFavoriteCountBestEffort(client, movieId)
   return { ok: true, data: { isOshi: true } }
 }
 

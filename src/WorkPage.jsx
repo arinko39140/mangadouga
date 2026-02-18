@@ -108,7 +108,14 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorde
       setEpisodes((prev) =>
         prev.map((episode) =>
           episode.id === movieId
-            ? { ...episode, isOshi: result.data.isOshi }
+            ? {
+                ...episode,
+                isOshi: result.data.isOshi,
+                favoriteCount:
+                  Number.isFinite(result.data.favoriteCount)
+                    ? result.data.favoriteCount
+                    : episode.favoriteCount,
+              }
             : episode
         )
       )

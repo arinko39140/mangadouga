@@ -20,6 +20,15 @@ const normalizeError = (error) => {
   return isNetworkError(error) ? 'network' : 'unknown'
 }
 
+const syncMovieFavoriteCountBestEffort = async (client, movieId) => {
+  if (!client || typeof client.rpc !== 'function') return
+  try {
+    await client.rpc('sync_movie_favorite_count', { target_movie_id: movieId })
+  } catch {
+    // 件数同期の失敗はトグル結果を失敗扱いにしない
+  }
+}
+
 const mapVisibility = (canDisplay) => (canDisplay ? 'public' : 'private')
 
 const mapListRow = (row, name) => ({
@@ -82,6 +91,7 @@ export const createOshiListPageProvider = (supabaseClient) => {
         return { ok: false, error: normalizeError(deleteError) }
       }
 
+      await syncMovieFavoriteCountBestEffort(supabaseClient, movieId)
       return { ok: true, data: { isOshi: false } }
     }
 
@@ -93,6 +103,7 @@ export const createOshiListPageProvider = (supabaseClient) => {
       return { ok: false, error: normalizeError(insertError) }
     }
 
+    await syncMovieFavoriteCountBestEffort(supabaseClient, movieId)
     return { ok: true, data: { isOshi: true } }
   }
 

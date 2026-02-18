@@ -170,6 +170,9 @@ const TopPageWorkCard = ({
           <span className="top-page__work-title text-strong">{item.title}</span>
         )}
       </div>
+      <p className="top-page__work-meta text-muted">
+        推し数: {item.favoriteCount ?? 0}
+      </p>
       {showMeta ? (
         <p className="top-page__work-meta text-muted">
           投稿日: {formatPublishedDate(item)}
@@ -279,26 +282,32 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
       }
     : null
 
-  const updateOshiState = (movieId, nextOshi) => {
+  const updateOshiState = (movieId, nextOshi, nextFavoriteCount) => {
+    const applyFavoriteState = (item) => {
+      if (item.id !== movieId) return item
+      return {
+        ...item,
+        isOshi: nextOshi,
+        favoriteCount:
+          Number.isFinite(nextFavoriteCount) ? nextFavoriteCount : item.favoriteCount,
+      }
+    }
     setWeekdayLists((prev) =>
       prev.map((list) => ({
         ...list,
-        items: list.items.map((item) =>
-          item.id === movieId ? { ...item, isOshi: nextOshi } : item
-        ),
+        items: list.items.map(applyFavoriteState),
       }))
     )
-    setRecentItems((prev) =>
-      prev.map((item) => (item.id === movieId ? { ...item, isOshi: nextOshi } : item))
-    )
+    setRecentItems((prev) => prev.map(applyFavoriteState))
     setSearchState((prev) => ({
       ...prev,
-      results: prev.results.map((item) =>
-        item.id === movieId ? { ...item, isOshi: nextOshi } : item
-      ),
+      results: prev.results.map(applyFavoriteState),
     }))
     if (typeof searchController.updateCachedItem === 'function') {
-      searchController.updateCachedItem(movieId, { isOshi: nextOshi })
+      searchController.updateCachedItem(movieId, {
+        isOshi: nextOshi,
+        favoriteCount: Number.isFinite(nextFavoriteCount) ? nextFavoriteCount : undefined,
+      })
     }
   }
 
@@ -315,7 +324,7 @@ function TopPage({ dataProvider = defaultWeekdayDataProvider, navigateToMovie })
     try {
       const result = await dataProvider.toggleMovieOshi(movieId)
       if (result.ok) {
-        updateOshiState(movieId, result.data.isOshi)
+        updateOshiState(movieId, result.data.isOshi, result.data.favoriteCount)
         publishOshiListUpdated()
       } else if (result.error === 'auth_required') {
         authGateInstance.redirectToLogin('oshi')
