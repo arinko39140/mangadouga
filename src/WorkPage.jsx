@@ -84,7 +84,16 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorde
       const result = await dataProvider.toggleSeriesFavorite(seriesId)
       if (result.ok) {
         setSeries((prev) =>
-          prev ? { ...prev, isFavorited: result.data.isFavorited } : prev
+          prev
+            ? {
+                ...prev,
+                isFavorited: result.data.isFavorited,
+                favoriteCount:
+                  Number.isFinite(result.data.favoriteCount)
+                    ? result.data.favoriteCount
+                    : prev.favoriteCount,
+              }
+            : prev
         )
         publishUserSeriesUpdated()
       }
@@ -242,6 +251,11 @@ function WorkPage({ dataProvider = defaultDataProvider, authGate, historyRecorde
           isLoading={loading.series}
           error={error.series}
         />
+        {error.series ? null : (
+          <p className="work-page__series-favorite-count">
+            お気に入り数: {series?.favoriteCount ?? 0}
+          </p>
+        )}
         <FavoriteStarButton
           isFavorited={series?.isFavorited ?? false}
           isLoading={favoriteUpdating}

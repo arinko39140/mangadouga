@@ -748,7 +748,7 @@ describe('WorkPage state', () => {
       fetchMovies: vi.fn().mockResolvedValue({ ok: true, data: [] }),
       toggleSeriesFavorite: vi.fn().mockResolvedValue({
         ok: true,
-        data: { isFavorited: true },
+        data: { isFavorited: true, favoriteCount: 1 },
       }),
     }
     const authGate = {
@@ -758,6 +758,7 @@ describe('WorkPage state', () => {
 
     renderWorkPage(dataProvider, 'series-1', authGate)
 
+    expect(await screen.findByText('お気に入り数: 0')).toBeInTheDocument()
     const button = await screen.findByRole('button', { name: /お気に入り/ })
     fireEvent.click(button)
 
@@ -765,6 +766,7 @@ describe('WorkPage state', () => {
       expect(dataProvider.toggleSeriesFavorite).toHaveBeenCalledWith('series-1')
     })
     expect(screen.getByText('お気に入り: 登録済み')).toBeInTheDocument()
+    expect(screen.getByText('お気に入り数: 1')).toBeInTheDocument()
   })
 
   it('未ログインの場合はログイン導線へ誘導する', async () => {

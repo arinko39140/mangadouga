@@ -17,9 +17,11 @@ const PAGE_SIZE = 50
 const syncFavoriteCountBestEffort = async (client, name, params) => {
   if (!client || typeof client.rpc !== 'function') return
   try {
-    await client.rpc(name, params)
+    const { data } = await client.rpc(name, params)
+    return Number.isFinite(data) ? data : null
   } catch {
     // 件数同期の失敗はトグル結果を失敗扱いにしない
+    return null
   }
 }
 
@@ -121,6 +123,17 @@ const fetchMovieFavoriteCount = async ({ client, movieId }) => {
     .from('movie')
     .select('favorite_count')
     .eq('movie_id', movieId)
+    .limit(1)
+
+  if (error) return null
+  return data?.[0]?.favorite_count ?? 0
+}
+
+const fetchSeriesFavoriteCount = async ({ client, seriesId }) => {
+  const { data, error } = await client
+    .from('series')
+    .select('favorite_count')
+    .eq('series_id', seriesId)
     .limit(1)
 
   if (error) return null
@@ -286,11 +299,30 @@ export const createWorkPageDataProvider = (supabaseClient) => {
       })
 
       if (toggleResult.ok) {
-        await syncFavoriteCountBestEffort(
+        const syncedFavoriteCount = await syncFavoriteCountBestEffort(
           supabaseClient,
           'sync_series_favorite_count',
           { target_series_id: seriesId }
         )
+        const favoriteCount =
+          Number.isFinite(syncedFavoriteCount)
+            ? syncedFavoriteCount
+            : await fetchSeriesFavoriteCount({
+                client: supabaseClient,
+                seriesId,
+              })
+
+        if (!Number.isFinite(favoriteCount)) {
+          return toggleResult
+        }
+
+        return {
+          ok: true,
+          data: {
+            ...toggleResult.data,
+            favoriteCount,
+          },
+        }
       }
 
       return toggleResult

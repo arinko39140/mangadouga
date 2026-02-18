@@ -6,6 +6,11 @@
   box-shadow: var(--shadow-card);
 }
 
+.work-page__series-favorite-count {
+  margin: 0;
+  color: rgba(44, 32, 50, 0.78);
+}
+
 .work-page__player {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -80,8 +85,14 @@
 }
 
 .work-page__episode-title,
-.work-page__episode-date {
+.work-page__episode-date,
+.work-page__episode-count {
   margin: 0;
+}
+
+.work-page__episode-count {
+  color: rgba(44, 32, 50, 0.75);
+  font-size: 0.9rem;
 }
 
 .work-page__episode-card {

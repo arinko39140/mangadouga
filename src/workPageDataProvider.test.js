@@ -120,6 +120,10 @@ const buildToggleSupabaseMock = ({
   existing,
   selectError = null,
   mutateError = null,
+  seriesFavoriteCount = 3,
+  seriesCountError = null,
+  rpcResult = null,
+  rpcError = null,
   sessionUserId = 'viewer-1',
   sessionError = null,
 } = {}) => {
@@ -135,12 +139,28 @@ const buildToggleSupabaseMock = ({
   const eqUserMock = vi.fn().mockReturnValue({ eq: eqSeriesMock })
   const selectMock = vi.fn().mockReturnValue({ eq: eqUserMock })
 
+  const seriesLimitMock = vi.fn().mockResolvedValue({
+    data: [{ favorite_count: seriesFavoriteCount }],
+    error: seriesCountError,
+  })
+  const seriesEqMock = vi.fn().mockReturnValue({ limit: seriesLimitMock })
+  const seriesSelectMock = vi.fn().mockReturnValue({ eq: seriesEqMock })
+
   const fromMock = vi.fn().mockImplementation((name) => {
     if (name === 'user_series') {
       return { select: selectMock, delete: deleteMock, insert: insertMock }
     }
+    if (name === 'series') {
+      return { select: seriesSelectMock }
+    }
     return {}
   })
+
+  const rpcMock = vi
+    .fn()
+    .mockImplementation(() =>
+      rpcError ? Promise.reject(rpcError) : Promise.resolve({ data: rpcResult, error: null })
+    )
 
   const getSessionMock = vi.fn().mockResolvedValue({
     data: sessionUserId ? { session: { user: { id: sessionUserId } } } : { session: null },
@@ -148,7 +168,7 @@ const buildToggleSupabaseMock = ({
   })
 
   return {
-    client: { from: fromMock, auth: { getSession: getSessionMock } },
+    client: { from: fromMock, rpc: rpcMock, auth: { getSession: getSessionMock } },
     calls: {
       fromMock,
       selectMock,
@@ -159,6 +179,10 @@ const buildToggleSupabaseMock = ({
       deleteEqUserMock,
       deleteEqSeriesMock,
       insertMock,
+      seriesSelectMock,
+      seriesEqMock,
+      seriesLimitMock,
+      rpcMock,
       getSessionMock,
     },
   }
@@ -536,6 +560,7 @@ describe('WorkPageDataProvider', () => {
   it('お気に入りが未登録の場合は登録して状態を返す', async () => {
     const { client, calls } = buildToggleSupabaseMock({
       existing: false,
+      rpcResult: 9,
     })
     const provider = createWorkPageDataProvider(client)
 
@@ -549,12 +574,16 @@ describe('WorkPageDataProvider', () => {
       user_id: 'viewer-1',
       series_id: 'series-1',
     })
-    expect(result).toEqual({ ok: true, data: { isFavorited: true } })
+    expect(calls.rpcMock).toHaveBeenCalledWith('sync_series_favorite_count', {
+      target_series_id: 'series-1',
+    })
+    expect(result).toEqual({ ok: true, data: { isFavorited: true, favoriteCount: 9 } })
   })
 
   it('お気に入りが登録済みの場合は解除して状態を返す', async () => {
     const { client, calls } = buildToggleSupabaseMock({
       existing: true,
+      rpcResult: 4,
     })
     const provider = createWorkPageDataProvider(client)
 
@@ -563,7 +592,23 @@ describe('WorkPageDataProvider', () => {
     expect(calls.deleteMock).toHaveBeenCalled()
     expect(calls.deleteEqUserMock).toHaveBeenCalledWith('user_id', 'viewer-1')
     expect(calls.deleteEqSeriesMock).toHaveBeenCalledWith('series_id', 'series-1')
-    expect(result).toEqual({ ok: true, data: { isFavorited: false } })
+    expect(result).toEqual({ ok: true, data: { isFavorited: false, favoriteCount: 4 } })
+  })
+
+  it('シリーズ件数同期RPCが失敗しても件数フォールバックで状態を返す', async () => {
+    const { client, calls } = buildToggleSupabaseMock({
+      existing: false,
+      rpcError: new Error('rpc failed'),
+      seriesFavoriteCount: 11,
+    })
+    const provider = createWorkPageDataProvider(client)
+
+    const result = await provider.toggleSeriesFavorite('series-1')
+
+    expect(calls.fromMock).toHaveBeenCalledWith('series')
+    expect(calls.seriesSelectMock).toHaveBeenCalledWith('favorite_count')
+    expect(calls.seriesEqMock).toHaveBeenCalledWith('series_id', 'series-1')
+    expect(result).toEqual({ ok: true, data: { isFavorited: true, favoriteCount: 11 } })
   })
 
   it('推しが未登録の場合は登録して状態を返す', async () => {
